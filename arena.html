@@ -1414,7 +1414,16 @@
                             }
                         } catch (e) { console.warn('Failed to get battle address via getContract:', e.message); }
                     }
-                    if (battleAddress) {
+                    if (!battleAddress) {
+                        try {
+                            const authAddr = '0x11Feea2F23362478a8850c9f0daA746D057D2928';
+                            const minABI = [{"inputs":[{"internalType":"string","name":"name","type":"string"}],"name":"getAddressByName","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}];
+                            const auth = new web3.eth.Contract(minABI, authAddr);
+                            battleAddress = await auth.methods.getAddressByName('battle').call();
+                            console.log('Direct authorizer - battle address:', battleAddress);
+                        } catch (e) { console.warn('Failed to get battle address via direct authorizer:', e.message); }
+                    }
+                    if (battleAddress && battleAddress !== '0x0000000000000000000000000000000000000000') {
                         battleContract = new web3.eth.Contract(config.ABIS.battleABI, battleAddress);
                         console.log('battleContract initialized:', battleAddress);
                     }
@@ -1432,7 +1441,16 @@
                             }
                         } catch (e) { console.warn('Failed to get battleSkillData address via getContract:', e.message); }
                     }
-                    if (battleSkillDataAddress) {
+                    if (!battleSkillDataAddress) {
+                        try {
+                            const authAddr = '0x11Feea2F23362478a8850c9f0daA746D057D2928';
+                            const minABI = [{"inputs":[{"internalType":"string","name":"name","type":"string"}],"name":"getAddressByName","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}];
+                            const auth = new web3.eth.Contract(minABI, authAddr);
+                            battleSkillDataAddress = await auth.methods.getAddressByName('battleSkillData').call();
+                            console.log('Direct authorizer - battleSkillData address:', battleSkillDataAddress);
+                        } catch (e) { console.warn('Failed to get battleSkillData address via direct authorizer:', e.message); }
+                    }
+                    if (battleSkillDataAddress && battleSkillDataAddress !== '0x0000000000000000000000000000000000000000') {
                         battleSkillDataContract = new web3.eth.Contract(config.ABIS.battleSkillDataABI, battleSkillDataAddress);
                         console.log('battleSkillDataContract initialized:', battleSkillDataAddress);
                     }

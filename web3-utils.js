@@ -299,6 +299,7 @@ window.ZODIAC_WEB3 = (function() {
         if (typeof window.ethereum !== 'undefined') {
             try {
                 web3 = new window.Web3(window.ethereum);
+                window.web3 = web3;
                 console.log('[ZODIAC_WEB3] Created web3 instance from MetaMask');
                 return web3;
             } catch (e) {
@@ -309,6 +310,7 @@ window.ZODIAC_WEB3 = (function() {
         if (!requireAccount) {
             try {
                 web3 = new window.Web3(new window.Web3.providers.HttpProvider(RPC_URL));
+                window.web3 = web3;
                 console.log('[ZODIAC_WEB3] Created web3 instance from public RPC for read-only access');
                 return web3;
             } catch (e) {
