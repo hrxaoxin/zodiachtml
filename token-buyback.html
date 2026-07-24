@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>代币回购销毁 - 十二生肖</title>
+    <link rel="icon" href="images/fu-cards/shuishu_1.jpg" type="image/jpg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.7.3/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="config.js"></script>
+    <script src="components.js"></script>
+    <script src="utils.js"></script>
+    <script src="web3-utils.js"></script>
+    <script src="ui-utils.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #f5f5f5;
+            background-image: linear-gradient(135deg, #f5f5f5 0%, #e8f5e8 100%);
+            overflow-x: hidden;
+        }
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+        .navbar { background-color: #ffffff; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); }
+        .btn-primary { background-color: #ff6b6b; color: white; border-radius: 8px; padding: 10px 20px; font-weight: 500; transition: all 0.3s ease; }
+        .btn-primary:hover { background-color: #ee5a6f; transform: translateY(-2px); }
+        .btn-secondary { background-color: white; color: #ff6b6b; border: 1px solid #ff6b6b; border-radius: 8px; padding: 10px 20px; font-weight: 500; transition: all 0.3s ease; }
+        .btn-secondary:hover { background-color: #f8f9fa; transform: translateY(-2px); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12); }
+        .table-row-hover:hover { background-color: #f9fafb; }
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+
+    <div id="mobileNavbarContainer"></div>
+    <div id="mobileMenuContainer"></div>
+    <div id="desktopSidebarContainer"></div>
+
+    <main class="px-4 pt-6 pb-24 md:pl-28 md:pr-4">
+        <div class="flex items-center mb-4">
+            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center mr-3">
+                <span class="text-white text-2xl font-bold">回</span>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">代币回购销毁</h1>
+                <p class="text-sm text-gray-500">三层回购策略：脉冲定投 + 价格锚定护盘 + 瀑布防御</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-xl p-6 shadow-md card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">脉冲阈值</p>
+                        <p class="text-2xl font-bold text-blue-600" id="buybackThreshold">-</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                        <i class="text-blue-500 text-xl">🎯</i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl p-6 shadow-md card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">累计待用BNB</p>
+                        <p class="text-2xl font-bold text-indigo-600" id="accumulatedBNB">-</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
+                        <i class="text-indigo-500 text-xl">📊</i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl p-6 shadow-md card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">护盘储备金</p>
+                        <p class="text-2xl font-bold text-amber-600" id="reserveBalance">-</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                        <i class="text-amber-500 text-xl">🛡️</i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl p-6 shadow-md card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">累计回购次数</p>
+                        <p class="text-2xl font-bold text-purple-600" id="buybackCount">-</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                        <i class="text-purple-500 text-xl">🔄</i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-xl p-6 shadow-md card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">锚定回购均价</p>
+                        <p class="text-2xl font-bold text-rose-600" id="lastBuybackAvgPrice">-</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center">
+                        <i class="text-rose-500 text-xl">📈</i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl p-6 shadow-md card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">当前代币价格</p>
+                        <p class="text-2xl font-bold text-emerald-600" id="currentTokenPrice">-</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                        <i class="text-emerald-500 text-xl">💵</i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl p-6 shadow-md card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">策略状态</p>
+                        <p class="text-2xl font-bold" id="strategyStatus">-</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-full" id="strategyStatusBg">
+                        <i class="text-xl" id="strategyStatusIcon">-</i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 shadow-md mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-400 to-pink-500 flex items-center justify-center mr-4">
+                        <i class="text-white text-xl">🔥</i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800">回购销毁记录</h3>
+                        <p class="text-sm text-gray-500">最新记录显示在顶部</p>
+                    </div>
+                </div>
+                <button class="btn-secondary text-sm" onclick="refreshBuybackRecords()">
+                    <i class="fas fa-sync-alt mr-1"></i> 刷新
+                </button>
+            </div>
+
+            <div id="buybackRecordsContainer" class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-300">
+                            <th class="text-left py-3 px-4 font-semibold text-gray-600">序号</th>
+                            <th class="text-left py-3 px-4 font-semibold text-gray-600">触发层级</th>
+                            <th class="text-left py-3 px-4 font-semibold text-gray-600">回购BNB</th>
+                            <th class="text-left py-3 px-4 font-semibold text-gray-600">销毁代币</th>
+                            <th class="text-left py-3 px-4 font-semibold text-gray-600">成交均价</th>
+                            <th class="text-left py-3 px-4 font-semibold text-gray-600">回购时间</th>
+                        </tr>
+                    </thead>
+                    <tbody id="buybackRecordsTable">
+                        <tr>
+                            <td colspan="6" class="text-center py-8">
+                                <i class="fa fa-spinner fa-spin text-3xl text-blue-500 mb-3"></i>
+                                <p class="text-gray-600">加载回购记录中...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="noRecords" class="hidden text-center py-8">
+                <i class="fa fa-inbox text-4xl text-gray-400 mb-4"></i>
+                <p class="text-gray-500">暂无回购记录</p>
+                <p class="text-sm text-gray-400 mt-2">当累计BNB达到脉冲阈值时，系统将自动触发脉冲式定投回购</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 shadow-md">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">三层回购策略说明</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-lg border-2 border-blue-200">
+                    <div class="flex items-center mb-3">
+                        <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold mr-3">1</div>
+                        <h4 class="font-bold text-blue-800">脉冲式定投</h4>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-2">累计收到 200 USDT 触发</p>
+                    <ul class="text-sm text-gray-600 list-disc list-inside">
+                        <li>40% 市价回购销毁</li>
+                        <li>60% 转入护盘储备金</li>
+                        <li>每周 2-3 次可见脉冲买盘</li>
+                    </ul>
+                </div>
+
+                <div class="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-lg border-2 border-amber-200">
+                    <div class="flex items-center mb-3">
+                        <div class="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-white font-bold mr-3">2</div>
+                        <h4 class="font-bold text-amber-800">动态价格锚定</h4>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-2">跌破上次回购均价 15%</p>
+                    <ul class="text-sm text-gray-600 list-disc list-inside">
+                        <li>从储备金拿出 20% 抄底</li>
+                        <li>高频次小批量介入</li>
+                        <li>托住下跌斜率</li>
+                    </ul>
+                </div>
+
+                <div class="bg-gradient-to-br from-red-50 to-rose-50 p-4 rounded-lg border-2 border-red-200">
+                    <div class="flex items-center mb-3">
+                        <div class="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white font-bold mr-3">3</div>
+                        <h4 class="font-bold text-red-800">极端瀑布防御</h4>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-2">跌破均价 30% / 50%</p>
+                    <ul class="text-sm text-gray-600 list-disc list-inside">
+                        <li>跌 30% → 储备金拿 50% 强护盘</li>
+                        <li>跌 50% → 暂停回购，等待企稳</li>
+                        <li>回升到均价 70% → 恢复定投</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <h4 class="font-bold text-blue-800 mb-2">📊 奖励分配比例</h4>
+                    <p class="text-sm text-gray-600">25% → 分红池</p>
+                    <p class="text-sm text-gray-600">15% → NFT质押池</p>
+                    <p class="text-sm text-gray-600">15% → 代币质押池</p>
+                    <p class="text-sm text-gray-600">15% → 竞技场奖励池</p>
+                    <p class="text-sm text-gray-600">20% → <strong class="text-red-600">代币回购池</strong></p>
+                    <p class="text-sm text-gray-600">10% → 运营钱包</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <h4 class="font-bold text-green-800 mb-2">💰 资金流转</h4>
+                    <p class="text-sm text-gray-600">1. 交易税进入回购合约</p>
+                    <p class="text-sm text-gray-600">2. 累计达到阈值 → 脉冲拆分</p>
+                    <p class="text-sm text-gray-600">3. 40% → 回购销毁</p>
+                    <p class="text-sm text-gray-600">4. 60% → 护盘储备金</p>
+                    <p class="text-sm text-gray-600">5. 价格触发 → 储备金护盘</p>
+                    <p class="text-sm text-gray-600">6. 代币打入黑洞地址销毁</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="text-center py-8 text-black/70 md:ml-28 md:mr-4">
+        <p>© 2026 十二生肖NFT系列 · Twelve Zodiacs Collection</p>
+        <p class="mt-2">祝你心想事成，生肖大旺 🐾✨</p>
+    </footer>
+
+    <script>
+        particlesJS('particles-js', {
+            particles: {
+                number: { value: 60, density: { enable: true, value_area: 800 } },
+                color: { value: '#ff6b6b' },
+                shape: { type: 'circle', stroke: { width: 0, color: '#000000' } },
+                opacity: { value: 0.5, random: true, anim: { enable: true, speed: 1, opacity_min: 0.1, sync: false } },
+                size: { value: 5, random: true, anim: { enable: true, speed: 2, size_min: 0.1, sync: false } },
+                line_linked: { enable: true, distance: 150, color: '#ff6b6b', opacity: 0.3, width: 1 },
+                move: { enable: true, speed: 1, direction: 'none', random: false, straight: false, out_mode: 'out', bounce: false }
+            },
+            interactivity: {
+                detect_on: 'canvas',
+                events: { onhover: { enable: true, mode: 'grab' }, onclick: { enable: true, mode: 'push' }, resize: true },
+                modes: { grab: { distance: 140, line_linked: { opacity: 1 } }, push: { particles_nb: 4 } }
+            },
+            retina_detect: true
+        });
+
+        let web3;
+        let account;
+        let tokenBuybackContract;
+        let tokenContract;
+        let priceOracleContract;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            ZODIAC_COMPONENTS.injectNavigation('tokenBuyback');
+            initWalletUI();
+            await initWeb3();
+        });
+
+        function initWalletUI() {
+            ZODIAC_UI.initWalletButton('connectWalletBtn', null, null);
+            ZODIAC_UI.on('walletConnected', async () => {
+                await initContracts();
+                await loadBuybackInfo();
+                await loadBuybackRecords();
+            });
+            ZODIAC_WEB3.on('connect', async () => {
+                await initContracts();
+                await loadBuybackInfo();
+                await loadBuybackRecords();
+            });
+        }
+
+        async function initWeb3() {
+            const connected = await window.ZODIAC_WEB3.initWeb3();
+            if (connected) {
+                account = window.ZODIAC_WEB3.getAccount();
+                web3 = window.ZODIAC_WEB3.getWeb3();
+                await initContracts();
+                await loadBuybackInfo();
+                await loadBuybackRecords();
+            }
+        }
+
+        async function initContracts() {
+            try {
+                tokenBuybackContract = await window.ZODIAC_WEB3.getContract('tokenBuyback');
+                tokenContract = await window.ZODIAC_WEB3.getContract('tokenContract');
+                priceOracleContract = await window.ZODIAC_WEB3.getContract('priceOracle');
+                console.log('[TOKEN_BUYBACK] Contracts initialized:', {
+                    tokenBuybackContract: !!tokenBuybackContract,
+                    tokenContract: !!tokenContract,
+                    priceOracleContract: !!priceOracleContract
+                });
+            } catch (error) {
+                console.warn('合约初始化失败:', error.message);
+            }
+        }
+
+        async function loadBuybackInfo() {
+            if (!tokenBuybackContract) return;
+
+            try {
+                const thresholdMode = await tokenBuybackContract.methods.thresholdMode().call();
+                let thresholdDisplay = '';
+                if (thresholdMode == 0) {
+                    const threshold = await tokenBuybackContract.methods.buybackThreshold().call();
+                    thresholdDisplay = parseFloat(web3.utils.fromWei(threshold, 'ether')).toFixed(4) + ' BNB';
+                } else {
+                    const threshold = await tokenBuybackContract.methods.buybackThresholdUSD().call();
+                    thresholdDisplay = (parseFloat(threshold) / 1e18).toFixed(2) + ' USDT';
+                }
+                document.getElementById('buybackThreshold').textContent = thresholdDisplay;
+
+                const accumulatedBNB = await tokenBuybackContract.methods.accumulatedBNB().call();
+                document.getElementById('accumulatedBNB').textContent = parseFloat(web3.utils.fromWei(accumulatedBNB, 'ether')).toFixed(4) + ' BNB';
+
+                const reserveBalance = await tokenBuybackContract.methods.reserveBalance().call();
+                document.getElementById('reserveBalance').textContent = parseFloat(web3.utils.fromWei(reserveBalance, 'ether')).toFixed(4) + ' BNB';
+
+                const count = await tokenBuybackContract.methods.buybackCount().call();
+                document.getElementById('buybackCount').textContent = count;
+
+                const avgPrice = await tokenBuybackContract.methods.lastBuybackAvgPrice().call();
+                if (avgPrice > 0) {
+                    document.getElementById('lastBuybackAvgPrice').textContent = '$' + (parseFloat(avgPrice) / 1e18).toFixed(4);
+                } else {
+                    document.getElementById('lastBuybackAvgPrice').textContent = '未执行回购';
+                }
+
+                await loadStrategyStatus();
+            } catch (error) {
+                console.error('加载回购信息失败:', error);
+            }
+        }
+
+        async function loadStrategyStatus() {
+            if (!tokenBuybackContract) return;
+
+            try {
+                const result = await tokenBuybackContract.methods.getStrategyStatus().call();
+                if (!result || typeof result !== 'object' || !Array.isArray(result)) {
+                    console.warn('getStrategyStatus returned invalid result:', result);
+                    return;
+                }
+                const [accBNB, reserve, avgPrice, tokenPrice, bnbPrice, isCrashPaused, mode] = result;
+
+                if (tokenPrice > 0) {
+                    document.getElementById('currentTokenPrice').textContent = '$' + (parseFloat(tokenPrice) / 1e18).toFixed(4);
+                } else if (priceOracleContract) {
+                    try {
+                        const oraclePrice = await priceOracleContract.methods.getTokenPriceUSD().call();
+                        if (oraclePrice > 0) {
+                            document.getElementById('currentTokenPrice').textContent = '$' + (parseFloat(oraclePrice) / 1e18).toFixed(4);
+                        } else {
+                            document.getElementById('currentTokenPrice').textContent = '-';
+                        }
+                    } catch (e) {
+                        document.getElementById('currentTokenPrice').textContent = '-';
+                    }
+                } else {
+                    document.getElementById('currentTokenPrice').textContent = '-';
+                }
+
+                const statusEl = document.getElementById('strategyStatus');
+                const statusBgEl = document.getElementById('strategyStatusBg');
+                const statusIconEl = document.getElementById('strategyStatusIcon');
+
+                if (isCrashPaused) {
+                    statusEl.textContent = '🔥 腰斩暂停';
+                    statusEl.className = 'text-2xl font-bold text-red-600';
+                    statusBgEl.className = 'w-12 h-12 rounded-full bg-red-100 flex items-center justify-center';
+                    statusIconEl.className = 'text-xl text-red-500';
+                    statusIconEl.textContent = '🔥';
+                } else if (avgPrice > 0 && tokenPrice > 0) {
+                    const dropPercent = ((avgPrice - tokenPrice) / avgPrice * 100).toFixed(1);
+                    if (dropPercent > 30) {
+                        statusEl.textContent = '⚠️ 严重下跌';
+                        statusEl.className = 'text-2xl font-bold text-orange-600';
+                        statusBgEl.className = 'w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center';
+                        statusIconEl.className = 'text-xl text-orange-500';
+                        statusIconEl.textContent = '⚠️';
+                    } else if (dropPercent > 15) {
+                        statusEl.textContent = '🔶 轻微下跌';
+                        statusEl.className = 'text-2xl font-bold text-amber-600';
+                        statusBgEl.className = 'w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center';
+                        statusIconEl.className = 'text-xl text-amber-500';
+                        statusIconEl.textContent = '🔶';
+                    } else {
+                        statusEl.textContent = '✅ 运行正常';
+                        statusEl.className = 'text-2xl font-bold text-green-600';
+                        statusBgEl.className = 'w-12 h-12 rounded-full bg-green-100 flex items-center justify-center';
+                        statusIconEl.className = 'text-xl text-green-500';
+                        statusIconEl.textContent = '✅';
+                    }
+                } else {
+                    statusEl.textContent = '⏳ 等待数据';
+                    statusEl.className = 'text-2xl font-bold text-gray-600';
+                    statusBgEl.className = 'w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center';
+                    statusIconEl.className = 'text-xl text-gray-500';
+                    statusIconEl.textContent = '⏳';
+                }
+            } catch (error) {
+                console.error('加载策略状态失败:', error);
+            }
+        }
+
+        async function loadBuybackRecords() {
+            if (!tokenBuybackContract) return;
+
+            try {
+                const count = parseInt(await tokenBuybackContract.methods.buybackCount().call(), 10);
+                const maxRecords = parseInt(await tokenBuybackContract.methods.MAX_BUYBACK_RECORDS().call(), 10);
+
+                if (count === 0) {
+                    document.getElementById('buybackRecordsTable').innerHTML = '';
+                    document.getElementById('noRecords').classList.remove('hidden');
+                    return;
+                }
+
+                document.getElementById('noRecords').classList.add('hidden');
+
+                const records = [];
+                const startIndex = Math.max(0, count - maxRecords);
+
+                for (let i = count; i > startIndex; i--) {
+                    try {
+                        const record = await tokenBuybackContract.methods.buybackHistory(i - 1).call();
+                        records.push({
+                            id: record.id,
+                            tier: parseInt(record.tier, 10),
+                            bnbAmount: record.bnbAmount,
+                            tokenAmount: record.tokenAmount,
+                            avgPrice: record.avgPrice,
+                            timestamp: record.timestamp
+                        });
+                    } catch (e) {
+                        console.warn(`获取记录 ${i} 失败:`, e.message);
+                    }
+                }
+
+                renderBuybackRecords(records);
+            } catch (error) {
+                console.error('加载回购记录失败:', error);
+                document.getElementById('buybackRecordsTable').innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-8">
+                            <i class="fa fa-exclamation-circle text-3xl text-red-500 mb-3"></i>
+                            <p class="text-gray-600">加载失败，请刷新重试</p>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function renderBuybackRecords(records) {
+            const tableBody = document.getElementById('buybackRecordsTable');
+            
+            if (records.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-8">
+                            <i class="fa fa-inbox text-4xl text-gray-400 mb-4"></i>
+                            <p class="text-gray-500">暂无回购记录</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            const tierLabels = {
+                1: { text: '脉冲定投', class: 'bg-blue-100 text-blue-700' },
+                2: { text: '轻度护盘', class: 'bg-amber-100 text-amber-700' },
+                3: { text: '严重护盘', class: 'bg-red-100 text-red-700' }
+            };
+
+            tableBody.innerHTML = records.map((record, index) => {
+                const bnbAmount = parseFloat(web3.utils.fromWei(record.bnbAmount, 'ether')).toFixed(6);
+                let tokenAmount = '0';
+                if (tokenContract) {
+                    const decimals = 18;
+                    tokenAmount = (parseFloat(record.tokenAmount) / Math.pow(10, decimals)).toFixed(4);
+                } else {
+                    tokenAmount = parseFloat(web3.utils.fromWei(record.tokenAmount, 'ether')).toFixed(4);
+                }
+
+                const avgPrice = record.avgPrice > 0 ? '$' + (parseFloat(record.avgPrice) / 1e18).toFixed(4) : '-';
+
+                const tierInfo = tierLabels[record.tier] || { text: '未知', class: 'bg-gray-100 text-gray-700' };
+                
+                const date = new Date(parseInt(record.timestamp, 10) * 1000);
+                const timeStr = date.toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+                return `
+                    <tr class="border-b border-gray-200 table-row-hover">
+                        <td class="py-4 px-4 font-medium text-gray-800">#${record.id}</td>
+                        <td class="py-4 px-4">
+                            <span class="px-3 py-1 rounded-full text-sm font-medium ${tierInfo.class}">${tierInfo.text}</span>
+                        </td>
+                        <td class="py-4 px-4">
+                            <span class="text-green-600 font-semibold">${bnbAmount}</span>
+                            <span class="text-gray-500 text-sm ml-1">BNB</span>
+                        </td>
+                        <td class="py-4 px-4">
+                            <span class="text-red-600 font-semibold">${tokenAmount}</span>
+                            <span class="text-gray-500 text-sm ml-1">代币</span>
+                        </td>
+                        <td class="py-4 px-4">
+                            <span class="text-rose-600 font-semibold">${avgPrice}</span>
+                        </td>
+                        <td class="py-4 px-4 text-gray-600 text-sm">${timeStr}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function refreshBuybackRecords() {
+            loadBuybackInfo();
+            loadBuybackRecords();
+        }
+    </script>
+</body>
+</html>

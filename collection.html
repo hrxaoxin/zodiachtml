@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>我的生肖 - 十二生肖NFT</title>
+    <link rel="icon" href="images/fu-cards/shuishu_1.jpg" type="image/jpg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.7.3/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="config.js"></script>
+    <script src="components.js"></script>
+    <script src="utils.js"></script>
+    <script src="web3-utils.js"></script>
+    <script src="ui-utils.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #f5f5f5;
+            background-image: linear-gradient(135deg, #f5f5f5 0%, #e8f5e8 100%);
+            overflow-x: hidden;
+        }
+        #particles-js { position: fixed; width: 100%; height: 100%; top: 0; left: 0; z-index: -1; }
+        .navbar { background-color: #ffffff; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); }
+        .zodiac-card {
+            position: relative;
+            background: white;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+        .zodiac-card:hover:not(.locked) { transform: translateY(-5px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
+        .zodiac-card.locked {
+            opacity: 0.4;
+            filter: grayscale(100%);
+            cursor: not-allowed;
+        }
+        .zodiac-card.locked:hover {
+            transform: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .zodiac-card.locked img {
+            filter: grayscale(100%);
+        }
+        .zodiac-card.locked::before {
+            content: '?';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 32px;
+            font-weight: bold;
+            color: #999;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .zodiac-card.has-item {
+            border: 2px solid #22c55e;
+        }
+        .zodiac-card img { width: 60px; height: 60px; object-fit: contain; margin: 0 auto 8px; border-radius: 8px; position: relative; z-index: 1; background-color: #f3f4f6; }
+        .zodiac-card img.lazy-image { background: linear-gradient(135deg, #f3f4f6 25%, #e5e7eb 25%, #e5e7eb 50%, #f3f4f6 50%, #f3f4f6 75%, #e5e7eb 75%, #e5e7eb); background-size: 20px 20px; animation: shimmer 1.5s linear infinite; }
+        @keyframes shimmer { 0% { background-position: 0 0; } 100% { background-position: 20px 20px; } }
+        .zodiac-card h4 { font-size: 12px; font-weight: 500; color: #333; }
+        .zodiac-card p { font-size: 10px; color: #666; }
+        .btn-primary { background-color: #3b82f6; color: white; border-radius: 8px; padding: 10px 20px; font-weight: 500; transition: all 0.3s ease; }
+        .btn-primary:hover { background-color: #2563eb; }
+        .btn-secondary { background-color: white; color: #3b82f6; border: 1px solid #3b82f6; border-radius: 8px; padding: 10px 20px; font-weight: 500; transition: all 0.3s ease; }
+        .btn-secondary:hover { background-color: #f8f9fa; }
+        .attribute-tab { padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; font-weight: 500; }
+        .attribute-tab.active { transform: scale(1.05); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
+        .tab-water { background-color: #e0f2fe; color: #0369a1; }
+        .tab-water.active { background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%); color: white; }
+        .tab-wind { background-color: #dcfce7; color: #15803d; }
+        .tab-wind.active { background: linear-gradient(135deg, #22c55e 0%, #15803d 100%); color: white; }
+        .tab-fire { background-color: #fee2e2; color: #b91c1c; }
+        .tab-fire.active { background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color: white; }
+        .tab-dark { background-color: #ede9fe; color: #6d28d9; }
+        .tab-dark.active { background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color: white; }
+        .tab-light { background-color: #fef3c7; color: #d97706; }
+        .tab-light.active { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; }
+        .tab-all { background-color: #e5e7eb; color: #374151; }
+        .tab-all.active { background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white; }
+        .empty-collection { text-align: center; padding: 60px 20px; }
+        .empty-collection .icon { font-size: 64px; margin-bottom: 16px; }
+        .mode-tab {
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+        .mode-tab.active {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        .collection-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background-color: #22c55e;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 10px;
+            z-index: 2;
+        }
+        .progress-bar {
+            height: 4px;
+            background-color: #e5e7eb;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+
+    <div id="mobileNavbarContainer"></div>
+    <div id="mobileMenuContainer"></div>
+    <div id="desktopSidebarContainer"></div>
+
+    <main class="px-4 pt-6 pb-24 md:pl-28 md:pr-4">
+        <div class="flex items-center mb-4">
+            <div class="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center mr-3">
+                <span class="text-white text-2xl font-bold">生</span>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800">我的生肖</h1>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 shadow-md mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <p class="text-sm text-gray-500">钱包地址</p>
+                    <p class="text-lg font-semibold text-gray-800" id="walletAddress">未连接钱包</p>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="btn-primary text-sm" id="connectWalletBtn"><i class="fas fa-plug mr-1"></i> 连接</button>
+                    <button class="btn-secondary text-sm" id="refreshBtn"><i class="fas fa-sync-alt mr-1"></i> 刷新</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-4 gap-4">
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-blue-600" id="totalCards">0</p>
+                    <p class="text-xs text-gray-500">拥有生肖</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-green-600" id="uniqueTypes">0</p>
+                    <p class="text-xs text-gray-500">不同种类</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-purple-600" id="totalDividends">0</p>
+                    <p class="text-xs text-gray-500">可领取分红(LP)</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-orange-600" id="collectionProgress">0%</p>
+                    <p class="text-xs text-gray-500">图鉴进度</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-200">
+                <div class="text-center">
+                    <p class="text-lg font-bold text-indigo-600" id="lpPoolBalance">0</p>
+                    <p class="text-xs text-gray-500">分红池LP余额</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-lg font-bold text-teal-600" id="lpFeesEarned">0</p>
+                    <p class="text-xs text-gray-500">LP手续费收益</p>
+                </div>
+            </div>
+            <div class="mt-4 flex justify-center">
+                <button class="btn-primary px-6 py-2" id="claimLPDividendBtn" disabled>
+                    <i class="fas fa-gift mr-2"></i>领取LP分红
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
+            <h3 class="text-lg font-bold text-blue-800 mb-2">生肖收集进度</h3>
+            <div class="grid grid-cols-5 gap-2" id="progressGrid">
+                <div class="text-center">
+                    <p class="text-sm font-semibold text-blue-600">水</p>
+                    <p class="text-xs text-gray-500"><span id="waterProgress">0</span>/24</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-sm font-semibold text-green-600">风</p>
+                    <p class="text-xs text-gray-500"><span id="windProgress">0</span>/24</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-sm font-semibold text-red-600">火</p>
+                    <p class="text-xs text-gray-500"><span id="fireProgress">0</span>/24</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-sm font-semibold text-purple-600">暗</p>
+                    <p class="text-xs text-gray-500"><span id="darkProgress">0</span>/24</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-sm font-semibold text-yellow-600">光</p>
+                    <p class="text-xs text-gray-500"><span id="lightProgress">0</span>/24</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <h3 class="text-lg font-bold text-gray-800 mb-3">显示模式</h3>
+            <div class="flex flex-wrap gap-2">
+                <button id="mode-collection" class="mode-tab active" onclick="switchViewMode('collection')">📚 图鉴模式</button>
+                <button id="mode-my" class="mode-tab" onclick="switchViewMode('my')">🎒 我的收藏</button>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-3">筛选属性</h3>
+            <div class="flex flex-wrap gap-2">
+                <button class="attribute-tab tab-water" onclick="switchAttribute('water')">💧 水</button>
+                <button class="attribute-tab tab-wind" onclick="switchAttribute('wind')">🌬️ 风</button>
+                <button class="attribute-tab tab-fire" onclick="switchAttribute('fire')">🔥 火</button>
+                <button class="attribute-tab tab-dark" onclick="switchAttribute('dark')">🌙 暗</button>
+                <button class="attribute-tab tab-light" onclick="switchAttribute('light')">☀️ 光</button>
+                <button class="attribute-tab tab-all active" style="background-color: #e5e7eb; color: #374151;" onclick="switchAttribute('all')">全部</button>
+            </div>
+        </div>
+
+        <div id="zodiacGrid" class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
+            <div class="col-span-full empty-collection" id="emptyState">
+                <div class="icon">🃏</div>
+                <p class="text-gray-600 mb-4">您还没有铸造任何生肖NFT</p>
+                <button class="btn-primary" onclick="window.location.href='mint.html'">去铸造</button>
+            </div>
+        </div>
+
+            </main>
+
+    <div id="cardModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl w-full max-w-md mx-4 max-h-[85vh] flex flex-col">
+            <div class="text-center p-4 border-b border-gray-100">
+                <img id="modalCardImage" src="" alt="生肖" class="w-24 h-24 mx-auto mb-3 rounded-lg shadow-md">
+                <h3 id="modalCardName" class="text-xl font-bold text-gray-800 mb-1">生肖名称</h3>
+                <div class="flex items-center justify-center gap-2 mb-1">
+                    <span id="modalCardRarity" class="text-xs font-bold px-2 py-1 rounded bg-gray-100 text-gray-600">普通</span>
+                </div>
+                <p id="modalCardDesc" class="text-gray-600 text-sm mb-1">描述</p>
+                <p class="text-sm text-gray-500"><span id="modalCardId"></span></p>
+            </div>
+            
+            <div id="modalCardStats" class="flex-1 overflow-y-auto p-4">
+            </div>
+            
+            <div class="flex space-x-4 p-4 border-t border-gray-100">
+                <button class="btn-secondary flex-1" id="closeModal">关闭</button>
+                <button class="btn-primary flex-1" id="listForSale">挂单出售</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let web3;
+        let account;
+        let nftContract;
+        let rewardManagerContract;
+        let dividendManagerContract;
+        let userTokens = [];
+        let allUserTokens = [];
+        let ownedTypes = new Set();
+        let currentFilter = 'all';
+        let currentViewMode = 'collection';
+
+        window.switchViewMode = function(mode) {
+            currentViewMode = mode;
+            document.querySelectorAll('.mode-tab').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(`mode-${mode}`).classList.add('active');
+            window.renderTokens();
+        };
+
+        window.switchAttribute = function(attr) {
+            currentFilter = attr;
+            document.querySelectorAll('.attribute-tab').forEach(tab => {
+                tab.classList.remove('active');
+                tab.removeAttribute('style');
+            });
+            const activeTab = document.querySelector(`.tab-${attr}`);
+            if (activeTab) {
+                activeTab.classList.add('active');
+            }
+            window.renderTokens();
+        };
+
+        window.renderTokens = function() {
+            const grid = document.getElementById('zodiacGrid');
+
+            if (!grid) {
+                console.warn('[COLLECTION] zodiacGrid not found');
+                return;
+            }
+
+            grid.innerHTML = '';
+            
+            if (currentViewMode === 'collection') {
+                window.renderCollectionView(grid);
+            } else {
+                window.renderMyCollectionView(grid);
+            }
+        };
+
+        window.renderCollectionView = function(grid) {
+            const allTypes = getAllNftTypes();
+            let filteredTypes = allTypes;
+            
+            if (currentFilter !== 'all') {
+                const attrs = ['water', 'wind', 'fire', 'dark', 'light'];
+                const attrIndex = attrs.indexOf(currentFilter);
+                filteredTypes = allTypes.filter(t => t.elementIndex === attrIndex);
+            }
+            
+            if (filteredTypes.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full empty-collection">
+                        <div class="icon">🃏</div>
+                        <p class="text-gray-600 mb-4">该属性下没有生肖</p>
+                        <button class="btn-primary" onclick="switchAttribute('all')">查看全部</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            
+            for (const nftType of filteredTypes) {
+                const typeId = nftType.typeId;
+                const isOwned = ownedTypes.has(typeId);
+                const userToken = userTokens.find(t => t.typeId === typeId);
+                const firstToken = allUserTokens.find(t => t.typeId === typeId);
+                const level = userToken ? userToken.level : 0;
+                const growth = userToken ? userToken.growth : 0;
+                const nftInfo = window.ZODIAC_UTILS.getNFTInfo(typeId, firstToken ? firstToken.tokenId : '', growth);
+                const count = userToken ? userToken.count : 0;
+                const genderText = nftInfo.gender === 1 ? '<span class="text-blue-500 text-sm">公</span>' : '<span class="text-pink-500 text-sm">母</span>';
+                
+                html += `
+                    <div class="zodiac-card nft-card-hover ${isOwned ? 'has-item cursor-pointer' : 'locked'}" 
+                         data-nft-typeid="${typeId}" data-nft-tokenid="${firstToken ? firstToken.tokenId : ''}" data-nft-level="${level}" data-nft-growth="${growth}">
+                        ${count > 1 ? '<span class="collection-badge">x' + count + '</span>' : ''}
+                        <img class="lazy-image" data-src="${nftInfo.imagePath}" alt="${nftInfo.name}" src="" onerror="this.src='images/fu-cards/shuishu_1.jpg'">
+                        <h4>${nftInfo.name} ${genderText}</h4>
+                        ${isOwned ? '<p>等级: ' + getStars(level) + '</p><p class="text-xs text-green-600">成长: ' + growth + '</p>' : '<p class="text-gray-400">未拥有</p>'}
+                    </div>
+                `;
+            }
+            
+            grid.innerHTML = html;
+            lazyLoadImages();
+        };
+
+        window.renderMyCollectionView = function(grid) {
+            let filteredTokens = allUserTokens;
+            
+            if (currentFilter !== 'all') {
+                const attrs = ['water', 'wind', 'fire', 'dark', 'light'];
+                const attrIndex = attrs.indexOf(currentFilter);
+                filteredTokens = allUserTokens.filter(t => Math.floor(t.typeId / 24) === attrIndex);
+            }
+
+            if (filteredTokens.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full empty-collection">
+                        <div class="icon">🃏</div>
+                        <p class="text-gray-600 mb-4">${currentFilter === 'all' ? '您还没有铸造任何生肖NFT' : '该属性下没有收藏的生肖'}</p>
+                        ${currentFilter === 'all' ? '<button class="btn-primary" onclick="window.location.href=\'mint.html\'">去铸造</button>' : '<button class="btn-primary" onclick="switchAttribute(\'all\')">查看全部</button>'}
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+
+            for (const token of filteredTokens) {
+                const typeId = token.typeId;
+                const level = token.level || 1;
+                const growth = token.growth || 0;
+                const isRare = token.isRare;
+                const nftInfo = window.ZODIAC_UTILS.getNFTInfo(typeId, token.tokenId, growth);
+                const genderText = nftInfo.gender === 1 ? '<span class="text-blue-500 text-sm">公</span>' : '<span class="text-pink-500 text-sm">母</span>';
+
+                html += `
+                    <div class="zodiac-card nft-card-hover cursor-pointer"
+                         data-nft-typeid="${typeId}" data-nft-tokenid="${token.tokenId}" data-nft-level="${level}" data-nft-growth="${growth}">
+                        ${isRare ? '<span class="collection-badge" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);">稀有</span>' : ''}
+                        <img class="lazy-image" data-src="${nftInfo.imagePath}" alt="${nftInfo.name}" src="" onerror="this.src='images/fu-cards/shuishu_1.jpg'">
+                        <h4>${nftInfo.name} ${genderText}</h4>
+                        <p>等级: ${getStars(level)}</p>
+                        <p class="text-xs text-green-600">成长: ${growth}</p>
+                        <p class="text-xs text-gray-500">ID: ${token.tokenId}</p>
+                    </div>
+                `;
+            }
+
+            grid.innerHTML = html;
+            lazyLoadImages();
+        };
+
+        // 安全获取 web3 实例（支持事件回调中的延迟调用）
+        function safeGetWeb3() {
+            if (web3) return web3;
+            return ZODIAC_WEB3.getWeb3();
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            particlesJS('particles-js', {
+                particles: {
+                    number: { value: 80, density: { enable: true, value_area: 800 } },
+                    color: { value: '#3b82f6' },
+                    shape: { type: 'circle', stroke: { width: 0, color: '#000000' } },
+                    opacity: { value: 0.5, random: true, anim: { enable: true, speed: 1, opacity_min: 0.1, sync: false } },
+                    size: { value: 5, random: true, anim: { enable: true, speed: 2, size_min: 0.1, sync: false } },
+                    line_linked: { enable: true, distance: 150, color: '#3b82f6', opacity: 0.4, width: 1 },
+                    move: { enable: true, speed: 1, direction: 'none', random: false, straight: false, out_mode: 'out', bounce: false }
+                },
+                interactivity: {
+                    detect_on: 'canvas',
+                    events: { onhover: { enable: true, mode: 'grab' }, onclick: { enable: true, mode: 'push' }, resize: true },
+                    modes: { grab: { distance: 140, line_linked: { opacity: 1 } }, push: { particles_nb: 4 } }
+                },
+                retina_detect: true
+            });
+
+
+            initWalletUI();
+            ZODIAC_COMPONENTS.injectNavigation('collection');
+            await initWeb3();
+        });
+
+        function initWalletUI() {
+            ZODIAC_UI.initWalletButton('connectWalletBtn', 'walletAddress', null);
+            ZODIAC_UI.initWalletButton('connectWalletBtnDesktop', 'walletAddressDesktop', null);
+            window.ZODIAC_WEB3.on('connect', async () => {
+                await initContracts();
+                await loadUserTokens();
+                await updateDividends();
+                await loadProgress();
+            });
+        }
+
+        function handleConnectWallet() {
+            ZODIAC_UI.emitEvent('walletConnectRequested');
+        }
+
+        async function initWeb3() {
+            const connected = await window.ZODIAC_WEB3.initWeb3();
+            if (connected) {
+                account = window.ZODIAC_WEB3.getAccount();
+                web3 = window.ZODIAC_WEB3.getWeb3();
+                await initContracts();
+                await loadUserTokens();
+                await updateDividends();
+                await loadProgress();
+            }
+        }
+
+        async function initContracts() {
+            try {
+                nftContract = await window.ZODIAC_WEB3.getContract('nftMint');
+                rewardManagerContract = await window.ZODIAC_WEB3.getContract('rewardManager');
+                dividendManagerContract = await window.ZODIAC_WEB3.getContract('dividendManager');
+                setupEventListeners();
+            } catch (error) {
+                console.warn('合约初始化失败:', error.message);
+            }
+        }
+
+        function setupEventListeners() {
+            if (!nftContract) return;
+
+            nftContract.events.Transfer({
+                filter: { to: account },
+                fromBlock: 'latest'
+            }, async (error, event) => {
+                if (!error && event) {
+                    console.log('NFT received:', event.returnValues);
+                    await loadUserTokens();
+                    await loadProgress();
+                    ZODIAC_UI.showToast('已获得新的生肖NFT！', 'success');
+                }
+            });
+
+            nftContract.events.Transfer({
+                filter: { from: account },
+                fromBlock: 'latest'
+            }, async (error, event) => {
+                if (!error && event) {
+                    console.log('NFT transferred:', event.returnValues);
+                    await loadUserTokens();
+                    await loadProgress();
+                    ZODIAC_UI.showToast('NFT已转出', 'info');
+                }
+            });
+        }
+
+        async function loadSingleTokenInfo(tokenId) {
+            try {
+                let typeId = 0, level = 1, growth = 0, isRare = false;
+
+                try {
+                    const nftData = await nftContract.methods.getNFTData(tokenId).call();
+                    typeId = parseInt(nftData.tokenType_ || nftData[0] || 0, 10);
+                    level = parseInt(nftData.level || nftData[1] || 1, 10);
+                } catch (e) {
+                    console.warn(`获取NFT ${tokenId} 基础数据失败，尝试单独获取:`, e.message);
+                    try {
+                        typeId = parseInt(await nftContract.methods.tokenType(tokenId).call(), 10);
+                    } catch (e2) { console.warn(`获取NFT ${tokenId} type失败:`, e2.message); }
+                    try {
+                        const nftDataContract = await window.ZODIAC_WEB3.getContract('nftData', false);
+                        if (nftDataContract) {
+                            level = parseInt(await nftDataContract.methods.tokenLevel(tokenId).call(), 10);
+                        }
+                    } catch (e2) { console.warn(`获取NFT ${tokenId} level失败:`, e2.message); }
+                }
+
+                try {
+                    growth = parseInt(await nftContract.methods.tokenGrowth(tokenId).call(), 10);
+                } catch (e) {
+                    console.warn(`获取NFT ${tokenId} growth失败:`, e.message);
+                }
+
+                try {
+                    isRare = await nftContract.methods.isRare(tokenId).call();
+                } catch (e) {
+                    console.warn(`获取NFT ${tokenId} isRare失败:`, e.message);
+                    isRare = typeId >= 72;
+                }
+
+                if (typeId === 0) {
+                    console.warn(`NFT ${tokenId} typeId为0，可能无效`);
+                    return null;
+                }
+
+                return {
+                    tokenId: tokenId,
+                    typeId: typeId,
+                    level: level,
+                    growth: growth,
+                    isRare: isRare
+                };
+            } catch (e) {
+                console.warn(`获取NFT ${tokenId} 详情完全失败:`, e);
+                return null;
+            }
+        }
+
+        async function loadUserTokens() {
+            userTokens = [];
+            allUserTokens = [];
+            ownedTypes.clear();
+            
+            try {
+                if (!account || !nftContract) {
+                    renderTokens();
+                    return;
+                }
+
+                const tokenIds = await nftContract.methods.getTokenIdsByOwner(account).call();
+                
+                const tokenInfoPromises = tokenIds.map(tokenId => {
+                    return loadSingleTokenInfo(tokenId);
+                });
+                
+                const tokenInfos = (await Promise.all(tokenInfoPromises)).filter(t => t !== null);
+                
+                allUserTokens = tokenInfos;
+                
+                const typeMap = {};
+                for (const info of tokenInfos) {
+                    ownedTypes.add(info.typeId);
+                    if (!typeMap[info.typeId]) {
+                        typeMap[info.typeId] = { typeId: info.typeId, count: 0, level: info.level, growth: info.growth, isRare: info.isRare };
+                    }
+                    typeMap[info.typeId].count++;
+                    if (info.level > typeMap[info.typeId].level) {
+                        typeMap[info.typeId].level = info.level;
+                    }
+                    if (info.growth > typeMap[info.typeId].growth) {
+                        typeMap[info.typeId].growth = info.growth;
+                    }
+                }
+                
+                userTokens = Object.values(typeMap);
+            } catch (error) {
+                console.error('Error loading user tokens:', error);
+            }
+            updateStats();
+            renderTokens();
+        }
+
+        function updateStats() {
+            const totalCards = userTokens.reduce((sum, t) => sum + t.count, 0);
+            const uniqueTypes = userTokens.length;
+            const collectionProgress = Math.round((uniqueTypes / 120) * 100);
+            
+            document.getElementById('totalCards').textContent = totalCards;
+            document.getElementById('uniqueTypes').textContent = uniqueTypes;
+            document.getElementById('collectionProgress').textContent = collectionProgress + '%';
+        }
+
+        let cachedNftTypes = null;
+        function getAllNftTypes() {
+            if (cachedNftTypes) {
+                return cachedNftTypes;
+            }
+            const allTypes = [];
+            for (let elementIndex = 0; elementIndex < 5; elementIndex++) {
+                for (let zodiacIndex = 0; zodiacIndex < 12; zodiacIndex++) {
+                    for (let gender = 0; gender < 2; gender++) {
+                        const typeId = elementIndex * 24 + zodiacIndex * 2 + gender;
+                        allTypes.push({
+                            typeId: typeId,
+                            elementIndex: elementIndex,
+                            zodiacIndex: zodiacIndex,
+                            gender: gender
+                        });
+                    }
+                }
+            }
+            cachedNftTypes = allTypes;
+            return allTypes;
+        }
+
+        async function updateDividends() {
+            try {
+                if (!account || !dividendManagerContract) {
+                    document.getElementById('totalDividends').textContent = '0';
+                    document.getElementById('claimLPDividendBtn').disabled = true;
+                    document.getElementById('lpPoolBalance').textContent = '0';
+                    document.getElementById('lpFeesEarned').textContent = '0';
+                    return;
+                }
+                const dividendManagerLP = await window.ZODIAC_WEB3.getContract('dividendManagerLP');
+                if (!dividendManagerLP) {
+                    document.getElementById('totalDividends').textContent = '0';
+                    document.getElementById('claimLPDividendBtn').disabled = true;
+                    return;
+                }
+                const lpDividend = await dividendManagerLP.methods.getClaimableLPDividend(account).call();
+                const unclaimedLP = safeGetWeb3().utils.fromWei(lpDividend.toString(), 'ether');
+                document.getElementById('totalDividends').textContent = parseFloat(unclaimedLP).toFixed(4);
+                
+                // 更新LP池余额
+                try {
+                    const lpPoolBalance = await dividendManagerContract.methods.lpDividendPoolBalance().call();
+                    const poolBalanceFormatted = safeGetWeb3().utils.fromWei(lpPoolBalance.toString(), 'ether');
+                    document.getElementById('lpPoolBalance').textContent = parseFloat(poolBalanceFormatted).toFixed(4);
+                } catch (e) {
+                    document.getElementById('lpPoolBalance').textContent = '-';
+                }
+                
+                // LP手续费收益暂时显示为0（需要从LP合约获取）
+                document.getElementById('lpFeesEarned').textContent = '-';
+                
+                const claimBtn = document.getElementById('claimLPDividendBtn');
+                claimBtn.disabled = parseFloat(unclaimedLP) <= 0;
+            } catch (error) {
+                document.getElementById('totalDividends').textContent = '0';
+                document.getElementById('claimLPDividendBtn').disabled = true;
+                document.getElementById('lpPoolBalance').textContent = '0';
+                document.getElementById('lpFeesEarned').textContent = '0';
+            }
+        }
+
+        async function claimLPDividend() {
+            if (!account || !dividendManagerContract) {
+                ZODIAC_UI.showToast('请先连接钱包', 'error');
+                return;
+            }
+
+            const claimBtn = document.getElementById('claimLPDividendBtn');
+            claimBtn.disabled = true;
+            claimBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>领取中...';
+
+            try {
+                const dividendManagerLP = await window.ZODIAC_WEB3.getContract('dividendManagerLP');
+                if (!dividendManagerLP) {
+                    ZODIAC_UI.showToast('LP分红合约未初始化', 'error');
+                    claimBtn.disabled = false;
+                    claimBtn.innerHTML = '<i class="fas fa-gift mr-2"></i>领取LP分红';
+                    return;
+                }
+                const tx = await dividendManagerLP.methods.claimLPDividend().send({ from: account });
+                console.log('LP分红领取成功:', tx);
+                ZODIAC_UI.showToast('LP分红领取成功！已兑换为代币和WBNB', 'success');
+                await updateDividends();
+            } catch (error) {
+                console.error('领取失败:', error);
+                ZODIAC_UI.showToast('领取失败: ' + (error.message || '未知错误'), 'error');
+            } finally {
+                claimBtn.disabled = false;
+                claimBtn.innerHTML = '<i class="fas fa-gift mr-2"></i>领取LP分红';
+            }
+        }
+
+        async function loadProgress() {
+            const progress = { water: 0, wind: 0, fire: 0, dark: 0, light: 0 };
+            const seenTypes = new Set();
+            for (const token of userTokens) {
+                if (seenTypes.has(token.typeId)) continue;
+                seenTypes.add(token.typeId);
+                const typeId = token.typeId;
+                const attrIndex = Math.floor(typeId / 24);
+                const attrs = ['water', 'wind', 'fire', 'dark', 'light'];
+                if (attrIndex >= 0 && attrIndex < 5) {
+                    progress[attrs[attrIndex]] += 1;
+                }
+            }
+            document.getElementById('waterProgress').textContent = progress.water;
+            document.getElementById('windProgress').textContent = progress.wind;
+            document.getElementById('fireProgress').textContent = progress.fire;
+            document.getElementById('darkProgress').textContent = progress.dark;
+            document.getElementById('lightProgress').textContent = progress.light;
+        }
+
+        function getSkillTypeName(skillType) {
+            const types = [
+                '普攻强化',
+                '连击攻击',
+                '快速打击',
+                '范围爆发',
+                '治疗恢复',
+                '持续伤害',
+                '力量增幅',
+                '防御削弱',
+                '群体攻击',
+                '瘟疫突袭'
+            ];
+            return types[skillType] || '特殊技能';
+        }
+
+        function getTypeNameCN(attrType) {
+            const types = ['攻击型', '防御型', '生命型', '平衡型', '速度型'];
+            return types[attrType] || '未知类型';
+        }
+
+        function getZodiacBonusName(zodiac) {
+            const bonuses = [
+                '速度+攻击',
+                '防御+生命',
+                '攻击+速度',
+                '速度+生命',
+                '攻击+生命',
+                '速度+攻击',
+                '速度+攻击',
+                '生命+防御',
+                '攻击+速度',
+                '攻击+防御',
+                '防御+生命',
+                '生命+防御'
+            ];
+            return bonuses[zodiac] || '未知';
+        }
+
+        function getLocalSkill(typeId) {
+            const typedId = parseInt(typeId, 10);
+            if (isNaN(typedId) || typedId < 0 || typedId > 119) {
+                return [
+                    { type: 0, damage: 100, cooldown: 3, isAoe: false },
+                    { type: 6, damage: 110, cooldown: 4, isAoe: false }
+                ];
+            }
+
+            const elementIndex = Math.floor(typedId / 24);
+            const remainder = typedId % 24;
+            const zodiacIndex = Math.floor(remainder / 2);
+            const gender = remainder % 2;
+
+            const getSkillType = function(z, g, skillIndex) {
+                if (z == 0 && g == 0) return skillIndex == 0 ? 0 : 6;
+                if (z == 0 && g == 1) return skillIndex == 0 ? 6 : 0;
+                if (z == 1 && g == 0) return skillIndex == 0 ? 0 : 8;
+                if (z == 1 && g == 1) return skillIndex == 0 ? 8 : 0;
+                if (z == 2 && g == 0) return skillIndex == 0 ? 0 : 5;
+                if (z == 2 && g == 1) return skillIndex == 0 ? 5 : 0;
+                if (z == 3 && g == 0) return skillIndex == 0 ? 0 : 2;
+                if (z == 3 && g == 1) return skillIndex == 0 ? 2 : 0;
+                if (z == 4 && g == 0) return skillIndex == 0 ? 3 : 8;
+                if (z == 4 && g == 1) return skillIndex == 0 ? 8 : 3;
+                if (z == 5 && g == 0) return skillIndex == 0 ? 7 : 6;
+                if (z == 5 && g == 1) return skillIndex == 0 ? 6 : 7;
+                if (z == 6 && g == 0) return skillIndex == 0 ? 1 : 4;
+                if (z == 6 && g == 1) return skillIndex == 0 ? 4 : 1;
+                if (z == 7 && g == 0) return skillIndex == 0 ? 3 : 5;
+                if (z == 7 && g == 1) return skillIndex == 0 ? 5 : 3;
+                if (z == 8 && g == 0) return skillIndex == 0 ? 1 : 7;
+                if (z == 8 && g == 1) return skillIndex == 0 ? 7 : 1;
+                if (z == 9 && g == 0) return skillIndex == 0 ? 2 : 4;
+                if (z == 9 && g == 1) return skillIndex == 0 ? 4 : 2;
+                if (z == 10 && g == 0) return skillIndex == 0 ? 3 : 5;
+                if (z == 10 && g == 1) return skillIndex == 0 ? 5 : 3;
+                if (z == 11 && g == 0) return skillIndex == 0 ? 1 : 8;
+                if (z == 11 && g == 1) return skillIndex == 0 ? 8 : 1;
+                return skillIndex == 0 ? 0 : 6;
+            };
+
+            const skillData = {
+                0: {
+                    0: { 0: { d: [125, 110], cd: [3, 4], aoe: [false, false] }, 1: { d: [110, 125], cd: [4, 3], aoe: [false, false] } },
+                    1: { 0: { d: [145, 95], cd: [5, 4], aoe: [false, true] }, 1: { d: [95, 145], cd: [4, 5], aoe: [true, false] } },
+                    2: { 0: { d: [165, 85], cd: [5, 4], aoe: [false, true] }, 1: { d: [85, 165], cd: [4, 5], aoe: [true, false] } },
+                    3: { 0: { d: [130, 80], cd: [3, 3], aoe: [false, false] }, 1: { d: [80, 130], cd: [3, 3], aoe: [false, false] } },
+                    4: { 0: { d: [185, 100], cd: [5, 4], aoe: [true, true] }, 1: { d: [100, 185], cd: [4, 5], aoe: [true, true] } },
+                    5: { 0: { d: [115, 125], cd: [4, 4], aoe: [false, false] }, 1: { d: [125, 115], cd: [4, 4], aoe: [false, false] } },
+                    6: { 0: { d: [125, 110], cd: [3, 4], aoe: [false, false] }, 1: { d: [110, 125], cd: [4, 3], aoe: [false, false] } },
+                    7: { 0: { d: [145, 115], cd: [5, 4], aoe: [false, true] }, 1: { d: [115, 145], cd: [4, 5], aoe: [true, false] } },
+                    8: { 0: { d: [165, 85], cd: [5, 4], aoe: [false, true] }, 1: { d: [85, 165], cd: [4, 5], aoe: [true, false] } },
+                    9: { 0: { d: [130, 80], cd: [3, 3], aoe: [false, false] }, 1: { d: [80, 130], cd: [3, 3], aoe: [false, false] } },
+                    10: { 0: { d: [185, 100], cd: [5, 4], aoe: [true, true] }, 1: { d: [100, 185], cd: [4, 5], aoe: [true, true] } },
+                    11: { 0: { d: [140, 150], cd: [5, 4], aoe: [false, true] }, 1: { d: [150, 140], cd: [4, 5], aoe: [true, false] } }
+                },
+                1: {
+                    0: { 0: { d: [135, 115], cd: [3, 4], aoe: [false, false] }, 1: { d: [115, 135], cd: [4, 3], aoe: [false, false] } },
+                    1: { 0: { d: [130, 105], cd: [5, 4], aoe: [false, true] }, 1: { d: [105, 130], cd: [4, 5], aoe: [true, false] } },
+                    2: { 0: { d: [155, 90], cd: [5, 4], aoe: [false, true] }, 1: { d: [90, 155], cd: [4, 5], aoe: [true, false] } },
+                    3: { 0: { d: [140, 100], cd: [3, 3], aoe: [false, false] }, 1: { d: [100, 140], cd: [3, 3], aoe: [false, false] } },
+                    4: { 0: { d: [180, 95], cd: [5, 4], aoe: [true, true] }, 1: { d: [95, 180], cd: [4, 5], aoe: [true, true] } },
+                    5: { 0: { d: [125, 120], cd: [4, 4], aoe: [false, false] }, 1: { d: [120, 125], cd: [4, 4], aoe: [false, false] } },
+                    6: { 0: { d: [135, 115], cd: [3, 4], aoe: [false, false] }, 1: { d: [115, 135], cd: [4, 3], aoe: [false, false] } },
+                    7: { 0: { d: [150, 125], cd: [5, 4], aoe: [false, true] }, 1: { d: [125, 150], cd: [4, 5], aoe: [true, false] } },
+                    8: { 0: { d: [155, 90], cd: [5, 4], aoe: [false, true] }, 1: { d: [90, 155], cd: [4, 5], aoe: [true, false] } },
+                    9: { 0: { d: [140, 100], cd: [3, 3], aoe: [false, false] }, 1: { d: [100, 140], cd: [3, 3], aoe: [false, false] } },
+                    10: { 0: { d: [180, 95], cd: [5, 4], aoe: [true, true] }, 1: { d: [95, 180], cd: [4, 5], aoe: [true, true] } },
+                    11: { 0: { d: [145, 140], cd: [5, 4], aoe: [false, true] }, 1: { d: [140, 145], cd: [4, 5], aoe: [true, false] } }
+                },
+                2: {
+                    0: { 0: { d: [120, 105], cd: [3, 4], aoe: [false, false] }, 1: { d: [105, 120], cd: [4, 3], aoe: [false, false] } },
+                    1: { 0: { d: [140, 110], cd: [5, 4], aoe: [false, true] }, 1: { d: [110, 140], cd: [4, 5], aoe: [true, false] } },
+                    2: { 0: { d: [160, 85], cd: [5, 4], aoe: [false, true] }, 1: { d: [85, 160], cd: [4, 5], aoe: [true, false] } },
+                    3: { 0: { d: [145, 95], cd: [3, 3], aoe: [false, false] }, 1: { d: [95, 145], cd: [3, 3], aoe: [false, false] } },
+                    4: { 0: { d: [170, 95], cd: [5, 4], aoe: [true, true] }, 1: { d: [95, 170], cd: [4, 5], aoe: [true, true] } },
+                    5: { 0: { d: [120, 115], cd: [4, 4], aoe: [false, false] }, 1: { d: [115, 120], cd: [4, 4], aoe: [false, false] } },
+                    6: { 0: { d: [120, 105], cd: [3, 4], aoe: [false, false] }, 1: { d: [105, 120], cd: [4, 3], aoe: [false, false] } },
+                    7: { 0: { d: [145, 130], cd: [5, 4], aoe: [false, true] }, 1: { d: [130, 145], cd: [4, 5], aoe: [true, false] } },
+                    8: { 0: { d: [160, 85], cd: [5, 4], aoe: [false, true] }, 1: { d: [85, 160], cd: [4, 5], aoe: [true, false] } },
+                    9: { 0: { d: [145, 95], cd: [3, 3], aoe: [false, false] }, 1: { d: [95, 145], cd: [3, 3], aoe: [false, false] } },
+                    10: { 0: { d: [170, 95], cd: [5, 4], aoe: [true, true] }, 1: { d: [95, 170], cd: [4, 5], aoe: [true, true] } },
+                    11: { 0: { d: [140, 135], cd: [5, 4], aoe: [false, true] }, 1: { d: [135, 140], cd: [4, 5], aoe: [true, false] } }
+                },
+                3: {
+                    0: { 0: { d: [145, 135], cd: [3, 4], aoe: [false, false] }, 1: { d: [135, 145], cd: [4, 3], aoe: [false, false] } },
+                    1: { 0: { d: [150, 115], cd: [5, 4], aoe: [false, true] }, 1: { d: [115, 150], cd: [4, 5], aoe: [true, false] } },
+                    2: { 0: { d: [165, 90], cd: [5, 4], aoe: [false, true] }, 1: { d: [90, 165], cd: [4, 5], aoe: [true, false] } },
+                    3: { 0: { d: [160, 100], cd: [3, 3], aoe: [false, false] }, 1: { d: [100, 160], cd: [3, 3], aoe: [false, false] } },
+                    4: { 0: { d: [220, 125], cd: [5, 4], aoe: [true, true] }, 1: { d: [125, 220], cd: [4, 5], aoe: [true, true] } },
+                    5: { 0: { d: [145, 130], cd: [4, 4], aoe: [false, false] }, 1: { d: [130, 145], cd: [4, 4], aoe: [false, false] } },
+                    6: { 0: { d: [145, 135], cd: [3, 4], aoe: [false, false] }, 1: { d: [135, 145], cd: [4, 3], aoe: [false, false] } },
+                    7: { 0: { d: [160, 135], cd: [5, 4], aoe: [false, true] }, 1: { d: [135, 160], cd: [4, 5], aoe: [true, false] } },
+                    8: { 0: { d: [165, 90], cd: [5, 4], aoe: [false, true] }, 1: { d: [90, 165], cd: [4, 5], aoe: [true, false] } },
+                    9: { 0: { d: [160, 100], cd: [3, 3], aoe: [false, false] }, 1: { d: [100, 160], cd: [3, 3], aoe: [false, false] } },
+                    10: { 0: { d: [220, 125], cd: [5, 4], aoe: [true, true] }, 1: { d: [125, 220], cd: [4, 5], aoe: [true, true] } },
+                    11: { 0: { d: [155, 150], cd: [5, 4], aoe: [false, true] }, 1: { d: [150, 155], cd: [4, 5], aoe: [true, false] } }
+                },
+                4: {
+                    0: { 0: { d: [150, 140], cd: [3, 4], aoe: [false, false] }, 1: { d: [140, 150], cd: [4, 3], aoe: [false, false] } },
+                    1: { 0: { d: [155, 110], cd: [5, 4], aoe: [false, true] }, 1: { d: [110, 155], cd: [4, 5], aoe: [true, false] } },
+                    2: { 0: { d: [170, 100], cd: [5, 4], aoe: [false, true] }, 1: { d: [100, 170], cd: [4, 5], aoe: [true, false] } },
+                    3: { 0: { d: [165, 105], cd: [3, 3], aoe: [false, false] }, 1: { d: [105, 165], cd: [3, 3], aoe: [false, false] } },
+                    4: { 0: { d: [230, 120], cd: [5, 4], aoe: [true, true] }, 1: { d: [120, 230], cd: [4, 5], aoe: [true, true] } },
+                    5: { 0: { d: [150, 135], cd: [4, 4], aoe: [false, false] }, 1: { d: [135, 150], cd: [4, 4], aoe: [false, false] } },
+                    6: { 0: { d: [150, 140], cd: [3, 4], aoe: [false, false] }, 1: { d: [140, 150], cd: [4, 3], aoe: [false, false] } },
+                    7: { 0: { d: [165, 130], cd: [5, 4], aoe: [false, true] }, 1: { d: [130, 165], cd: [4, 5], aoe: [true, false] } },
+                    8: { 0: { d: [170, 100], cd: [5, 4], aoe: [false, true] }, 1: { d: [100, 170], cd: [4, 5], aoe: [true, false] } },
+                    9: { 0: { d: [165, 105], cd: [3, 3], aoe: [false, false] }, 1: { d: [105, 165], cd: [3, 3], aoe: [false, false] } },
+                    10: { 0: { d: [230, 120], cd: [5, 4], aoe: [true, true] }, 1: { d: [120, 230], cd: [4, 5], aoe: [true, true] } },
+                    11: { 0: { d: [160, 155], cd: [5, 4], aoe: [false, true] }, 1: { d: [155, 160], cd: [4, 5], aoe: [true, false] } }
+                }
+            };
+
+            const data = skillData[elementIndex] && skillData[elementIndex][zodiacIndex] && skillData[elementIndex][zodiacIndex][gender];
+            if (data) {
+                return [
+                    { type: getSkillType(zodiacIndex, gender, 0), damage: data.d[0], cooldown: data.cd[0], isAoe: data.aoe[0] },
+                    { type: getSkillType(zodiacIndex, gender, 1), damage: data.d[1], cooldown: data.cd[1], isAoe: data.aoe[1] }
+                ];
+            }
+            return [
+                { type: 0, damage: 100, cooldown: 3, isAoe: false },
+                { type: 6, damage: 110, cooldown: 4, isAoe: false }
+            ];
+        }
+
+        function getSkillDescription(skillType, damage, isAoe) {
+            const desc = [
+                `提升普攻伤害`,
+                `进行多次连续攻击`,
+                `回合最快的快速攻击`,
+                `打击所有敌方的爆发攻击`,
+                `恢复自身或友方生命`,
+                `造成持续多次合伤害`,
+                `临时提升攻击力`,
+                `降低敌方防御能力`,
+                `攻击所有敌方的群攻`,
+                `高速突袭并提升暴击`
+            ];
+            return desc[skillType] || `特殊效果`;
+        }
+
+        async function showCardModal(typeId, level, growth = 0, tokenId = null) {
+            console.log('[COLLECTION] showCardModal started:', typeId, level, growth, tokenId);
+            try {
+                const nftInfo = ZODIAC_UTILS.getNFTInfo(typeId, tokenId, growth);
+                console.log('[COLLECTION] nftInfo:', nftInfo);
+                
+                if (!nftInfo) {
+                    console.error('[COLLECTION] nftInfo is null or undefined');
+                    return;
+                }
+                
+                const isOwned = ownedTypes.has(typeId);
+                const userToken = userTokens.find(t => t.typeId === typeId);
+                const count = userToken ? userToken.count : 0;
+                
+                const displayLevel = level > 0 ? level : 1;
+                const displayGrowth = growth > 0 ? growth : (userToken && userToken.growth ? userToken.growth : 50);
+                
+                const element = nftInfo.elementKey || 'water';
+                let isRare = (element === 'light' || element === 'dark');
+                if (tokenId !== null) {
+                    const specificToken = allUserTokens.find(t => t.tokenId == tokenId);
+                    if (specificToken) {
+                        isRare = specificToken.isRare;
+                    }
+                }
+                const rarityText = isRare ? '稀有' : '普通';
+                const rarityColor = isRare ? 'text-purple-600' : 'text-gray-600';
+                
+                let weight = displayLevel * (isRare ? 2 : 1);
+                
+                const canBreed = level >= 5;
+                const canBattle = level >= 1;
+                const canStake = level >= 1;
+                
+                const zodiacNames = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
+                const zodiacName = nftInfo.zodiac !== undefined ? (ZODIAC_CONFIG && ZODIAC_CONFIG.ZODIAC_NAMES ? ZODIAC_CONFIG.ZODIAC_NAMES[nftInfo.zodiac] : zodiacNames[nftInfo.zodiac]) : '未知';
+                
+                const desc = isOwned 
+                    ? `${nftInfo.attrName || '未知'}属性生肖·${zodiacName}·${nftInfo.genderName || '未知'} · 持有可享受税收分红` 
+                    : '尚未拥有此生肖';
+
+                let skillTypeName1 = '未知技能';
+                let skillDesc1 = '未知效果';
+                let sDamage1 = '0%';
+                let sCooldown1 = 0;
+                let sIsAoe1 = false;
+                
+                let skillTypeName2 = '未知技能';
+                let skillDesc2 = '未知效果';
+                let sDamage2 = '0%';
+                let sCooldown2 = 0;
+                let sIsAoe2 = false;
+                
+                let attack = 0;
+                let defense = 0;
+                let speed = 0;
+                let hp = 0;
+                
+                let nftFullInfo = null;
+                
+                if (tokenId !== null && window.ZODIAC_WEB3) {
+                    try {
+                        nftFullInfo = await window.ZODIAC_WEB3.getNFTFullInfo(tokenId);
+                        const nftAttrs = await window.ZODIAC_WEB3.getNFTAttributes(tokenId);
+                        
+                        if (nftFullInfo) {
+                            const skillTypes = nftFullInfo.skills || [];
+                            if (skillTypes.length >= 1) {
+                                const skillInfo1 = await window.ZODIAC_WEB3.getNFTSkillInfo(skillTypes[0]);
+                                if (skillInfo1) {
+                                    skillTypeName1 = skillInfo1.name;
+                                    skillDesc1 = skillInfo1.description;
+                                    sDamage1 = skillInfo1.damage;
+                                    sCooldown1 = skillInfo1.cooldown;
+                                    sIsAoe1 = skillInfo1.isAoe;
+                                }
+                            }
+                            
+                            if (skillTypes.length >= 2) {
+                                const skillInfo2 = await window.ZODIAC_WEB3.getNFTSkillInfo(skillTypes[1]);
+                                if (skillInfo2) {
+                                    skillTypeName2 = skillInfo2.name;
+                                    skillDesc2 = skillInfo2.description;
+                                    sDamage2 = skillInfo2.damage;
+                                    sCooldown2 = skillInfo2.cooldown;
+                                    sIsAoe2 = skillInfo2.isAoe;
+                                }
+                            }
+                        }
+                        
+                        if (nftAttrs) {
+                            attack = nftAttrs.attack;
+                            defense = nftAttrs.defense;
+                            speed = nftAttrs.speed;
+                            hp = nftAttrs.health;
+                        }
+                    } catch (e) {
+                        console.warn('[COLLECTION] Failed to get NFT info from contract, using local fallback:', e);
+                    }
+                }
+                
+                if (attack === 0 || defense === 0 || speed === 0 || hp === 0) {
+                    attack = window.ZODIAC_UI.calculateAttack(displayLevel, displayGrowth);
+                    defense = window.ZODIAC_UI.calculateDefense(displayLevel, displayGrowth);
+                    speed = window.ZODIAC_UI.calculateSpeed(displayLevel, displayGrowth, nftInfo.zodiac);
+                    hp = window.ZODIAC_UI.calculateMaxHP(displayLevel, displayGrowth);
+                }
+                
+                if (skillTypeName1 === '未知技能') {
+                    const localSkills = getLocalSkill(typeId);
+                    const skill1 = localSkills[0];
+                    const skill2 = localSkills[1];
+                    
+                    skillTypeName1 = getSkillTypeName(parseInt(skill1.type));
+                    skillDesc1 = getSkillDescription(parseInt(skill1.type), parseInt(skill1.damage), skill1.isAoe);
+                    sDamage1 = skill1.damage + '%';
+                    sCooldown1 = skill1.cooldown;
+                    sIsAoe1 = skill1.isAoe;
+                    
+                    skillTypeName2 = getSkillTypeName(parseInt(skill2.type));
+                    skillDesc2 = getSkillDescription(parseInt(skill2.type), parseInt(skill2.damage), skill2.isAoe);
+                    sDamage2 = skill2.damage + '%';
+                    sCooldown2 = skill2.cooldown;
+                    sIsAoe2 = skill2.isAoe;
+                }
+                
+                const skillInfo = `
+                    <div class="mt-4">
+                        <div class="text-xs text-gray-600 mb-2">⚔️ 战斗技能</div>
+                        <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3 border border-blue-200 mb-2">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-sm font-bold text-blue-700">技能1: ${skillTypeName1}</span>
+                                <span class="text-xs px-2 py-0.5 ${sIsAoe1 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'} rounded">${sIsAoe1 ? '范围攻击' : '单体攻击'}</span>
+                            </div>
+                            <div class="text-xs text-gray-500">${skillDesc1}</div>
+                            <div class="mt-2 flex gap-3 text-xs">
+                                <span class="text-gray-500">伤害倍率: <span class="text-purple-600 font-bold">${sDamage1}</span></span>
+                                <span class="text-gray-500">冷却: <span class="text-orange-600 font-bold">${sCooldown1}回合</span></span>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-r from-green-50 to-teal-50 rounded-lg p-3 border border-green-200">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-sm font-bold text-green-700">技能2: ${skillTypeName2}</span>
+                                <span class="text-xs px-2 py-0.5 ${sIsAoe2 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'} rounded">${sIsAoe2 ? '范围攻击' : '单体攻击'}</span>
+                            </div>
+                            <div class="text-xs text-gray-500">${skillDesc2}</div>
+                            <div class="mt-2 flex gap-3 text-xs">
+                                <span class="text-gray-500">伤害倍率: <span class="text-purple-600 font-bold">${sDamage2}</span></span>
+                                <span class="text-gray-500">冷却: <span class="text-orange-600 font-bold">${sCooldown2}回合</span></span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('modalCardImage').src = nftInfo.imagePath || 'images/fu-cards/shuishu_1.jpg';
+                document.getElementById('modalCardImage').style.filter = isOwned ? 'none' : 'grayscale(100%)';
+                document.getElementById('modalCardName').textContent = nftInfo.name || '未知生肖';
+                document.getElementById('modalCardDesc').textContent = desc;
+                document.getElementById('modalCardId').textContent = tokenId !== null ? `Token ID: ${tokenId}` : `类型ID: ${typeId}`;
+                
+                const rarityBadge = document.getElementById('modalCardRarity');
+                if (rarityBadge) {
+                    rarityBadge.textContent = rarityText;
+                    rarityBadge.className = `text-xs font-bold px-2 py-1 rounded ${isRare ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-600'}`;
+                }
+
+                let attrType = 3;
+                if (nftFullInfo && nftFullInfo.attrType !== undefined) {
+                    attrType = nftFullInfo.attrType;
+                }
+                const growthType = getTypeNameCN(attrType);
+                const zodiacBonus = getZodiacBonusName(nftInfo.zodiac);
+                
+                const statsDiv = document.getElementById('modalCardStats');
+                if (statsDiv) {
+                    statsDiv.innerHTML = `
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-blue-50 rounded-lg p-3">
+                                <div class="text-xs text-gray-600 mb-1">稀有度</div>
+                                <div class="${rarityColor} font-bold">${rarityText}</div>
+                            </div>
+                            <div class="bg-green-50 rounded-lg p-3">
+                                <div class="text-xs text-gray-600 mb-1">分红权重</div>
+                                <div class="text-green-600 font-bold" id="modalWeightValue">${weight}x</div>
+                            </div>
+                            <div class="bg-yellow-50 rounded-lg p-3">
+                                <div class="text-xs text-gray-600 mb-1">当前等级</div>
+                                <div class="text-yellow-600 font-bold">${level > 0 ? '⭐'.repeat(level) : '未拥有'}</div>
+                            </div>
+                            <div class="bg-purple-50 rounded-lg p-3">
+                                <div class="text-xs text-gray-600 mb-1">成长值</div>
+                                <div class="text-purple-600 font-bold">${displayGrowth}</div>
+                            </div>
+                            <div class="bg-orange-50 rounded-lg p-3">
+                                <div class="text-xs text-gray-600 mb-1">成长定位</div>
+                                <div class="text-orange-600 font-bold">${growthType}</div>
+                            </div>
+                            <div class="bg-indigo-50 rounded-lg p-3">
+                                <div class="text-xs text-gray-600 mb-1">生肖特色</div>
+                                <div class="text-indigo-600 font-bold">${zodiacBonus}</div>
+                            </div>
+                            <div class="bg-red-50 rounded-lg p-3">
+                                <div class="text-xs text-gray-600 mb-1">持有数量</div>
+                                <div class="text-red-600 font-bold">${count} 张</div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="text-xs text-gray-600 mb-2">战斗属性</div>
+                            <div class="grid grid-cols-4 gap-2">
+                                <div class="bg-red-50 rounded-lg p-2 text-center">
+                                    <div class="text-lg mb-1">⚔️</div>
+                                    <div class="text-xs text-gray-500">攻击</div>
+                                    <div class="text-sm font-bold text-red-600">${attack}</div>
+                                </div>
+                                <div class="bg-blue-50 rounded-lg p-2 text-center">
+                                    <div class="text-lg mb-1">🛡️</div>
+                                    <div class="text-xs text-gray-500">防御</div>
+                                    <div class="text-sm font-bold text-blue-600">${defense}</div>
+                                </div>
+                                <div class="bg-yellow-50 rounded-lg p-2 text-center">
+                                    <div class="text-lg mb-1">💨</div>
+                                    <div class="text-xs text-gray-500">速度</div>
+                                    <div class="text-sm font-bold text-yellow-600">${speed}</div>
+                                </div>
+                                <div class="bg-green-50 rounded-lg p-2 text-center">
+                                    <div class="text-lg mb-1">❤️</div>
+                                    <div class="text-xs text-gray-500">生命</div>
+                                    <div class="text-sm font-bold text-green-600">${hp}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="text-xs text-gray-600 mb-2">可用功能</div>
+                            <div class="flex gap-2 flex-wrap">
+                                ${canBattle ? '<span class="px-2 py-1 bg-blue-100 text-blue-600 rounded text-xs">⚔️ 战斗</span>' : '<span class="px-2 py-1 bg-gray-100 text-gray-400 rounded text-xs">⚔️ 战斗</span>'}
+                                ${canStake ? '<span class="px-2 py-1 bg-green-100 text-green-600 rounded text-xs">💰 质押</span>' : '<span class="px-2 py-1 bg-gray-100 text-gray-400 rounded text-xs">💰 质押</span>'}
+                                ${canBreed ? '<span class="px-2 py-1 bg-purple-100 text-purple-600 rounded text-xs">🧬 孕育</span>' : '<span class="px-2 py-1 bg-gray-100 text-gray-400 rounded text-xs">🧬 孕育</span>'}
+                                <span class="px-2 py-1 bg-yellow-100 text-yellow-600 rounded text-xs">📊 分红</span>
+                            </div>
+                        </div>
+                        <div class="mt-4 text-xs text-gray-500">
+                            <p>💡 ${isRare ? '稀有属性' : '普通属性'}NFT，${isRare ? '权重更高' : '基础权重'}，适合参与各类游戏玩法。</p>
+                        </div>
+                        <div id="modalSkillSection">${skillInfo}</div>
+                    `;
+                }
+                
+                const cardModal = document.getElementById('cardModal');
+                if (cardModal) {
+                    cardModal.classList.remove('hidden');
+                    console.log('[COLLECTION] Modal shown successfully');
+                }
+
+                // 输出完整NFT元数据日志
+                const nftMetadata = {
+                    tokenId: tokenId,
+                    typeId: typeId,
+                    name: nftInfo.name,
+                    element: nftInfo.elementKey,
+                    attrName: nftInfo.attrName,
+                    zodiac: nftInfo.zodiac,
+                    zodiacName: zodiacName,
+                    gender: nftInfo.gender,
+                    genderName: nftInfo.genderName,
+                    level: displayLevel,
+                    growth: displayGrowth,
+                    isRare: isRare,
+                    rarityText: rarityText,
+                    weight: weight,
+                    attack: attack,
+                    defense: defense,
+                    speed: speed,
+                    hp: hp,
+                    skill: {
+                        type: sType,
+                        typeName: skillTypeName,
+                        damage: sDamage,
+                        cooldown: sCooldown,
+                        isAoe: sIsAoe,
+                        description: skillDesc
+                    },
+                    canBattle: canBattle,
+                    canStake: canStake,
+                    canBreed: canBreed,
+                    isOwned: isOwned,
+                    count: count,
+                    imagePath: nftInfo.imagePath
+                };
+                console.log('[COLLECTION] NFT完整元数据:', nftMetadata);
+                console.table && console.table(nftMetadata);
+
+                asyncLoadModalData(typeId, displayLevel, isRare);
+            } catch (error) {
+                console.error('[COLLECTION] showCardModal error:', error);
+                console.error('[COLLECTION] Error stack:', error.stack);
+            }
+        }
+
+        async function asyncLoadModalData(typeId, displayLevel, isRare) {
+            try {
+                const nftDataContract = await window.ZODIAC_WEB3.getContract('nftData', false);
+                if (nftDataContract) {
+                    const realWeight = await nftDataContract.methods.getWeightByLevel(displayLevel, isRare).call();
+                    if (realWeight && realWeight > 0) {
+                        const weightEl = document.getElementById('modalWeightValue');
+                        if (weightEl) {
+                            weightEl.textContent = parseInt(realWeight, 10) + 'x';
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('获取NFT权重失败:', e.message);
+            }
+
+            try {
+                const battleContract = await window.ZODIAC_WEB3.getContract('battleSkillData');
+                if (battleContract) {
+                    const isInitialized = await battleContract.methods.skillsInitialized().call();
+                    if (isInitialized) {
+                        const skill = await battleContract.methods.getSkill(typeId).call();
+                        const sType = skill[1] !== undefined ? skill[1] : (skill.skillType !== undefined ? skill.skillType : 0);
+                        const sDamage = skill[2] !== undefined ? skill[2] : (skill.damage !== undefined ? skill.damage : 0);
+                        const sCooldown = skill[3] !== undefined ? skill[3] : (skill.cooldown !== undefined ? skill.cooldown : 0);
+                        const sIsAoe = skill[5] !== undefined ? skill[5] : (skill.isAoe !== undefined ? skill.isAoe : false);
+                        const skillTypeName = getSkillTypeName(parseInt(sType));
+                        const skillDesc = getSkillDescription(parseInt(sType), parseInt(sDamage), sIsAoe);
+                        const skillSectionEl = document.getElementById('modalSkillSection');
+                        if (skillSectionEl) {
+                            skillSectionEl.innerHTML = `
+                                <div class="mt-4">
+                                    <div class="text-xs text-gray-600 mb-2">⚔️ 战斗技能</div>
+                                    <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3 border border-blue-200">
+                                        <div class="flex items-center justify-between mb-1">
+                                            <span class="text-sm font-bold text-blue-700">${skillTypeName}</span>
+                                            <span class="text-xs px-2 py-0.5 ${sIsAoe ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'} rounded">${sIsAoe ? '范围攻击' : '单体攻击'}</span>
+                                        </div>
+                                        <div class="text-xs text-gray-500">${skillDesc}</div>
+                                        <div class="mt-2 flex gap-3 text-xs">
+                                            <span class="text-gray-500">伤害倍率: <span class="text-purple-600 font-bold">${parseInt(sDamage)}%</span></span>
+                                            <span class="text-gray-500">冷却: <span class="text-orange-600 font-bold">${parseInt(sCooldown)}回合</span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('获取技能信息失败:', e.message);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('closeModal').addEventListener('click', function() {
+                document.getElementById('cardModal').classList.add('hidden');
+            });
+
+            document.getElementById('cardModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    document.getElementById('cardModal').classList.add('hidden');
+                }
+            });
+
+            document.getElementById('listForSale').addEventListener('click', function() {
+                document.getElementById('cardModal').classList.add('hidden');
+                window.location.href = 'trading.html';
+            });
+
+            document.getElementById('zodiacGrid').addEventListener('click', function(e) {
+                console.log('[COLLECTION] zodiacGrid clicked', e.target);
+                const card = e.target.closest('.zodiac-card');
+                console.log('[COLLECTION] found card:', card);
+                if (card) {
+                    console.log('[COLLECTION] card classes:', card.classList);
+                    console.log('[COLLECTION] has-item:', card.classList.contains('has-item'));
+                }
+                if (card && card.hasAttribute('data-nft-typeid')) {
+                    const typeId = parseInt(card.getAttribute('data-nft-typeid'));
+                    const level = parseInt(card.getAttribute('data-nft-level')) || 0;
+                    const growth = parseInt(card.getAttribute('data-nft-growth')) || 0;
+                    const tokenId = card.getAttribute('data-nft-tokenid') || null;
+                    console.log('[COLLECTION] showCardModal called with:', typeId, level, growth, tokenId);
+                    showCardModal(typeId, level, growth, tokenId);
+                }
+            });
+        });
+
+        document.getElementById('refreshBtn').addEventListener('click', async function() {
+            await loadUserTokens();
+            await updateDividends();
+            await loadProgress();
+        });
+
+        document.getElementById('claimLPDividendBtn').addEventListener('click', claimLPDividend);
+
+        let imageObserver = null;
+
+        function lazyLoadImages() {
+            if (imageObserver) {
+                imageObserver.disconnect();
+            }
+
+            const lazyImages = document.querySelectorAll('img.lazy-image');
+
+            if ('IntersectionObserver' in window) {
+                imageObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target;
+                            const src = img.getAttribute('data-src');
+                            if (src) {
+                                img.src = src;
+                                img.classList.remove('lazy-image');
+                            }
+                            observer.unobserve(img);
+                        }
+                    });
+                }, {
+                    rootMargin: '50px',
+                    threshold: 0.1
+                });
+
+                lazyImages.forEach(img => {
+                    imageObserver.observe(img);
+                });
+            } else {
+                lazyImages.forEach(img => {
+                    const src = img.getAttribute('data-src');
+                    if (src) {
+                        img.src = src;
+                        img.classList.remove('lazy-image');
+                    }
+                });
+            }
+        }
+
+        function getStars(level) {
+            return window.ZODIAC_UTILS.getStars(parseInt(level, 10));
+        }
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'zodiac_mint_success') {
+                console.log('[COLLECTION] Detected mint success, refreshing data...');
+                setTimeout(async () => {
+                    await loadUserTokens();
+                    await updateDividends();
+                    await loadProgress();
+                }, 1000);
+            }
+        });
+    </script>
+</body>
+</html>

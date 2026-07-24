@@ -1,0 +1,1909 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>质押挖矿 - 十二生肖</title>
+    <link rel="icon" href="images/fu-cards/shuishu_1.jpg" type="image/jpg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.7.3/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="config.js"></script>
+    <script src="components.js"></script>
+    <script src="utils.js"></script>
+    <script src="web3-utils.js"></script>
+    <script src="ui-utils.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #f5f5f5;
+            background-image: linear-gradient(135deg, #f5f5f5 0%, #e8f5e8 100%);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+        .navbar {
+            background-color: #ffffff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary {
+            background-color: #ff6b6b;
+            color: white;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            background-color: #ee5a6f;
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background-color: white;
+            color: #ff6b6b;
+            border: 1px solid #ff6b6b;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .btn-secondary:hover {
+            background-color: #f8f9fa;
+            transform: translateY(-2px);
+        }
+        .stake-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        .stake-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .nft-card {
+            background: white;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .nft-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        .nft-card.selected {
+            border-color: #ff6b6b;
+            background: #fff5f5;
+        }
+        .info-box {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .countdown {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ff6b6b;
+            text-align: center;
+        }
+        .particles-js-canvas-el {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        .rarity-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        .rarity-normal {
+            background-color: #e5e7eb;
+            color: #4b5563;
+        }
+        .rarity-rare {
+            background-color: #fef3c7;
+            color: #d97706;
+        }
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+
+    <div id="mobileNavbarContainer"></div>
+    <div id="mobileMenuContainer"></div>
+    <div id="desktopSidebarContainer"></div>
+
+    <main class="px-4 pt-6 pb-24 md:pl-28 md:pr-4">
+        <div class="bg-white rounded-xl p-6 shadow-md mb-8">
+            <div class="flex items-center mb-6">
+                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-4">
+                    <i class="text-blue-500 text-xl">💰</i>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-gray-800">钱包信息</h3>
+                    <p class="text-sm text-gray-500" id="walletAddress">未连接钱包</p>
+                    <p class="text-xs text-gray-400" id="connectionStatus">请点击连接钱包按钮</p>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="btn-primary text-sm" id="connectWalletBtn">
+                        <i class="fas fa-plug mr-1"></i> 连接
+                    </button>
+                    <button class="btn-secondary text-sm" id="refreshWallet">
+                        <i class="fas fa-sync-alt mr-1"></i> 刷新
+                    </button>
+                </div>
+            </div>
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">代币余额</span>
+                    <span class="text-lg font-semibold text-gray-800" id="stakingTokenBalance">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center mb-4">
+            <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center mr-3">
+                <i class="text-white text-xl">⚡</i>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800">质押挖矿</h1>
+        </div>
+
+        <div class="flex space-x-4 mb-8">
+            <button id="nftStakeTab" class="tab-btn active px-6 py-3 bg-blue-500 text-white rounded-lg font-medium transition-colors">
+                🎴 NFT质押
+            </button>
+            <button id="tokenStakeTab" class="tab-btn px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors hover:bg-gray-300">
+                💰 代币质押
+            </button>
+        </div>
+
+        <div id="nftStakePanel">
+            <p class="text-lg text-gray-600 mb-8">质押NFT来挖矿，每分钟获得代币奖励</p>
+
+            <div class="info-box mb-8">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">🌟 挖矿规则</h3>
+                <ul class="text-gray-600 space-y-2">
+                    <li>• 质押NFT来挖矿</li>
+                    <li>• 稀有NFT权重更高，获得更多奖励</li>
+                    <li>• 最低质押时间 <span id="minStakingDuration" class="font-bold text-blue-600">30分钟</span></li>
+                    <li>• 每日释放比例 <span id="nftDailyReleaseRate" class="font-bold text-green-600">0.3%</span>，支持弹性增量机制</li>
+                    <li>• 随时可以领取已挖矿的代币</li>
+                    <li>• 随时可以赎回质押的NFT</li>
+                </ul>
+            </div>
+
+            <div class="mb-8">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">我的可质押NFT</h3>
+                <div id="eligibleNFTs" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    <div class="col-span-full text-center text-gray-500 py-8">加载中...</div>
+                </div>
+                <button id="stakeBtn" class="btn-primary w-full mt-4" disabled>
+                    质押选中的NFT
+                </button>
+            </div>
+
+            <div class="mb-8">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">我的质押</h3>
+                <div id="myStakes" class="space-y-4">
+                    <div class="text-center text-gray-500 py-8">暂无质押</div>
+                </div>
+            </div>
+
+            <div class="info-box mb-8">
+                <h3 class="text-xl font-bold text-gray-800 mb-4" id="rewardInfoTitle">🎁 LP奖励信息</h3>
+                <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg mb-4">
+                    <span class="text-lg font-medium text-gray-800" id="rewardLabel">可领取LP奖励</span>
+                    <span class="text-lg font-bold text-purple-600" id="rewardsAmount">0.00</span>
+                </div>
+                <div class="p-4 bg-purple-50 rounded-lg mb-4">
+                    <div class="text-sm text-purple-600 font-medium mb-2" id="rewardDescTitle">💡 LP奖励说明</div>
+                    <p class="text-xs text-gray-600" id="rewardDescText">LP奖励领取后会自动兑换为代币和WBNB发送到您的钱包，您将获得双重收益：项目分红 + DEX交易手续费</p>
+                </div>
+                <div id="rewardEstimate" class="p-4 bg-blue-50 rounded-lg mb-4">
+                    <div class="text-sm text-blue-600 font-medium mb-2">📈 收益预估</div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <span class="text-xs text-gray-500">每日预估收益</span>
+                            <p class="text-lg font-bold text-blue-600" id="dailyReward">0.00</p>
+                        </div>
+                        <div>
+                            <span class="text-xs text-gray-500">年化收益率</span>
+                            <p class="text-lg font-bold text-green-600" id="annualRate">0.00%</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-blue-200">
+                        <p class="text-xs text-gray-500 flex items-start">
+                            <span class="mr-1">⚠️</span>
+                            <span>收益预估基于当前总权重计算，实际收益可能因其他用户质押/解质押而变化</span>
+                        </p>
+                    </div>
+                </div>
+                <button id="claimBtn" class="btn-primary w-full" disabled>
+                    <i class="fas fa-gift mr-2"></i><span id="claimBtnText">领取LP奖励</span>
+                </button>
+            </div>
+
+            <div class="info-box">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">📊 合约信息</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <span class="text-sm text-gray-600">普通NFT权重</span>
+                        <p class="text-lg font-bold text-gray-800" id="normalWeight">66</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <span class="text-sm text-gray-600">稀有NFT权重</span>
+                        <p class="text-lg font-bold text-gray-800" id="rareWeight">76</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <span class="text-sm text-gray-600">总质押权重</span>
+                        <p class="text-lg font-bold text-gray-800" id="totalStakedWeight">0</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <span class="text-sm text-gray-600">我的质押数量</span>
+                        <p class="text-lg font-bold text-gray-800" id="myStakedCount">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tokenStakePanel" class="hidden">
+            <p class="text-lg text-gray-600 mb-8" id="tokenStakeIntroText">质押代币获得LP奖励，支持弹性释放机制</p>
+
+            <div class="info-box mb-8">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">🌟 代币质押规则</h3>
+                <ul class="text-gray-600 space-y-2">
+                    <li id="tokenRule1">• 质押代币获得LP奖励</li>
+                    <li>• 最低质押时长 <span id="tokenMinDuration" class="font-bold text-blue-600">30</span> 分钟</li>
+                    <li>• 当前每日释放比例 <span id="dailyReleaseRatioDisplay" class="font-bold text-green-600">1.0</span>%，支持弹性增量机制</li>
+                    <li>• 赎回时自动领取累积奖励</li>
+                    <li id="tokenRule5">• 奖励以LP形式发放，领取时自动兑换为代币和WBNB</li>
+                    <li id="tokenRule6">• 双重收益：项目分红 + DEX交易手续费</li>
+                </ul>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="info-box">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">💰 质押代币</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">质押数量</label>
+                            <input type="number" id="tokenStakeAmount" placeholder="输入代币数量" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            当前余额: <span id="tokenBalance" class="font-bold text-gray-800">0.00</span>
+                        </div>
+                        <button id="tokenStakeBtn" class="btn-primary w-full" disabled>
+                            质押代币
+                        </button>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">🎁 我的质押</h3>
+                    <div class="space-y-4">
+                        <div class="p-4 bg-gray-50 rounded-lg">
+                            <span class="text-sm text-gray-600">质押数量</span>
+                            <p class="text-xl font-bold text-gray-800" id="myTokenStakeAmount">0.00</p>
+                        </div>
+                        <div class="p-4 bg-gray-50 rounded-lg">
+                            <span class="text-sm text-gray-600" id="tokenRewardLabel">可领取LP奖励</span>
+                            <p class="text-xl font-bold text-purple-600" id="tokenRewardsAmount">0.00</p>
+                        </div>
+                        <div class="p-4 bg-gray-50 rounded-lg">
+                            <span class="text-sm text-gray-600">质押时间</span>
+                            <p class="text-sm text-gray-800" id="tokenStakedAt">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="info-box">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">📤 赎回代币</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">赎回数量</label>
+                            <input type="number" id="tokenUnstakeAmount" placeholder="输入赎回数量" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <button id="tokenUnstakeBtn" class="btn-secondary w-full" disabled>
+                            赎回代币
+                        </button>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">📊 代币质押合约信息</h3>
+                    <div class="space-y-4">
+                        <div class="p-4 bg-gray-50 rounded-lg">
+                            <span class="text-sm text-gray-600" id="contractRewardBalanceLabel">合约LP奖励余额</span>
+                            <p class="text-lg font-bold text-gray-800" id="tokenStakingBNBBalance">0.00</p>
+                        </div>
+                        <div class="p-4 bg-gray-50 rounded-lg">
+                            <span class="text-sm text-gray-600">总质押代币</span>
+                            <p class="text-lg font-bold text-gray-800" id="totalStakedTokens">0.00</p>
+                        </div>
+                        <div class="p-4 bg-gray-50 rounded-lg">
+                            <span class="text-sm text-gray-600">今日释放比例</span>
+                            <p class="text-lg font-bold text-gray-800" id="currentReleaseRatio">0.00%</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <h3 class="text-xl font-bold text-gray-800 mb-4" id="tokenRewardTitle">🎯 领取LP奖励</h3>
+                <div class="p-4 bg-purple-50 rounded-lg mb-4">
+                    <div class="text-sm text-purple-600 font-medium mb-2" id="tokenRewardDescTitle">💡 LP奖励说明</div>
+                    <p class="text-xs text-gray-600" id="tokenRewardDescText">LP奖励领取后会自动兑换为代币和WBNB发送到您的钱包</p>
+                </div>
+                <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg mb-4">
+                    <span class="text-lg font-medium text-gray-800" id="tokenRewardAmountLabel">可领取LP奖励</span>
+                    <span class="text-lg font-bold text-purple-600" id="claimableBNB">0.00</span>
+                </div>
+                <button id="claimTokenRewardsBtn" class="btn-primary w-full" disabled>
+                    <i class="fas fa-gift mr-2"></i><span id="claimTokenRewardsBtnText">领取LP奖励</span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <footer class="text-center py-8 text-black/70 md:ml-28 md:mr-4">
+        <p>© 2026 十二生肖NFT系列 · Twelve Zodiacs Collection</p>
+        <p class="mt-2">祝你心想事成，生肖大旺🐾✨</p>
+    </footer>
+
+    <script>
+        let web3;
+        let account;
+        let nftContract;
+        let tokenContract;
+        let stakingContract;
+        let stakingLPRewardContract;
+        let tokenStakingContract;
+        let tokenStakingLPContract;
+        let tokenStakingLPRateManagerContract;
+        let selectedNFTs = [];
+
+        function getSkillTypeName(skillType) {
+            const types = [
+                '普攻强化',
+                '连击攻击',
+                '快速打击',
+                '范围爆发',
+                '治疗回复',
+                '持续伤害',
+                '力量增幅',
+                '防御削弱',
+                '群体攻击'
+            ];
+            return types[skillType] || '特殊技能';
+        }
+
+        function getSkillDescription(skillType, damage, isAoe) {
+            const desc = [
+                `强化普通攻击，造成${damage}%伤害`,
+                `连续攻击目标，造成${damage}%伤害`,
+                `快速出击，造成${damage}%伤害`,
+                `释放范围爆发技能${isAoe ? '攻击所有敌人' : '攻击单个目标'}，造成${damage}%伤害`,
+                `恢复自身生命值，同时造成${damage}%伤害`,
+                `施加持续伤害效果，造成${damage}%伤害`,
+                `临时提升攻击力，造成${damage}%伤害`,
+                `削弱敌人防御，造成${damage}%伤害`,
+                `发动群体攻击${isAoe ? '攻击所有敌人' : '攻击单个目标'}，造成${damage}%伤害`
+            ];
+            return desc[skillType] || `技能效果，造成${damage}%伤害${isAoe ? '（范围攻击）' : ''}`;
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            particlesJS('particles-js', {
+                particles: {
+                    number: { value: 80, density: { enable: true, value_area: 800 } },
+                    color: { value: '#ff6b6b' },
+                    shape: { type: 'circle', stroke: { width: 0, color: '#000000' } },
+                    opacity: { value: 0.5, random: true, anim: { enable: true, speed: 1, opacity_min: 0.1, sync: false } },
+                    size: { value: 5, random: true, anim: { enable: true, speed: 2, size_min: 0.1, sync: false } },
+                    line_linked: { enable: true, distance: 150, color: '#ff6b6b', opacity: 0.4, width: 1 },
+                    move: { enable: true, speed: 1, direction: 'none', random: false, straight: false, out_mode: 'out', bounce: false }
+                },
+                interactivity: { detect_on: 'canvas', events: { onhover: { enable: true, mode: 'grab' }, onclick: { enable: true, mode: 'push' }, resize: true } },
+                retina_detect: true
+            });
+
+            initWalletUI();
+            initTabSwitch();
+            ZODIAC_COMPONENTS.injectNavigation('staking');
+            await initWeb3();
+        });
+
+        function initTabSwitch() {
+            document.getElementById('nftStakeTab').addEventListener('click', () => switchTab('nft'));
+            document.getElementById('tokenStakeTab').addEventListener('click', () => switchTab('token'));
+        }
+
+        function switchTab(tab) {
+            const nftTab = document.getElementById('nftStakeTab');
+            const tokenTab = document.getElementById('tokenStakeTab');
+            const nftPanel = document.getElementById('nftStakePanel');
+            const tokenPanel = document.getElementById('tokenStakePanel');
+
+            if (tab === 'nft') {
+                nftTab.classList.add('active');
+                nftTab.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                nftTab.classList.add('bg-blue-500', 'text-white');
+                
+                tokenTab.classList.remove('active');
+                tokenTab.classList.remove('bg-blue-500', 'text-white');
+                tokenTab.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                
+                nftPanel.classList.remove('hidden');
+                tokenPanel.classList.add('hidden');
+            } else {
+                tokenTab.classList.add('active');
+                tokenTab.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                tokenTab.classList.add('bg-blue-500', 'text-white');
+                
+                nftTab.classList.remove('active');
+                nftTab.classList.remove('bg-blue-500', 'text-white');
+                nftTab.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                
+                tokenPanel.classList.remove('hidden');
+                nftPanel.classList.add('hidden');
+                
+                if (account) {
+                    loadTokenStakingInfo();
+                }
+            }
+        }
+
+        function initWalletUI() {
+            ZODIAC_UI.initWalletButton('connectWalletBtn', 'walletAddress', 'connectionStatus');
+            ZODIAC_UI.initWalletButton('connectWalletBtnDesktop', 'walletAddressDesktop', null);
+            ZODIAC_WEB3.on('connect', async () => {
+                await initContracts();
+                await updateWalletStatus();
+                await loadStakingConstants();
+                await loadEligibleNFTs();
+                await loadMyStakes();
+                await loadRewards();
+                await loadContractInfo();
+                await loadTokenStakingInfo();
+            });
+            ZODIAC_WEB3.on('disconnect', () => {
+                stopRewardEstimateRefresh();
+                account = null;
+                const defaultUnit = 'BNB';
+                document.getElementById('rewardsAmount').textContent = '0.00 ' + defaultUnit;
+                document.getElementById('tokenRewardsAmount').textContent = '0.00 ' + defaultUnit;
+            });
+        }
+
+        async function initWeb3() {
+            const connected = await window.ZODIAC_WEB3.initWeb3();
+            if (connected) {
+                account = window.ZODIAC_WEB3.getAccount();
+                web3 = window.ZODIAC_WEB3.getWeb3();
+                updateWalletButton();
+                await initContracts();
+                await updateWalletStatus();
+                await loadStakingConstants();
+                await loadEligibleNFTs();
+                await loadMyStakes();
+                await loadRewards();
+                await loadContractInfo();
+                await loadTokenStakingInfo();
+                
+                setupEventListeners();
+                await updateRewardEstimate();
+                startRewardEstimateRefresh();
+            }
+        }
+        
+        function setupEventListeners() {
+            try {
+                window.ZODIAC_WEB3.listenToEvent('nftUpdate', 'CardUpgraded', async (event) => {
+                    console.log('CardUpgraded event:', event.returnValues);
+                    await loadMyStakes();
+                    await loadRewards();
+                    await loadContractInfo();
+                    await updateRewardEstimate();
+                });
+                
+                window.ZODIAC_WEB3.listenToEvent('staking', 'Staked', async () => {
+                    await loadMyStakes();
+                    await loadRewards();
+                    await loadContractInfo();
+                    await updateRewardEstimate();
+                });
+                
+                window.ZODIAC_WEB3.listenToEvent('staking', 'Unstaked', async () => {
+                    await loadMyStakes();
+                    await loadRewards();
+                    await loadContractInfo();
+                    await updateRewardEstimate();
+                });
+            } catch (error) {
+                console.warn('Failed to subscribe to staking events:', error);
+            }
+        }
+        
+        async function updateRewardEstimate() {
+            try {
+                const totalWeighted = await stakingContract.methods.totalWeightedNFTs().call();
+                const myStakedCount = parseInt(document.getElementById('myStakedCount').textContent) || 0;
+                
+                if (myStakedCount === 0 || totalWeighted === '0') {
+                    document.getElementById('dailyReward').textContent = '0.00';
+                    document.getElementById('annualRate').textContent = '0.00%';
+                    return;
+                }
+                
+                let myWeight = 0;
+                try {
+                    myWeight = await stakingContract.methods.userStakedWeight(account).call();
+                    myWeight = parseInt(myWeight, 10) || myStakedCount;
+                } catch (e) {
+                    console.warn('获取用户质押权重失败，使用估算:', e.message);
+                    myWeight = myStakedCount;
+                }
+                
+                const pendingReward = await stakingContract.methods.getPendingReward(account).call();
+                const pendingRewardEth = parseFloat(web3.utils.fromWei(pendingReward, 'ether'));
+                
+                const myStakes = await stakingContract.methods.getUserStakedNFTs(account).call();
+                let totalStakingDays = 0;
+                for (const tokenId of myStakes) {
+                    const stakeInfo = await stakingContract.methods.getStakingInfo(tokenId).call();
+                    const stakeTime = parseInt(stakeInfo.stakeTime || stakeInfo[1] || 0, 10);
+                    if (stakeTime > 0) {
+                        const stakingDays = (Date.now() / 1000 - stakeTime) / 86400;
+                        if (stakingDays > 0) totalStakingDays += stakingDays;
+                    }
+                }
+                
+                let dailyReward = 0;
+                if (totalStakingDays > 0) {
+                    dailyReward = pendingRewardEth / totalStakingDays * myStakes.length;
+                } else {
+                    dailyReward = (myWeight / parseInt(totalWeighted)) * 0.1;
+                }
+                
+                const userBalance = await tokenContract.methods.balanceOf(account).call();
+                const userBalanceEth = parseFloat(web3.utils.fromWei(userBalance, 'ether'));
+                const annualRate = userBalanceEth > 0 ? (dailyReward * 365 / userBalanceEth) * 100 : 0;
+                
+                document.getElementById('dailyReward').textContent = dailyReward.toFixed(4);
+                document.getElementById('annualRate').textContent = annualRate.toFixed(2) + '%';
+            } catch (error) {
+                console.error('更新收益预估失败:', error);
+            }
+        }
+        
+        let rewardEstimateInterval = null;
+        
+        function startRewardEstimateRefresh() {
+            if (rewardEstimateInterval) {
+                clearInterval(rewardEstimateInterval);
+            }
+            rewardEstimateInterval = setInterval(updateRewardEstimate, 30000);
+        }
+        
+        function stopRewardEstimateRefresh() {
+            if (rewardEstimateInterval) {
+                clearInterval(rewardEstimateInterval);
+                rewardEstimateInterval = null;
+            }
+        }
+
+        function updateWalletButton() {
+            const walletBtn = document.getElementById('connectWalletBtn');
+            const walletBtnDesktop = document.getElementById('connectWalletBtnDesktop');
+            if (account) {
+                const shortAddress = account.substring(0, 4) + '...' + account.substring(account.length - 4);
+                walletBtn.textContent = shortAddress;
+                walletBtn.disabled = true;
+                walletBtn.style.background = 'linear-gradient(135deg, #4338ca 0%, #3730a3 100%)';
+                if (walletBtnDesktop) {
+                    walletBtnDesktop.textContent = shortAddress;
+                    walletBtnDesktop.disabled = true;
+                    walletBtnDesktop.style.background = 'linear-gradient(135deg, #4338ca 0%, #3730a3 100%)';
+                }
+                document.getElementById('connectionStatus').textContent = '钱包已连接';
+                document.getElementById('connectionStatus').style.color = '#4CAF50';
+            }
+        }
+
+        async function initContracts() {
+            try {
+                nftContract = await window.ZODIAC_WEB3.getContract('nftMint');
+                tokenContract = await window.ZODIAC_WEB3.getContract('tokenContract');
+                stakingContract = await window.ZODIAC_WEB3.getContract('staking');
+                stakingLPRewardContract = await window.ZODIAC_WEB3.getContract('stakingLPReward');
+                tokenStakingContract = await window.ZODIAC_WEB3.getContract('tokenStaking');
+                tokenStakingLPContract = await window.ZODIAC_WEB3.getContract('tokenStakingLP');
+                
+                try {
+                    tokenStakingLPRateManagerContract = await window.ZODIAC_WEB3.getContract('tokenStakingLPRateManager');
+                } catch (e) {
+                    const rateManagerAddress = await window.ZODIAC_WEB3.getContractAddress('tokenStakingLPRateManager');
+                    if (rateManagerAddress) {
+                        const web3Inst = window.ZODIAC_WEB3.getWeb3();
+                        if (web3Inst) {
+                            const minABI = [
+                                {"inputs":[],"name":"rewardRate","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+                                {"inputs":[],"name":"maxRewardRate","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
+                            ];
+                            tokenStakingLPRateManagerContract = new web3Inst.eth.Contract(minABI, rateManagerAddress);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn('合约初始化失败:', error.message);
+                ZODIAC_UI.showToast('合约初始化失败: ' + error.message, 'warning');
+            }
+        }
+
+        async function updateWalletStatus() {
+            if (!account || !tokenContract) return;
+
+            try {
+                const balance = await tokenContract.methods.balanceOf(account).call();
+                const balanceInTokens = web3.utils.fromWei(balance, 'ether');
+                const balanceFormatted = parseFloat(balanceInTokens).toFixed(4);
+                document.getElementById('stakingTokenBalance').textContent = balanceFormatted;
+            } catch (error) {
+                console.error('更新代币余额失败:', error);
+                document.getElementById('stakingTokenBalance').textContent = '0';
+            }
+        }
+
+        async function loadStakingConstants() {
+            try {
+                const minDuration = await stakingContract.methods.minStakingDuration().call();
+                const normalWeightArr = await stakingContract.methods.normalNFTWeight().call();
+                const rareWeightArr = await stakingContract.methods.rareNFTWeight().call();
+                document.getElementById('minStakingDuration').textContent = formatDuration(minDuration);
+                // 显示所有等级的权重，格式为 "等级1:weight1, 等级2:weight2, ..."
+                const normalWeightStr = normalWeightArr.map((w, i) => `${i+1}:${w}`).join(', ');
+                const rareWeightStr = rareWeightArr.map((w, i) => `${i+1}:${w}`).join(', ');
+                document.getElementById('normalWeight').textContent = normalWeightStr;
+                document.getElementById('rareWeight').textContent = rareWeightStr;
+                
+                // 加载NFT质押每日释放比例
+                if (stakingLPRewardContract) {
+                    try {
+                        const poolState = await stakingLPRewardContract.methods.getPoolState().call();
+                        const rewardRate = poolState[8] || 30;
+                        const rewardRatePercent = (parseInt(rewardRate, 10) / 100).toFixed(2);
+                        document.getElementById('nftDailyReleaseRate').textContent = rewardRatePercent + '%';
+                    } catch (e) {
+                        console.warn('获取NFT质押每日释放比例失败:', e);
+                    }
+                }
+            } catch (error) {
+                console.error('加载质押常量失败:', error);
+            }
+        }
+
+        function formatDuration(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            if (hours > 0) {
+                return `${hours}小时${minutes}分钟`;
+            }
+            return `${minutes}分钟`;
+        }
+
+        function parseStakeInfo(stakeInfo) {
+            if (!stakeInfo) {
+                return { amount: '0', lastRewardTime: '0', accumulatedRewards: '0', stakedAt: '0' };
+            }
+            
+            return {
+                amount: stakeInfo.amount !== undefined ? stakeInfo.amount : (stakeInfo[0] || '0'),
+                lastRewardTime: stakeInfo.lastRewardTime !== undefined ? stakeInfo.lastRewardTime : (stakeInfo[1] || '0'),
+                accumulatedRewards: stakeInfo.accumulatedRewards !== undefined ? stakeInfo.accumulatedRewards : (stakeInfo[2] || '0'),
+                stakedAt: stakeInfo.stakedAt !== undefined ? stakeInfo.stakedAt : (stakeInfo[3] || '0')
+            };
+        }
+
+        async function isNFTLevelEligible(level) {
+            try {
+                const minLevel = await stakingContract.methods.minStakingLevel().call();
+                return parseInt(level) >= parseInt(minLevel);
+            } catch (e) {
+                console.error('Failed to get minStakingLevel:', e);
+                return parseInt(level) >= 1;
+            }
+        }
+
+        function isNFTRare(tokenType) {
+            // 暗属性(72-95)和光属性(96-119)为稀有NFT
+            return parseInt(tokenType, 10) >= 72;
+        }
+
+        let isLoadingStakingNFTs = false;
+        let pendingLoadStakingNFTs = false;
+
+        async function loadEligibleNFTs() {
+            if (isLoadingStakingNFTs) {
+                pendingLoadStakingNFTs = true;
+                return;
+            }
+            
+            isLoadingStakingNFTs = true;
+            ZODIAC_UI.showLoading('加载NFT中...');
+            const eligibleNFTs = document.getElementById('eligibleNFTs');
+
+            try {
+                const tokenIds = await nftContract.methods.getTokenIdsByOwner(account).call();
+                
+                let minLevel = 1;
+                try {
+                    minLevel = parseInt(await stakingContract.methods.minStakingLevel().call());
+                } catch (e) {
+                    console.warn('获取最低质押等级失败:', e);
+                }
+                
+                const nftPromises = tokenIds.map(tokenId => {
+                    return Promise.all([
+                        window.ZODIAC_WEB3.getNFTFullInfo(tokenId).catch(e => ({ tokenType: 0, level: 1, growth: 0 })),
+                        stakingContract.methods.getStakingInfo(tokenId).call().catch(() => ({ owner: '0x0000000000000000000000000000000000000000' }))
+                    ]).then(([nftInfo, stakeInfo]) => {
+                        if (!nftInfo || nftInfo.tokenType === 0) {
+                            return null;
+                        }
+                        
+                        return {
+                            tokenId: tokenId.toString(),
+                            level: nftInfo.level.toString(),
+                            type: nftInfo.tokenType.toString(),
+                            growth: nftInfo.growth,
+                            stakeInfo: stakeInfo
+                        };
+                    }).catch(e => {
+                        console.warn(`获取NFT ${tokenId} 详情失败:`, e);
+                        return null;
+                    });
+                });
+
+                const results = await Promise.all(nftPromises);
+                const nfts = results.filter(nft => nft !== null);
+
+                const eligible = [];
+                for (const nft of nfts) {
+                    if (parseInt(nft.level) >= minLevel) {
+                        if (nft.stakeInfo.owner === '0x0000000000000000000000000000000000000000') {
+                            const nftInfo = getNFTInfo(nft.type);
+                            const isRare = isNFTRare(nft.type);
+                            const gender = parseInt(nft.type) % 2;
+                            eligible.push({
+                                id: nft.tokenId,
+                                type: nft.type,
+                                level: nft.level,
+                                growth: nft.growth,
+                                image: nftInfo.imagePath,
+                                name: nftInfo.name,
+                                isRare: isRare,
+                                gender: gender
+                            });
+                        }
+                    }
+                }
+
+                if (eligible.length === 0) {
+                    eligibleNFTs.innerHTML = '<div class="col-span-full text-center text-gray-500 py-8">没有可质押的NFT</div>';
+                    ZODIAC_UI.hideLoading();
+                    return;
+                }
+
+                let html = '';
+                eligible.forEach(nft => {
+                    const rarityClass = nft.isRare ? 'rarity-rare' : 'rarity-normal';
+                    const rarityLabel = nft.isRare ? '稀有' : '普通';
+                    const genderText = nft.gender === 1 ? '<span class="text-blue-500">公</span>' : '<span class="text-pink-500">母</span>';
+                    html += `
+                        <div class="nft-card relative" onclick="toggleNFTSelection('${nft.id}')" data-token-id="${nft.id}">
+                            <button onclick="event.stopPropagation(); showNFTModal(${nft.id}, ${nft.type}, ${nft.level}, '${nft.name}', '${nft.image}')" class="info-btn absolute top-2 right-2 w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors z-10" title="查看详情">
+                                <i class="fas fa-info text-blue-600 text-xs"></i>
+                            </button>
+                            <img src="${nft.image}" alt="${nft.name}" class="w-full aspect-square object-contain mb-2" onerror="this.src='images/fu-cards/shuishu_1.jpg'">
+                            <p class="text-gray-800 text-sm truncate">${nft.name} ${genderText}</p>
+                            <p class="text-gray-500 text-xs">${getStars(nft.level)}</p>
+                            <p class="text-gray-400 text-xs">成长值: ${nft.growth}</p>
+                            <span class="rarity-badge ${rarityClass}">${rarityLabel}</span>
+                            <p class="text-gray-400 text-xs mt-1">ID: ${nft.id}</p>
+                        </div>
+                    `;
+                });
+                eligibleNFTs.innerHTML = html;
+            } catch (error) {
+                console.error('加载NFT失败:', error);
+                eligibleNFTs.innerHTML = '<div class="col-span-full text-center text-gray-500 py-8">加载失败，请重试</div>';
+                ZODIAC_UI.showToast('加载NFT失败: ' + error.message, 'error');
+            } finally {
+                ZODIAC_UI.hideLoading();
+                isLoadingStakingNFTs = false;
+                if (pendingLoadStakingNFTs) {
+                    pendingLoadStakingNFTs = false;
+                    setTimeout(loadEligibleNFTs, 100);
+                }
+            }
+        }
+
+        async function loadSingleStakingNFT(tokenId) {
+            try {
+                let stakeInfo = { owner: '0x0000000000000000000000000000000000000000' };
+
+                const nftInfo = await window.ZODIAC_WEB3.getNFTFullInfo(tokenId);
+                
+                if (!nftInfo || nftInfo.tokenType === 0) {
+                    console.warn(`NFT ${tokenId} type为0，可能无效`);
+                    return null;
+                }
+
+                try {
+                    stakeInfo = await stakingContract.methods.getStakingInfo(tokenId).call();
+                } catch (e) {
+                    console.warn(`获取NFT ${tokenId} 质押信息失败:`, e.message);
+                }
+
+                return {
+                    tokenId: tokenId.toString(),
+                    level: nftInfo.level.toString(),
+                    type: nftInfo.tokenType.toString(),
+                    growth: nftInfo.growth,
+                    stakeInfo: stakeInfo
+                };
+            } catch (e) {
+                console.warn(`获取NFT ${tokenId} 详情完全失败:`, e);
+                return null;
+            }
+        }
+
+        async function loadMyStakes() {
+            const myStakes = document.getElementById('myStakes');
+
+            try {
+                const tokenIds = await stakingContract.methods.getUserStakedNFTs(account).call();
+
+                if (tokenIds.length === 0) {
+                    myStakes.innerHTML = '<div class="text-center text-gray-500 py-8">暂无质押</div>';
+                    document.getElementById('myStakedCount').textContent = '0';
+                    return;
+                }
+
+                document.getElementById('myStakedCount').textContent = tokenIds.length;
+
+                let minStakingDuration = 1800;
+                try {
+                    minStakingDuration = parseInt(await stakingContract.methods.minStakingDuration().call(), 10);
+                } catch (e) {
+                    console.warn('获取最小质押时间失败，使用默认30分钟:', e);
+                }
+
+                const stakePromises = tokenIds.map(tokenId => {
+                    return Promise.all([
+                        stakingContract.methods.getStakingInfo(tokenId).call(),
+                        window.ZODIAC_WEB3.getNFTFullInfo(tokenId).catch(e => ({ tokenType: 0, level: 1, growth: 0 }))
+                    ]).then(([stakeInfo, nftInfo]) => {
+                        if (!nftInfo || nftInfo.tokenType === 0) {
+                            return null;
+                        }
+                        return {
+                            tokenId: tokenId.toString(),
+                            stakeInfo: stakeInfo,
+                            type: nftInfo.tokenType.toString(),
+                            level: nftInfo.level.toString(),
+                            growth: nftInfo.growth
+                        };
+                    }).catch(e => {
+                        console.warn(`获取质押NFT ${tokenId} 详情失败:`, e);
+                        return null;
+                    });
+                });
+
+                const results = await Promise.all(stakePromises);
+                const stakes = results.filter(s => s !== null);
+
+                const now = Math.floor(Date.now() / 1000);
+                let html = '';
+                for (const stake of stakes) {
+                    const nftInfo = getNFTInfo(stake.type);
+                    const isRare = isNFTRare(stake.type);
+                    const weight = isRare ? document.getElementById('rareWeight').textContent : document.getElementById('normalWeight').textContent;
+                    
+                    const stakeTime = parseInt(stake.stakeInfo.stakeTime, 10);
+                    const unlockTime = stakeTime + minStakingDuration;
+                    const isLocked = now < unlockTime;
+                    const remainingSeconds = isLocked ? unlockTime - now : 0;
+                    const remainingMinutes = Math.ceil(remainingSeconds / 60);
+
+                    html += `
+                        <div class="stake-card nft-card-hover" data-nft-typeid="${stake.type}" data-nft-tokenid="${stake.tokenId}" data-nft-level="${stake.level}">
+                            <div class="flex items-center gap-4 mb-4">
+                                <img src="${nftInfo.imagePath}" alt="${nftInfo.name}" class="w-16 h-16 object-contain" onerror="this.src='images/fu-cards/shuishu_1.jpg'">
+                                <div class="flex-1">
+                                    <h4 class="text-lg font-bold text-gray-800">${nftInfo.name}</h4>
+                                    <p class="text-gray-500">等级: ${getStars(stake.level)}</p>
+                                    <p class="text-gray-400 text-xs">ID: ${stake.tokenId}</p>
+                                    <p class="text-gray-500 text-sm">权重: ${weight}</p>
+                                    <p class="text-gray-400 text-xs">成长值: ${stake.growth}</p>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center mb-4">
+                                <span class="text-gray-600">质押时间</span>
+                                <span class="text-gray-800 font-medium">${formatStakingTime(stake.stakeInfo.stakeTime)}</span>
+                            </div>
+                            ${isLocked ? `
+                                <div class="mb-2 text-xs text-orange-600 text-center">
+                                    <i class="fas fa-lock mr-1"></i>锁定期中，还剩 ${remainingMinutes} 分钟
+                                </div>
+                                <button class="btn-secondary w-full opacity-50 cursor-not-allowed" disabled>
+                                    赎回NFT
+                                </button>
+                            ` : `
+                                <button class="btn-secondary w-full" onclick="unstakeNFT('${stake.tokenId}')">
+                                    赎回NFT
+                                </button>
+                            `}
+                        </div>
+                    `;
+                }
+                myStakes.innerHTML = html;
+            } catch (error) {
+                console.error('加载质押失败:', error);
+                myStakes.innerHTML = '<div class="text-center text-gray-500 py-8">加载失败，请重试</div>';
+                ZODIAC_UI.showToast('加载质押失败: ' + error.message, 'error');
+            }
+        }
+
+        function formatStakingTime(timestamp) {
+            const now = Math.floor(Date.now() / 1000);
+            const diff = now - parseInt(timestamp, 10);
+            const hours = Math.floor(diff / 3600);
+            const minutes = Math.floor((diff % 3600) / 60);
+            const seconds = diff % 60;
+            if (hours > 0) {
+                return `${hours}小时${minutes}分钟`;
+            } else if (minutes > 0) {
+                return `${minutes}分钟${seconds}秒`;
+            }
+            return `${seconds}秒`;
+        }
+
+        async function loadRewards() {
+            try {
+                const lpRewards = await stakingLPRewardContract.methods.getPendingLPReward(account).call();
+                const rawRewardType = await stakingLPRewardContract.methods.rewardType().call();
+                const rewardType = typeof rawRewardType === 'object' && rawRewardType.toString ? parseInt(rawRewardType.toString(), 10) : parseInt(rawRewardType, 10);
+                console.log('[STAKING] NFT staking rewardType from contract:', rawRewardType, 'parsed:', rewardType);
+                
+                const rewardsFormatted = web3.utils.fromWei(lpRewards, 'ether');
+                const unit = getRewardUnit(rewardType);
+                const displayText = getRewardDisplayText(rewardType);
+                
+                document.getElementById('rewardsAmount').textContent = parseFloat(rewardsFormatted).toFixed(4) + ' ' + unit;
+                document.getElementById('claimBtn').disabled = lpRewards === '0';
+                
+                updateRewardDescription(rewardType);
+            } catch (error) {
+                console.error('加载LP奖励失败:', error);
+                ZODIAC_UI.showToast('加载LP奖励失败: ' + error.message, 'error');
+            }
+        }
+
+        function getRewardUnit(rewardType) {
+            const type = typeof rewardType === 'object' && rewardType.toString ? parseInt(rewardType.toString(), 10) : parseInt(rewardType, 10);
+            switch(type) {
+                case 0: return 'LP';
+                case 1: return 'TOKEN';
+                case 2: return 'BNB';
+                default: return 'LP';
+            }
+        }
+
+        function getRewardDisplayText(rewardType) {
+            const type = typeof rewardType === 'object' && rewardType.toString ? parseInt(rewardType.toString(), 10) : parseInt(rewardType, 10);
+            switch(type) {
+                case 0: return 'LP奖励';
+                case 1: return '代币奖励';
+                case 2: return 'BNB奖励';
+                default: return 'LP奖励';
+            }
+        }
+
+        function updateRewardDescription(rewardType) {
+            const type = typeof rewardType === 'object' && rewardType.toString ? parseInt(rewardType.toString(), 10) : parseInt(rewardType, 10);
+            const displayText = getRewardDisplayText(type);
+            const icon = type === 2 ? '💰' : (type === 1 ? '🪙' : '🎁');
+            
+            const rewardInfoTitle = document.getElementById('rewardInfoTitle');
+            if (rewardInfoTitle) rewardInfoTitle.textContent = icon + ' ' + displayText + '信息';
+            
+            const rewardLabel = document.getElementById('rewardLabel');
+            if (rewardLabel) rewardLabel.textContent = '可领取' + displayText;
+            
+            const rewardDescTitle = document.getElementById('rewardDescTitle');
+            if (rewardDescTitle) rewardDescTitle.textContent = '💡 ' + displayText + '说明';
+            
+            const rewardDescText = document.getElementById('rewardDescText');
+            if (rewardDescText) {
+                switch(type) {
+                    case 0:
+                        rewardDescText.textContent = displayText + '领取后会自动兑换为代币和WBNB发送到您的钱包，您将获得双重收益：项目分红 + DEX交易手续费';
+                        break;
+                    case 1:
+                        rewardDescText.textContent = displayText + '直接发放至您的钱包';
+                        break;
+                    case 2:
+                        rewardDescText.textContent = displayText + '直接发放至您的钱包';
+                        break;
+                }
+            }
+            
+            const claimBtnText = document.getElementById('claimBtnText');
+            if (claimBtnText) claimBtnText.textContent = '领取' + displayText;
+            
+            const tokenRewardLabel = document.getElementById('tokenRewardLabel');
+            if (tokenRewardLabel) tokenRewardLabel.textContent = '可领取' + displayText;
+            
+            const tokenRewardTitle = document.getElementById('tokenRewardTitle');
+            if (tokenRewardTitle) tokenRewardTitle.textContent = '🎯 领取' + displayText;
+            
+            const tokenRewardDescTitle = document.getElementById('tokenRewardDescTitle');
+            if (tokenRewardDescTitle) tokenRewardDescTitle.textContent = '💡 ' + displayText + '说明';
+            
+            const tokenRewardDescText = document.getElementById('tokenRewardDescText');
+            if (tokenRewardDescText) {
+                switch(type) {
+                    case 0:
+                        tokenRewardDescText.textContent = displayText + '领取后会自动兑换为代币和WBNB发送到您的钱包';
+                        break;
+                    case 1:
+                        tokenRewardDescText.textContent = displayText + '直接发放至您的钱包';
+                        break;
+                    case 2:
+                        tokenRewardDescText.textContent = displayText + '直接发放至您的钱包';
+                        break;
+                }
+            }
+            
+            const tokenRewardAmountLabel = document.getElementById('tokenRewardAmountLabel');
+            if (tokenRewardAmountLabel) tokenRewardAmountLabel.textContent = '可领取' + displayText;
+            
+            const claimTokenRewardsBtnText = document.getElementById('claimTokenRewardsBtnText');
+            if (claimTokenRewardsBtnText) claimTokenRewardsBtnText.textContent = '领取' + displayText;
+            
+            const tokenStakeIntroText = document.getElementById('tokenStakeIntroText');
+            if (tokenStakeIntroText) tokenStakeIntroText.textContent = '质押代币获得' + displayText + '，支持弹性释放机制';
+            
+            const tokenRule1 = document.getElementById('tokenRule1');
+            if (tokenRule1) tokenRule1.textContent = '• 质押代币获得' + displayText;
+            
+            const tokenRule5 = document.getElementById('tokenRule5');
+            if (tokenRule5) {
+                const unit = getRewardUnit(type);
+                switch(type) {
+                    case 0:
+                        tokenRule5.textContent = '• 奖励以' + unit + '形式发放，领取时自动兑换为代币和WBNB';
+                        break;
+                    case 1:
+                        tokenRule5.textContent = '• 奖励以' + unit + '形式发放，直接到账钱包';
+                        break;
+                    case 2:
+                        tokenRule5.textContent = '• 奖励以' + unit + '形式发放，直接到账钱包';
+                        break;
+                }
+            }
+            
+            const tokenRule6 = document.getElementById('tokenRule6');
+            if (tokenRule6) {
+                switch(type) {
+                    case 0:
+                        tokenRule6.textContent = '• 双重收益：项目分红 + DEX交易手续费';
+                        break;
+                    case 1:
+                        tokenRule6.textContent = '• 稳定收益：项目分红奖励';
+                        break;
+                    case 2:
+                        tokenRule6.textContent = '• 实时收益：' + getRewardUnit(type) + '直接到账';
+                        break;
+                }
+            }
+            
+            const contractRewardBalanceLabel = document.getElementById('contractRewardBalanceLabel');
+            if (contractRewardBalanceLabel) contractRewardBalanceLabel.textContent = '合约' + displayText + '余额';
+            
+            const descElement = document.querySelector('#rewardEstimate .text-xs.text-gray-500');
+            if (descElement) {
+                switch(type) {
+                    case 0:
+                        descElement.textContent = '收益预估基于当前总权重计算，实际收益可能因其他用户质押/解质押而变化。' + displayText + '领取后自动兑换为代币和WBNB';
+                        break;
+                    case 1:
+                        descElement.textContent = '收益预估基于当前总权重计算，实际收益可能因其他用户质押/解质押而变化';
+                        break;
+                    case 2:
+                        descElement.textContent = '收益预估基于当前总权重计算，实际收益可能因其他用户质押/解质押而变化。' + displayText + '直接发放至钱包';
+                        break;
+                }
+            }
+        }
+
+        async function loadContractInfo() {
+            try {
+                const totalWeighted = await stakingContract.methods.totalWeightedNFTs().call();
+                document.getElementById('totalStakedWeight').textContent = totalWeighted;
+            } catch (error) {
+                console.error('加载合约信息失败:', error);
+                ZODIAC_UI.showToast('加载合约信息失败: ' + error.message, 'error');
+            }
+        }
+
+        function toggleNFTSelection(tokenId) {
+            const tokenIdStr = String(tokenId);
+            const index = selectedNFTs.indexOf(tokenIdStr);
+            const cardElement = document.querySelector(`[data-token-id="${tokenIdStr}"]`);
+            
+            if (index === -1) {
+                selectedNFTs.push(tokenIdStr);
+                if (cardElement) cardElement.classList.add('selected');
+            } else {
+                selectedNFTs.splice(index, 1);
+                if (cardElement) cardElement.classList.remove('selected');
+            }
+            
+            document.getElementById('stakeBtn').disabled = selectedNFTs.length === 0;
+        }
+
+        async function checkAlreadyStaked(tokenId) {
+            try {
+                const stakeInfo = await stakingContract.methods.getStakingInfo(tokenId).call();
+                return stakeInfo.owner !== '0x0000000000000000000000000000000000000000';
+            } catch (error) {
+                console.error('检查质押状态失败:', error);
+                return false;
+            }
+        }
+
+        async function validateSelectedNFTs() {
+            const invalidNFTs = [];
+            
+            for (const tokenId of selectedNFTs) {
+                const isStaked = await checkAlreadyStaked(tokenId);
+                if (isStaked) {
+                    invalidNFTs.push(tokenId);
+                }
+            }
+            
+            if (invalidNFTs.length > 0) {
+                showToast(`以下NFT已被质押: ${invalidNFTs.join(', ')}`, 'warning');
+                selectedNFTs = selectedNFTs.filter(id => !invalidNFTs.includes(id));
+                updateNFTDisplay();
+                return false;
+            }
+            
+            return true;
+        }
+
+        async function stakeNFTs() {
+            if (selectedNFTs.length === 0) return;
+
+            const stakingAddress = await window.ZODIAC_WEB3.getContractAddress('staking');
+            if (!stakingAddress || stakingAddress === '0x0000000000000000000000000000000000000000') {
+                ZODIAC_UI.showToast('质押合约地址未配置，请联系管理员部署合约', 'error');
+                return;
+            }
+
+            const isValid = await validateSelectedNFTs();
+            if (!isValid) return;
+
+            const confirm = await ZODIAC_UI.showConfirmModal(
+                '确认质押',
+                `将质押 ${selectedNFTs.length} 个NFT进行挖矿。（稀有度由合约自动识别）`
+            );
+
+            if (!confirm) return;
+
+            const btn = document.getElementById('stakeBtn');
+            btn.disabled = true;
+            btn.textContent = '质押中...';
+
+            try {
+                const stakingAddress = await window.ZODIAC_WEB3.getContractAddress('staking');
+                
+                const tokenIdsNum = selectedNFTs.map(id => parseInt(id, 10));
+                
+                await ZODIAC_WEB3.setNFTApprovalForAll(stakingAddress, true);
+
+                await ZODIAC_WEB3.stake(tokenIdsNum);
+
+                ZODIAC_UI.showToast('质押成功！', 'success');
+                selectedNFTs = [];
+                await Promise.all([
+                    loadEligibleNFTs(),
+                    loadMyStakes(),
+                    loadRewards(),
+                    loadContractInfo()
+                ]);
+            } catch (error) {
+                console.error('质押失败:', error);
+                ZODIAC_UI.handleContractError(error, '质押');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '质押选中的NFT';
+            }
+        }
+
+        async function unstakeNFT(tokenId) {
+            const confirm = await ZODIAC_UI.showConfirmModal(
+                '确认赎回NFT',
+                '确定要赎回这个NFT吗？\n\n赎回后将停止获得质押奖励',
+                { confirmText: '赎回NFT' }
+            );
+
+            if (!confirm) return;
+
+            try {
+                await ZODIAC_WEB3.unstake([tokenId]);
+                
+                ZODIAC_UI.showToast('赎回成功！', 'success');
+                loadEligibleNFTs();
+                loadMyStakes();
+                loadRewards();
+                loadContractInfo();
+            } catch (error) {
+                console.error('赎回失败:', error);
+                ZODIAC_UI.showToast('赎回失败: ' + (error.message || '未知错误'), 'error');
+            }
+        }
+
+        async function claimRewards() {
+            const btn = document.getElementById('claimBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>领取中...';
+
+            try {
+                await stakingLPRewardContract.methods.claimLPReward().send({ from: account });
+                
+                const rewardType = await stakingLPRewardContract.methods.rewardType().call();
+                const displayText = getRewardDisplayText(rewardType);
+                const unit = getRewardUnit(rewardType);
+                let successMsg = displayText + '领取成功！';
+                if (parseInt(rewardType) === 0) {
+                    successMsg += '已兑换为代币和WBNB';
+                }
+                ZODIAC_UI.showToast(successMsg, 'success');
+                loadRewards();
+                loadMyStakes();
+            } catch (error) {
+                console.error('领取失败:', error);
+                ZODIAC_UI.showToast('领取失败: ' + (error.message || '未知错误'), 'error');
+            } finally {
+                btn.disabled = false;
+                const rewardType = await stakingLPRewardContract.methods.rewardType().call().catch(() => 0);
+                btn.innerHTML = '<i class="fas fa-gift mr-2"></i>领取' + getRewardDisplayText(rewardType);
+            }
+        }
+
+        function getNFTInfo(typeId) {
+            return window.ZODIAC_UTILS.getNFTInfo(typeId);
+        }
+
+        function getStars(level) {
+            return window.ZODIAC_UTILS.getStars(parseInt(level, 10));
+        }
+
+        document.getElementById('refreshWallet').addEventListener('click', initWeb3);
+        document.getElementById('stakeBtn').addEventListener('click', stakeNFTs);
+        document.getElementById('claimBtn').addEventListener('click', claimRewards);
+
+        setInterval(loadRewards, 60000);
+    </script>
+
+    <script>
+        async function loadTokenStakingInfo() {
+            if (!tokenStakingContract) {
+                console.warn('代币质押合约未配置');
+                updateTokenStakeButton();
+                return;
+            }
+
+            try {
+                let hasBalance = false;
+                try {
+                    if (tokenContract && account) {
+                        const balance = await tokenContract.methods.balanceOf(account).call();
+                        const balanceStr = web3.utils.fromWei(balance, 'ether').substring(0, 10);
+                        document.getElementById('tokenBalance').textContent = balanceStr;
+                        document.getElementById('tokenStakeAmount').max = parseFloat(balanceStr);
+                        hasBalance = parseFloat(balanceStr) > 0;
+                    }
+                } catch (e) {
+                    console.warn('读取代币余额失败:', e);
+                    document.getElementById('tokenBalance').textContent = '0';
+                }
+
+                let stakedAmount = '0';
+                let stakedAt = 0;
+                try {
+                    const stakeInfo = await tokenStakingContract.methods.getUserStake(account).call();
+                    const parsedStakeInfo = parseStakeInfo(stakeInfo);
+                    stakedAmount = parsedStakeInfo.amount;
+                    stakedAt = parsedStakeInfo.stakedAt;
+                    document.getElementById('myTokenStakeAmount').textContent = web3.utils.fromWei(parsedStakeInfo.amount, 'ether').substring(0, 10);
+                } catch (e) {
+                    console.warn('读取质押信息失败:', e);
+                    document.getElementById('myTokenStakeAmount').textContent = '0';
+                }
+
+                let claimableLP = '0';
+                let rewardUnit = 'LP';
+                let rewardDisplayText = '可领取LP奖励';
+                let rewardType = 0;
+                try {
+                    if (tokenStakingLPContract && account) {
+                        const lpRewards = await tokenStakingLPContract.methods.getPendingLPReward(account).call();
+                        claimableLP = web3.utils.fromWei(lpRewards, 'ether').substring(0, 10);
+                        const rawRewardType = await tokenStakingLPContract.methods.getRewardType().call();
+                        rewardType = typeof rawRewardType === 'object' && rawRewardType.toString ? parseInt(rawRewardType.toString(), 10) : parseInt(rawRewardType, 10);
+                        console.log('[STAKING] Token staking rewardType from contract:', rawRewardType, 'parsed:', rewardType);
+                        rewardUnit = getRewardUnit(rewardType);
+                        rewardDisplayText = getRewardDisplayText(rewardType);
+                    }
+                } catch (e) {
+                    console.warn('读取LP奖励失败:', e);
+                    claimableLP = '0';
+                }
+                
+                document.getElementById('tokenRewardsAmount').textContent = claimableLP + ' ' + rewardUnit;
+                updateRewardDescription(rewardType);
+
+                if (stakedAt > 0) {
+                    const date = new Date(stakedAt * 1000);
+                    document.getElementById('tokenStakedAt').textContent = date.toLocaleString('zh-CN');
+                } else {
+                    document.getElementById('tokenStakedAt').textContent = '-';
+                }
+
+                try {
+                    let lpBalance = '0';
+                    let rewardUnit = 'LP';
+                    if (tokenStakingLPContract) {
+                        const lpBalanceWei = await tokenStakingLPContract.methods.lpRewardPoolBalance().call();
+                        lpBalance = web3.utils.fromWei(lpBalanceWei, 'ether').substring(0, 10);
+                        const rawRewardType = await tokenStakingLPContract.methods.getRewardType().call();
+                        const rewardType = typeof rawRewardType === 'object' && rawRewardType.toString ? parseInt(rawRewardType.toString(), 10) : parseInt(rawRewardType, 10);
+                        rewardUnit = getRewardUnit(rewardType);
+                    }
+                    document.getElementById('tokenStakingBNBBalance').textContent = lpBalance + ' ' + rewardUnit;
+                } catch (e) {
+                    document.getElementById('tokenStakingBNBBalance').textContent = '0 BNB';
+                }
+
+                try {
+                    const totalStakedAll = await tokenStakingContract.methods.getTotalStaked().call();
+                    document.getElementById('totalStakedTokens').textContent = web3.utils.fromWei(totalStakedAll, 'ether').substring(0, 10);
+                } catch (e) {
+                    document.getElementById('totalStakedTokens').textContent = '0';
+                }
+
+                document.getElementById('currentReleaseRatio').textContent = '--';
+                document.getElementById('dailyReleaseRatioDisplay').textContent = '--';
+                
+                try {
+                    if (tokenStakingLPRateManagerContract) {
+                        const rewardRate = await tokenStakingLPRateManagerContract.methods.rewardRate().call();
+                        const rewardRatePercent = (parseInt(rewardRate, 10) / 100).toFixed(2);
+                        document.getElementById('dailyReleaseRatioDisplay').textContent = rewardRatePercent;
+                        document.getElementById('currentReleaseRatio').textContent = rewardRatePercent + '%';
+                    }
+                } catch (e) {
+                    console.warn('读取释放比例失败:', e);
+                }
+                
+                try {
+                    const minDuration = await tokenStakingContract.methods.MIN_STAKING_DURATION().call();
+                    const minDurationMinutes = Math.floor(parseInt(minDuration, 10) / 60);
+                    document.getElementById('tokenMinDuration').textContent = minDurationMinutes;
+                } catch (e) {
+                    document.getElementById('tokenMinDuration').textContent = '30';
+                }
+
+                document.getElementById('tokenStakeBtn').disabled = !hasBalance;
+                const hasStaked = stakedAmount && parseInt(stakedAmount, 10) > 0;
+                document.getElementById('tokenUnstakeBtn').disabled = !hasStaked;
+                if (hasStaked) {
+                    document.getElementById('tokenUnstakeAmount').value = web3.utils.fromWei(stakedAmount, 'ether');
+                }
+                document.getElementById('claimTokenRewardsBtn').disabled = !(parseFloat(claimableLP) > 0);
+            } catch (error) {
+                console.error('加载代币质押信息失败:', error);
+                document.getElementById('tokenStakeBtn').disabled = false;
+            }
+        }
+
+        function updateTokenStakeButton() {
+            const amount = document.getElementById('tokenStakeAmount').value;
+            const btn = document.getElementById('tokenStakeBtn');
+            btn.disabled = !amount || parseFloat(amount) <= 0;
+        }
+
+        function updateTokenUnstakeButton() {
+            const amount = document.getElementById('tokenUnstakeAmount').value;
+            const btn = document.getElementById('tokenUnstakeBtn');
+            btn.disabled = !amount || parseFloat(amount) <= 0;
+        }
+
+        async function handleTokenStake() {
+            const amount = document.getElementById('tokenStakeAmount').value;
+            if (!amount || parseFloat(amount) <= 0) {
+                ZODIAC_UI.showToast('请输入有效的质押数量', 'warning');
+                return;
+            }
+
+            const tokenStakingAddress = await window.ZODIAC_WEB3.getContractAddress('tokenStaking');
+            if (!tokenStakingAddress || tokenStakingAddress === '0x0000000000000000000000000000000000000000') {
+                ZODIAC_UI.showToast('代币质押合约地址未配置', 'error');
+                return;
+            }
+
+            const confirm = await ZODIAC_UI.showConfirmModal(
+                '确认质押',
+                `将质押 ${amount} 代币`
+            );
+
+            if (!confirm) return;
+
+            const btn = document.getElementById('tokenStakeBtn');
+            btn.disabled = true;
+            btn.textContent = '质押中...';
+
+            try {
+                const amountWei = web3.utils.toWei(amount, 'ether');
+                
+                if (!tokenContract) {
+                    throw new Error('代币合约未初始化');
+                }
+                
+                const tokenAddress = tokenContract.options.address;
+                if (!tokenAddress || tokenAddress === '0x0000000000000000000000000000000000000000') {
+                    throw new Error('代币合约地址无效');
+                }
+                
+                const allowance = await tokenContract.methods.allowance(account, tokenStakingAddress).call();
+                if (parseInt(allowance, 10) < parseInt(amountWei, 10)) {
+                    await ZODIAC_WEB3.approveToken(tokenStakingAddress, amountWei);
+                }
+
+                await ZODIAC_WEB3.stakeTokens(amountWei);
+
+                ZODIAC_UI.showToast('代币质押成功！', 'success');
+                document.getElementById('tokenStakeAmount').value = '';
+                await loadTokenStakingInfo();
+            } catch (error) {
+                console.error('代币质押失败:', error);
+                ZODIAC_UI.showToast('代币质押失败: ' + (error.message || '未知错误'), 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '质押代币';
+            }
+        }
+
+        async function handleTokenUnstake() {
+            const amount = document.getElementById('tokenUnstakeAmount').value;
+            if (!amount || parseFloat(amount) <= 0) {
+                ZODIAC_UI.showToast('请输入有效的赎回数量', 'warning');
+                return;
+            }
+
+            const amountWei = web3.utils.toWei(amount, 'ether');
+
+            try {
+                const stakeInfo = await tokenStakingContract.methods.getUserStake(account).call();
+                const parsedStakeInfo = parseStakeInfo(stakeInfo);
+                const stakedAmount = parsedStakeInfo.amount;
+                const stakedAt = parsedStakeInfo.stakedAt;
+
+                if (parseInt(stakedAmount, 10) < parseInt(amountWei, 10)) {
+                    ZODIAC_UI.showToast('赎回数量超过质押数量', 'error');
+                    return;
+                }
+
+                if (parseInt(stakedAt, 10) === 0) {
+                    ZODIAC_UI.showToast('没有找到质押记录', 'error');
+                    return;
+                }
+
+                const minDuration = await tokenStakingContract.methods.MIN_STAKING_DURATION().call();
+                const minDurationSeconds = parseInt(minDuration, 10);
+                const currentTime = Math.floor(Date.now() / 1000);
+
+                if (currentTime < parseInt(stakedAt, 10) + minDurationSeconds) {
+                    const remainingMinutes = Math.ceil((parseInt(stakedAt, 10) + minDurationSeconds - currentTime) / 60);
+                    ZODIAC_UI.showToast(`锁仓期未结束，还需等待 ${remainingMinutes} 分钟`, 'error');
+                    return;
+                }
+
+                const isPaused = await tokenStakingContract.methods.paused().call();
+                if (isPaused) {
+                    ZODIAC_UI.showToast('合约已暂停，请稍后重试', 'error');
+                    return;
+                }
+            } catch (e) {
+                console.warn('预检查失败:', e.message);
+            }
+
+            const confirm = await ZODIAC_UI.showConfirmModal(
+                '确认赎回',
+                `将赎回 ${amount} 代币，同时领取累积奖励`
+            );
+
+            if (!confirm) return;
+
+            const btn = document.getElementById('tokenUnstakeBtn');
+            btn.disabled = true;
+            btn.textContent = '赎回中...';
+
+            try {
+                await ZODIAC_WEB3.unstakeTokens(amountWei);
+
+                ZODIAC_UI.showToast('代币赎回成功！', 'success');
+                document.getElementById('tokenUnstakeAmount').value = '';
+                await loadTokenStakingInfo();
+            } catch (error) {
+                console.error('代币赎回失败:', error);
+                ZODIAC_UI.showToast('代币赎回失败: ' + (error.message || '未知错误'), 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '赎回代币';
+            }
+        }
+
+        async function claimTokenRewards() {
+            const btn = document.getElementById('claimTokenRewardsBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>领取中...';
+
+            try {
+                await tokenStakingLPContract.methods.claimLPReward().send({ from: account });
+
+                const rewardType = await tokenStakingLPContract.methods.getRewardType().call();
+                const displayText = getRewardDisplayText(rewardType);
+                let successMsg = displayText + '领取成功！';
+                if (parseInt(rewardType) === 0) {
+                    successMsg += '已兑换为代币和WBNB';
+                }
+                ZODIAC_UI.showToast(successMsg, 'success');
+                await loadTokenStakingInfo();
+            } catch (error) {
+                console.error('领取奖励失败:', error);
+                ZODIAC_UI.showToast('领取奖励失败: ' + (error.message || '未知错误'), 'error');
+            } finally {
+                btn.disabled = false;
+                const rewardType = await tokenStakingLPContract.methods.getRewardType().call().catch(() => 0);
+                btn.innerHTML = '<i class="fas fa-gift mr-2"></i>领取' + getRewardDisplayText(rewardType);
+            }
+        }
+
+        async function showNFTModal(nftId, nftType, nftLevel, nftName, nftImage) {
+            const nftInfo = window.ZODIAC_UTILS.getNFTInfo(nftType);
+            const isRare = nftInfo.isRare;
+            const rarityText = isRare ? '稀有' : '普通';
+            
+            const level = parseInt(nftLevel, 10);
+            const displayLevel = level > 0 ? level : 1;
+            
+            const canBreed = level >= 5;
+            const canBattle = level >= 1;
+            const canStake = level >= 1;
+            
+            const zodiacNames = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
+            const zodiacName = nftInfo.zodiac !== undefined ? (ZODIAC_CONFIG && ZODIAC_CONFIG.ZODIAC_NAMES ? ZODIAC_CONFIG.ZODIAC_NAMES[nftInfo.zodiac] : zodiacNames[nftInfo.zodiac]) : '未知';
+            
+            let growth = 0;
+            let attrType = 3;
+            let attack = 0, defense = 0, speed = 0, hp = 0;
+            
+            let skillTypeName1 = '未知技能';
+            let skillDesc1 = '未知效果';
+            let sDamage1 = '0%';
+            let sCooldown1 = 0;
+            let sIsAoe1 = false;
+            
+            let skillTypeName2 = '未知技能';
+            let skillDesc2 = '未知效果';
+            let sDamage2 = '0%';
+            let sCooldown2 = 0;
+            let sIsAoe2 = false;
+            
+            if (nftId && window.ZODIAC_WEB3) {
+                try {
+                    const nftFullInfo = await window.ZODIAC_WEB3.getNFTFullInfo(nftId);
+                    const nftAttrs = await window.ZODIAC_WEB3.getNFTAttributes(nftId);
+                    
+                    if (nftFullInfo) {
+                        growth = nftFullInfo.growth || 0;
+                        attrType = nftFullInfo.attrType !== undefined ? nftFullInfo.attrType : 3;
+                        const skillTypes = nftFullInfo.skills || [];
+                        if (skillTypes.length >= 1) {
+                            const skillInfo1 = await window.ZODIAC_WEB3.getNFTSkillInfo(skillTypes[0]);
+                            if (skillInfo1) {
+                                skillTypeName1 = skillInfo1.name;
+                                skillDesc1 = skillInfo1.description;
+                                sDamage1 = skillInfo1.damage;
+                                sCooldown1 = skillInfo1.cooldown;
+                                sIsAoe1 = skillInfo1.isAoe;
+                            }
+                        }
+                        if (skillTypes.length >= 2) {
+                            const skillInfo2 = await window.ZODIAC_WEB3.getNFTSkillInfo(skillTypes[1]);
+                            if (skillInfo2) {
+                                skillTypeName2 = skillInfo2.name;
+                                skillDesc2 = skillInfo2.description;
+                                sDamage2 = skillInfo2.damage;
+                                sCooldown2 = skillInfo2.cooldown;
+                                sIsAoe2 = skillInfo2.isAoe;
+                            }
+                        }
+                    }
+                    
+                    if (nftAttrs) {
+                        attack = nftAttrs.attack;
+                        defense = nftAttrs.defense;
+                        speed = nftAttrs.speed;
+                        hp = nftAttrs.health;
+                    }
+                } catch (e) {
+                    console.warn('[STAKING] Failed to get NFT info from contract:', e);
+                }
+            }
+            
+            if (attack === 0 || defense === 0 || speed === 0 || hp === 0) {
+                attack = window.ZODIAC_UI.calculateAttack(displayLevel, growth);
+                defense = window.ZODIAC_UI.calculateDefense(displayLevel, growth);
+                speed = window.ZODIAC_UI.calculateSpeed(displayLevel, growth, nftInfo.zodiac);
+                hp = window.ZODIAC_UI.calculateMaxHP(displayLevel, growth);
+            }
+            
+            if (skillTypeName1 === '未知技能') {
+                const localSkills = window.ZODIAC_UTILS.getLocalSkill(nftType);
+                const skill1 = localSkills[0];
+                const skill2 = localSkills[1];
+                
+                skillTypeName1 = window.ZODIAC_UTILS.getSkillTypeName(parseInt(skill1.type));
+                skillDesc1 = window.ZODIAC_UTILS.getSkillDescription(parseInt(skill1.type), parseInt(skill1.damage), skill1.isAoe);
+                sDamage1 = skill1.damage + '%';
+                sCooldown1 = skill1.cooldown;
+                sIsAoe1 = skill1.isAoe;
+                
+                skillTypeName2 = window.ZODIAC_UTILS.getSkillTypeName(parseInt(skill2.type));
+                skillDesc2 = window.ZODIAC_UTILS.getSkillDescription(parseInt(skill2.type), parseInt(skill2.damage), skill2.isAoe);
+                sDamage2 = skill2.damage + '%';
+                sCooldown2 = skill2.cooldown;
+                sIsAoe2 = skill2.isAoe;
+            }
+            
+            const growthType = window.ZODIAC_UTILS.getTypeNameCN(attrType);
+            const zodiacBonus = window.ZODIAC_UTILS.getZodiacBonusName(nftInfo.zodiac);
+            
+            const skillInfo = `
+                <div class="mt-4">
+                    <div class="text-xs text-gray-600 mb-2">⚔️ 战斗技能</div>
+                    <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3 border border-blue-200 mb-2">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm font-bold text-blue-700">技能1: ${skillTypeName1}</span>
+                            <span class="text-xs px-2 py-0.5 ${sIsAoe1 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'} rounded">${sIsAoe1 ? '范围攻击' : '单体攻击'}</span>
+                        </div>
+                        <div class="text-xs text-gray-500">${skillDesc1}</div>
+                        <div class="mt-2 flex gap-3 text-xs">
+                            <span class="text-gray-500">伤害倍率: <span class="text-purple-600 font-bold">${sDamage1}</span></span>
+                            <span class="text-gray-500">冷却: <span class="text-orange-600 font-bold">${sCooldown1}回合</span></span>
+                        </div>
+                    </div>
+                    <div class="bg-gradient-to-r from-green-50 to-teal-50 rounded-lg p-3 border border-green-200">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm font-bold text-green-700">技能2: ${skillTypeName2}</span>
+                            <span class="text-xs px-2 py-0.5 ${sIsAoe2 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'} rounded">${sIsAoe2 ? '范围攻击' : '单体攻击'}</span>
+                        </div>
+                        <div class="text-xs text-gray-500">${skillDesc2}</div>
+                        <div class="mt-2 flex gap-3 text-xs">
+                            <span class="text-gray-500">伤害倍率: <span class="text-purple-600 font-bold">${sDamage2}</span></span>
+                            <span class="text-gray-500">冷却: <span class="text-orange-600 font-bold">${sCooldown2}回合</span></span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('modalCardImage').src = nftImage;
+            document.getElementById('modalCardName').textContent = nftName;
+            document.getElementById('modalCardDesc').textContent = `${nftInfo.attrName || '未知'}属性生肖·${zodiacName}·${nftInfo.genderName || '未知'}`;
+            document.getElementById('modalCardId').textContent = nftId;
+            
+            const rarityBadge = document.getElementById('modalCardRarity');
+            if (rarityBadge) {
+                rarityBadge.textContent = rarityText;
+                rarityBadge.className = `text-xs font-bold px-2 py-1 rounded ${isRare ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-600'}`;
+            }
+            
+            let weight = level * (isRare ? 2 : 1);
+            try {
+                const weightsConfig = ZODIAC_CONFIG && ZODIAC_CONFIG.WEIGHTS;
+                if (weightsConfig) {
+                    const weightTable = isRare ? weightsConfig.rare : weightsConfig.normal;
+                    if (weightTable && weightTable[level]) {
+                        weight = weightTable[level];
+                    }
+                }
+            } catch (e) {}
+            
+            const statsDiv = document.getElementById('modalCardStats');
+            if (statsDiv) {
+                statsDiv.innerHTML = `
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-blue-50 rounded-lg p-3">
+                            <div class="text-xs text-gray-600 mb-1">稀有度</div>
+                            <div class="${isRare ? 'text-purple-600' : 'text-gray-600'} font-bold">${rarityText}</div>
+                        </div>
+                        <div class="bg-green-50 rounded-lg p-3">
+                            <div class="text-xs text-gray-600 mb-1">分红权重</div>
+                            <div class="text-green-600 font-bold">${weight}x</div>
+                        </div>
+                        <div class="bg-yellow-50 rounded-lg p-3">
+                            <div class="text-xs text-gray-600 mb-1">当前等级</div>
+                            <div class="text-yellow-600 font-bold">${'⭐'.repeat(level)}</div>
+                        </div>
+                        <div class="bg-purple-50 rounded-lg p-3">
+                            <div class="text-xs text-gray-600 mb-1">成长值</div>
+                            <div class="text-purple-600 font-bold">${growth}</div>
+                        </div>
+                        <div class="bg-orange-50 rounded-lg p-3">
+                            <div class="text-xs text-gray-600 mb-1">成长定位</div>
+                            <div class="text-orange-600 font-bold">${growthType}</div>
+                        </div>
+                        <div class="bg-indigo-50 rounded-lg p-3">
+                            <div class="text-xs text-gray-600 mb-1">生肖特色</div>
+                            <div class="text-indigo-600 font-bold">${zodiacBonus}</div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <div class="text-xs text-gray-600 mb-2">战斗属性</div>
+                        <div class="grid grid-cols-4 gap-2">
+                            <div class="bg-red-50 rounded-lg p-2 text-center">
+                                <div class="text-lg mb-1">⚔️</div>
+                                <div class="text-xs text-gray-500">攻击</div>
+                                <div class="text-sm font-bold text-red-600">${attack}</div>
+                            </div>
+                            <div class="bg-blue-50 rounded-lg p-2 text-center">
+                                <div class="text-lg mb-1">🛡️</div>
+                                <div class="text-xs text-gray-500">防御</div>
+                                <div class="text-sm font-bold text-blue-600">${defense}</div>
+                            </div>
+                            <div class="bg-yellow-50 rounded-lg p-2 text-center">
+                                <div class="text-lg mb-1">💨</div>
+                                <div class="text-xs text-gray-500">速度</div>
+                                <div class="text-sm font-bold text-yellow-600">${speed}</div>
+                            </div>
+                            <div class="bg-green-50 rounded-lg p-2 text-center">
+                                <div class="text-lg mb-1">❤️</div>
+                                <div class="text-xs text-gray-500">生命</div>
+                                <div class="text-sm font-bold text-green-600">${hp}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <div class="text-xs text-gray-600 mb-2">可用功能</div>
+                        <div class="flex gap-2 flex-wrap">
+                            ${canBattle ? '<span class="px-2 py-1 bg-blue-100 text-blue-600 rounded text-xs">⚔️ 战斗</span>' : '<span class="px-2 py-1 bg-gray-100 text-gray-400 rounded text-xs">⚔️ 战斗</span>'}
+                            ${canStake ? '<span class="px-2 py-1 bg-green-100 text-green-600 rounded text-xs">💰 质押</span>' : '<span class="px-2 py-1 bg-gray-100 text-gray-400 rounded text-xs">💰 质押</span>'}
+                            ${canBreed ? '<span class="px-2 py-1 bg-purple-100 text-purple-600 rounded text-xs">🧬 孕育</span>' : '<span class="px-2 py-1 bg-gray-100 text-gray-400 rounded text-xs">🧬 孕育</span>'}
+                            <span class="px-2 py-1 bg-yellow-100 text-yellow-600 rounded text-xs">📊 分红</span>
+                        </div>
+                    </div>
+                    ${skillInfo}
+                    <div class="mt-4 text-xs text-gray-500">
+                        <p>💡 ${isRare ? '稀有属性' : '普通属性'}NFT，${isRare ? '权重更高' : '基础权重'}，适合参与各类游戏玩法。</p>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('cardModal').classList.remove('hidden');
+            
+            loadNFTChainData(nftId, nftType, level, isRare);
+        }
+        
+        async function loadNFTChainData(nftId, nftType, level, isRare) {
+            try {
+                if (!nftContract) return;
+                
+                const [growth, realWeight] = await Promise.all([
+                    nftContract.methods.tokenGrowth(nftId).call().catch(() => 50),
+                    (async () => {
+                        try {
+                            const nftDataContract = await window.ZODIAC_WEB3.getContract('nftData', false);
+                            if (nftDataContract) {
+                                const w = await nftDataContract.methods.getWeightByLevel(level, isRare).call();
+                                return w && w > 0 ? parseInt(w, 10) : level * (isRare ? 2 : 1);
+                            }
+                        } catch (e) {}
+                        return level * (isRare ? 2 : 1);
+                    })()
+                ]);
+                
+                const displayGrowth = parseInt(growth, 10) || 50;
+                const displayWeight = realWeight;
+                
+                const nftInfo = window.ZODIAC_UTILS.getNFTInfo(nftType);
+                const attack = window.ZODIAC_UI.calculateAttack(level, displayGrowth);
+                const defense = window.ZODIAC_UI.calculateDefense(level, displayGrowth);
+                const speed = window.ZODIAC_UI.calculateSpeed(level, displayGrowth, nftInfo.zodiac);
+                const hp = window.ZODIAC_UI.calculateMaxHP(level, displayGrowth);
+                
+                const statsDiv = document.getElementById('modalCardStats');
+                if (statsDiv) {
+                    const weightEl = statsDiv.querySelector('.text-green-600.font-bold');
+                    if (weightEl) weightEl.textContent = `${displayWeight}x`;
+                    
+                    const growthEl = statsDiv.querySelectorAll('.bg-purple-50 .text-purple-600.font-bold')[0];
+                    if (growthEl) growthEl.textContent = displayGrowth;
+                    
+                    const statValues = statsDiv.querySelectorAll('.grid-cols-4 .font-bold');
+                    if (statValues.length >= 4) {
+                        statValues[0].textContent = attack;
+                        statValues[1].textContent = defense;
+                        statValues[2].textContent = speed;
+                        statValues[3].textContent = hp;
+                    }
+                }
+            } catch (e) {
+                console.warn('加载链上NFT数据失败:', e.message);
+            }
+        }
+
+        function closeNFTModal() {
+            document.getElementById('cardModal').classList.add('hidden');
+        }
+
+        document.getElementById('tokenStakeBtn').addEventListener('click', handleTokenStake);
+        document.getElementById('tokenUnstakeBtn').addEventListener('click', handleTokenUnstake);
+        document.getElementById('claimTokenRewardsBtn').addEventListener('click', claimTokenRewards);
+        
+        document.getElementById('tokenStakeAmount').addEventListener('input', updateTokenStakeButton);
+        document.getElementById('tokenUnstakeAmount').addEventListener('input', updateTokenUnstakeButton);
+    </script>
+
+    <div id="cardModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl w-full max-w-md mx-4 max-h-[85vh] flex flex-col">
+            <div class="text-center p-4 border-b border-gray-100">
+                <button onclick="closeNFTModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
+                    <i class="fas fa-times text-gray-600"></i>
+                </button>
+                <img id="modalCardImage" src="" alt="生肖" class="w-24 h-24 mx-auto mb-3 rounded-lg shadow-md">
+                <h3 id="modalCardName" class="text-xl font-bold text-gray-800 mb-1">生肖名称</h3>
+                <div class="flex items-center justify-center gap-2 mb-1">
+                    <span id="modalCardRarity" class="text-xs font-bold px-2 py-1 rounded bg-gray-100 text-gray-600">普通</span>
+                </div>
+                <p id="modalCardDesc" class="text-gray-600 text-sm mb-1">描述</p>
+                <p class="text-sm text-gray-500">Token ID: <span id="modalCardId"></span></p>
+            </div>
+            <div id="modalCardStats" class="flex-1 overflow-y-auto p-4">
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

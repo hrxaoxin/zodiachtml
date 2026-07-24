@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>税收奖励 - 十二生肖</title>
+    <link rel="icon" href="images/fu-cards/shuishu_1.jpg" type="image/jpg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.7.3/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="config.js"></script>
+    <script src="components.js"></script>
+    <script src="utils.js"></script>
+    <script src="web3-utils.js"></script>
+    <script src="ui-utils.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap');
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #f5f5f5;
+            background-image: linear-gradient(135deg, #f5f5f5 0%, #e8f5e8 100%);
+            overflow-x: hidden;
+        }
+        
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+        
+        .navbar {
+            background-color: #ffffff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .task-card {
+            background-color: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .task-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+        
+        .btn-primary {
+            background-color: #ff6b6b;
+            color: white;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            background-color: #ee5a6f;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background-color: white;
+            color: #ff6b6b;
+            border: 1px solid #ff6b6b;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #f8f9fa;
+            transform: translateY(-2px);
+        }
+        
+        .rewards-summary {
+            background: linear-gradient(135deg, #4ecdc4 0%, #45b7aa 100%);
+            border-radius: 16px;
+            color: white;
+        }
+        
+        .task-item {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .task-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .task-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+
+    <div id="mobileNavbarContainer"></div>
+    <div id="mobileMenuContainer"></div>
+    <div id="desktopSidebarContainer"></div>
+
+    <main class="px-4 pt-6 pb-24 md:pl-28 md:pr-4">
+        <div class="flex items-center mb-4">
+            <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center mr-3">
+                <i class="text-white text-xl">💰</i>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800">税收奖励</h1>
+        </div>
+
+        <p class="text-lg text-gray-600 mb-8">领取你的生肖NFT税收分红</p>
+
+        <div class="bg-white rounded-xl p-6 shadow-md mb-8">
+            <div class="flex items-center mb-6">
+                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-4">
+                    <i class="text-blue-500 text-xl">💰</i>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-gray-800">钱包信息</h3>
+                    <p class="text-sm text-gray-500" id="walletAddress">未连接钱包</p>
+                    <p class="text-xs text-gray-400" id="connectionStatus">请点击连接钱包按钮</p>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="btn-primary text-sm" id="connectWalletBtn">
+                        <i class="fas fa-plug mr-1"></i> 连接
+                    </button>
+                    <button class="btn-secondary text-sm" id="refreshWallet">
+                        <i class="fas fa-sync-alt mr-1"></i> 刷新
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 shadow-md mb-8">
+            <div class="flex items-center mb-6">
+                <div class="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center mr-3">
+                    <i class="text-white text-sm">💸</i>
+                </div>
+                <h2 class="text-lg font-semibold text-gray-800">税收分配机制</h2>
+            </div>
+
+            <div class="space-y-3">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">代币交易税率</span>
+                    <span class="text-gray-800 font-medium">3%</span>
+                </div>
+                <div class="border-t border-gray-200 pt-3">
+                    <p class="text-gray-600 mb-3">税收分配明细</p>
+                    <p class="text-gray-600 mb-2">• 1%自动燃烧销毁</p>
+                    <p class="text-gray-600 mb-2">• <span id="dividendPercentReward">0.8</span>%进入分红池，按权重分配给NFT持有者</p>
+                    <p class="text-gray-600 mb-2">• <span id="nftStakingPercentReward">0.4</span>%兑换成代币进入NFT质押矿池，用于挖矿产出</p>
+                    <p class="text-gray-600 mb-2">• <span id="arenaPercentReward">0.3</span>%用于竞技场排名奖励</p>
+                    <p class="text-gray-600 mb-2">• <span id="tokenStakingPercentReward">0.3</span>%进入代币质押矿池，用于挖矿产出</p>
+                    <p class="text-gray-600 mb-2">• <span id="burnPercentReward">0.4</span>%进入回购销毁池，用于回购代币</p>
+                    <p class="text-gray-600 mb-2">• <span id="operationPercentReward">0.2</span>%进入运营钱包</p>
+                </div>
+                <div class="border-t border-gray-200 pt-3">
+                    <p class="text-gray-600 mb-3">权重分配规则</p>
+                    <p class="text-blue-600 mb-2 font-medium">🌊 水/风/火属性（普通）：</p>
+                    <p class="text-gray-600 mb-1">• 1阶NFT权重：<span id="normalWeight1Reward">1</span></p>
+                    <p class="text-gray-600 mb-1">• 2阶NFT权重：<span id="normalWeight2Reward">2</span></p>
+                    <p class="text-gray-600 mb-1">• 3阶NFT权重：<span id="normalWeight3Reward">6</span></p>
+                    <p class="text-gray-600 mb-1">• 4阶NFT权重：<span id="normalWeight4Reward">18</span></p>
+                    <p class="text-gray-600 mb-2">• 5阶NFT权重：<span id="normalWeight5Reward">66</span></p>
+                    <p class="text-purple-600 mb-2 font-medium">✨ 光/暗属性（稀有）：</p>
+                    <p class="text-gray-600 mb-1">• 1阶NFT权重：<span id="rareWeight1Reward">10</span></p>
+                    <p class="text-gray-600 mb-1">• 2阶NFT权重：<span id="rareWeight2Reward">12</span></p>
+                    <p class="text-gray-600 mb-1">• 3阶NFT权重：<span id="rareWeight3Reward">16</span></p>
+                    <p class="text-gray-600 mb-1">• 4阶NFT权重：<span id="rareWeight4Reward">28</span></p>
+                    <p class="text-gray-600 mb-2">• 5阶NFT权重：<span id="rareWeight5Reward">76</span></p>
+                    <p class="text-gray-600 text-sm bg-yellow-50 p-2 rounded">💡 稀有属性（光/暗）各等级权重不同</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 shadow-md mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center mr-3">
+                        <span class="text-white text-sm font-bold">生</span>
+                    </div>
+                    <h2 class="text-lg font-semibold text-gray-800">生肖奖励</h2>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="btn-primary" id="claimAllBtn"><i class="fas fa-gift mr-2"></i><span id="claimBtnText">领取分红</span></button>
+                    <button class="btn-secondary" id="refreshRewardBtn">
+                        <i class="fas fa-sync-alt mr-2"></i> 刷新分红
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-4 bg-purple-50 rounded-lg mb-4">
+                <div class="text-sm text-purple-600 font-medium mb-2" id="rewardDescTitle">💡 奖励说明</div>
+                <p class="text-xs text-gray-600 reward-description">奖励领取说明</p>
+            </div>
+
+            <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                <span class="text-lg font-medium text-gray-800" id="rewardLabel">可领取奖励</span>
+                <span class="text-lg font-bold text-purple-600" id="bnbReward">0.0000</span>
+            </div>
+        </div>
+    </main>
+
+    <footer class="text-center py-8 text-black/70 md:ml-28 md:mr-4">
+        <p>© 2026 十二生肖NFT系列 · Twelve Zodiacs Collection</p>
+        <p class="mt-2">祝你心想事成，生肖大旺 🐾✨</p>
+    </footer>
+
+    <script>
+        particlesJS('particles-js', {
+            particles: {
+                number: { value: 80, density: { enable: true, value_area: 800 } },
+                color: { value: '#ff6b6b' },
+                shape: { type: 'circle', stroke: { width: 0, color: '#000000' } },
+                opacity: { value: 0.5, random: true, anim: { enable: true, speed: 1, opacity_min: 0.1, sync: false } },
+                size: { value: 5, random: true, anim: { enable: true, speed: 2, size_min: 0.1, sync: false } },
+                line_linked: { enable: true, distance: 150, color: '#ff6b6b', opacity: 0.4, width: 1 },
+                move: { enable: true, speed: 1, direction: 'none', random: false, straight: false, out_mode: 'out', bounce: false }
+            },
+            interactivity: {
+                detect_on: 'canvas',
+                events: { onhover: { enable: true, mode: 'grab' }, onclick: { enable: true, mode: 'push' }, resize: true },
+                modes: { grab: { distance: 140, line_linked: { opacity: 1 } }, push: { particles_nb: 4 } }
+            },
+            retina_detect: true
+        });
+
+        let web3;
+        let account;
+        let dividendManagerContract;
+        let dividendManagerLPContract;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            initWalletUI();
+            ZODIAC_COMPONENTS.injectNavigation('rewards');
+            await initWeb3();
+        });
+
+        function initWalletUI() {
+            ZODIAC_UI.initWalletButton('connectWalletBtn', 'walletAddress', 'connectionStatus');
+            ZODIAC_UI.initWalletButton('connectWalletBtnDesktop', 'walletAddressDesktop', null);
+            ZODIAC_UI.on('walletConnected', async () => {
+                await initContracts();
+                await loadLPReward();
+            });
+            // 监听 MetaMask 账户切换事件，自动刷新数据
+            ZODIAC_WEB3.on('connect', async () => {
+                await initContracts();
+                await loadLPReward();
+            });
+            ZODIAC_WEB3.on('disconnect', () => {
+                document.getElementById('bnbReward').textContent = '0.0000 LP';
+            });
+        }
+
+        function handleConnectWallet() {
+            ZODIAC_UI.emitEvent('walletConnectRequested');
+        }
+
+        async function initWeb3() {
+            const connected = await window.ZODIAC_WEB3.initWeb3();
+            if (connected) {
+                account = window.ZODIAC_WEB3.getAccount();
+                web3 = window.ZODIAC_WEB3.getWeb3();
+                updateWalletButton();
+                await initContracts();
+                await loadLPReward();
+            }
+        }
+
+        function updateWalletButton() {
+            const walletBtn = document.getElementById('connectWalletBtn');
+            const walletBtnDesktop = document.getElementById('connectWalletBtnDesktop');
+            if (account) {
+                const shortAddress = account.substring(0, 4) + '...' + account.substring(account.length - 4);
+                walletBtn.textContent = shortAddress;
+                walletBtn.disabled = true;
+                walletBtn.style.background = 'linear-gradient(135deg, #4338ca 0%, #3730a3 100%)';
+                walletBtnDesktop.textContent = shortAddress;
+                walletBtnDesktop.disabled = true;
+                walletBtnDesktop.style.background = 'linear-gradient(135deg, #4338ca 0%, #3730a3 100%)';
+                document.getElementById('connectionStatus').textContent = '钱包已连接';
+                document.getElementById('connectionStatus').style.color = '#4CAF50';
+            }
+        }
+
+        async function initContracts() {
+            try {
+                dividendManagerContract = await window.ZODIAC_WEB3.getContract('dividendManager');
+                dividendManagerLPContract = await window.ZODIAC_WEB3.getContract('dividendManagerLP');
+                await loadRewardConfig();
+            } catch (error) {
+                console.warn('合约初始化失败:', error.message);
+                ZODIAC_UI.showToast('合约初始化失败: ' + error.message, 'warning');
+            }
+        }
+
+        async function loadRewardConfig() {
+            try {
+                const rewardManager = await window.ZODIAC_WEB3.getContract('rewardManager');
+                const dividendManager = await window.ZODIAC_WEB3.getContract('dividendManager');
+                
+                if (!rewardManager || !dividendManager) {
+                    console.warn('RewardManager or DividendManager contract not available');
+                    return;
+                }
+                
+                // 从 RewardManager 读取分配比例
+                try {
+                    const percents = await rewardManager.methods.getDistributionPercents().call();
+                    const dividendPercent = (parseInt(percents[0]) / 5000).toFixed(1);
+                    const nftStakingPercent = (parseInt(percents[1]) / 5000).toFixed(1);
+                    const tokenStakingPercent = (parseInt(percents[2]) / 5000).toFixed(1);
+                    const arenaPercent = (parseInt(percents[3]) / 5000).toFixed(1);
+                    const buybackPercent = percents[4] ? (parseInt(percents[4]) / 5000).toFixed(1) : '0.4';
+                    const operationPercent = percents[5] ? (parseInt(percents[5]) / 5000).toFixed(1) : '0.2';
+                    
+                    document.getElementById('dividendPercentReward').textContent = dividendPercent;
+                    document.getElementById('nftStakingPercentReward').textContent = nftStakingPercent;
+                    document.getElementById('tokenStakingPercentReward').textContent = tokenStakingPercent;
+                    document.getElementById('arenaPercentReward').textContent = arenaPercent;
+                    document.getElementById('burnPercentReward').textContent = buybackPercent;
+                    document.getElementById('operationPercentReward').textContent = operationPercent;
+                    
+                    console.log('Distribution config loaded:', { dividendPercent, nftStakingPercent, tokenStakingPercent, arenaPercent, buybackPercent });
+                } catch (e) {
+                    console.error('Failed to load distribution config:', e);
+                }
+                
+                // 从 Staking 合约读取权重配置
+                try {
+                    const stakingContract = await window.ZODIAC_WEB3.getContract('staking', false);
+                    if (stakingContract) {
+                        const normalWeights = await stakingContract.methods.normalNFTWeight().call();
+                        const rareWeights = await stakingContract.methods.rareNFTWeight().call();
+                        
+                        document.getElementById('normalWeight1Reward').textContent = normalWeights[0] || '1';
+                        document.getElementById('normalWeight2Reward').textContent = normalWeights[1] || '2';
+                        document.getElementById('normalWeight3Reward').textContent = normalWeights[2] || '6';
+                        document.getElementById('normalWeight4Reward').textContent = normalWeights[3] || '18';
+                        document.getElementById('normalWeight5Reward').textContent = normalWeights[4] || '66';
+                        
+                        document.getElementById('rareWeight1Reward').textContent = rareWeights[0] || '10';
+                        document.getElementById('rareWeight2Reward').textContent = rareWeights[1] || '12';
+                        document.getElementById('rareWeight3Reward').textContent = rareWeights[2] || '16';
+                        document.getElementById('rareWeight4Reward').textContent = rareWeights[3] || '28';
+                        document.getElementById('rareWeight5Reward').textContent = rareWeights[4] || '76';
+                        
+                        console.log('Weight config loaded:', { normalWeights, rareWeights });
+                    }
+                } catch (e) {
+                    console.error('Failed to load weight config:', e);
+                }
+            } catch (error) {
+                console.error('Load reward config failed:', error);
+            }
+        }
+
+        async function loadLPReward() {
+            try {
+                if (!dividendManagerContract || !account) {
+                    document.getElementById('bnbReward').textContent = '0.0000 LP';
+                    return;
+                }
+                
+                const lpDividend = await dividendManagerLPContract.methods.getClaimableLPDividend(account).call();
+                const rewardType = await dividendManagerLPContract.methods.rewardType().call();
+                
+                const lpAmount = web3.utils.fromWei(lpDividend, 'ether');
+                const unit = getRewardUnit(rewardType);
+                
+                document.getElementById('bnbReward').textContent = parseFloat(lpAmount).toFixed(4) + ' ' + unit;
+                
+                if (parseInt(lpDividend) === 0) {
+                    document.getElementById('bnbReward').textContent = '0.0000 ' + unit;
+                }
+                
+                updateRewardInfo(rewardType);
+            } catch (error) {
+                console.error('获取LP分红失败:', error);
+                document.getElementById('bnbReward').textContent = '0.0000 LP';
+            }
+        }
+
+        function getRewardUnit(rewardType) {
+            switch(parseInt(rewardType)) {
+                case 0: return 'LP';
+                case 1: return 'TOKEN';
+                case 2: return 'BNB';
+                default: return 'LP';
+            }
+        }
+
+        function updateRewardInfo(rewardType) {
+            const typeNum = parseInt(rewardType);
+            const claimBtn = document.getElementById('claimAllBtn');
+            const rewardDesc = document.querySelector('.reward-description');
+            const rewardDescTitle = document.getElementById('rewardDescTitle');
+            const rewardLabel = document.getElementById('rewardLabel');
+            
+            let btnText = '领取LP分红';
+            let descText = '';
+            let titleText = '';
+            let labelText = '';
+            
+            switch(typeNum) {
+                case 0:
+                    btnText = '领取LP分红';
+                    descText = '领取后，LP将自动兑换为代币和WBNB发送到您的钱包，您将获得双重收益：项目分红 + DEX交易手续费';
+                    titleText = '💡 LP奖励说明';
+                    labelText = '可领取LP奖励';
+                    break;
+                case 1:
+                    btnText = '领取代币分红';
+                    descText = '代币奖励将直接发放至您的钱包';
+                    titleText = '💡 代币奖励说明';
+                    labelText = '可领取代币奖励';
+                    break;
+                case 2:
+                    btnText = '领取BNB分红';
+                    descText = 'BNB奖励将直接发放至您的钱包';
+                    titleText = '💡 BNB奖励说明';
+                    labelText = '可领取BNB奖励';
+                    break;
+            }
+            
+            if (claimBtn) {
+                claimBtn.innerHTML = `<i class="fas fa-gift mr-2"></i>${btnText}`;
+            }
+            
+            if (rewardDesc) {
+                rewardDesc.textContent = descText;
+            }
+            
+            if (rewardDescTitle) {
+                rewardDescTitle.textContent = titleText;
+            }
+            
+            if (rewardLabel) {
+                rewardLabel.textContent = labelText;
+            }
+        }
+
+        document.getElementById('refreshRewardBtn').addEventListener('click', loadLPReward);
+
+        document.getElementById('claimAllBtn').addEventListener('click', async function() {
+            if (!dividendManagerContract || !account) {
+                ZODIAC_UI.showToast('请先连接钱包', 'warning');
+                return;
+            }
+
+            const currentReward = document.getElementById('bnbReward').textContent;
+            const rewardType = await dividendManagerLPContract.methods.rewardType().call();
+            const unit = getRewardUnit(rewardType);
+            
+            if (currentReward === '0.0000 ' + unit) {
+                ZODIAC_UI.showToast('当前没有可领取的分红', 'info');
+                return;
+            }
+
+            let title = '确认领取分红';
+            let message = `当前可领取：${currentReward}\n\n`;
+            
+            switch(parseInt(rewardType)) {
+                case 0:
+                    title = '确认领取LP分红';
+                    message += '领取后，LP将自动兑换为代币和WBNB发送到您的钱包。您将获得双重收益：项目分红 + DEX交易手续费。确定要继续吗？';
+                    break;
+                case 1:
+                    title = '确认领取代币分红';
+                    message += '代币奖励将直接发放至您的钱包。确定要继续吗？';
+                    break;
+                case 2:
+                    title = '确认领取BNB分红';
+                    message += 'BNB奖励将直接发放至您的钱包。确定要继续吗？';
+                    break;
+            }
+
+            const confirm = await ZODIAC_UI.showConfirmModal(title, message);
+
+            if (!confirm) return;
+
+            const btn = this;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> 领取中...';
+            btn.disabled = true;
+
+            try {
+                await dividendManagerLPContract.methods.claimLPDividend().send({ from: account });
+                
+                let successMsg = '';
+                switch(parseInt(rewardType)) {
+                    case 0:
+                        successMsg = 'LP分红领取成功！已兑换为代币和WBNB';
+                        break;
+                    case 1:
+                        successMsg = '代币分红领取成功！';
+                        break;
+                    case 2:
+                        successMsg = 'BNB分红领取成功！';
+                        break;
+                }
+                
+                ZODIAC_UI.showToast(successMsg, 'success');
+                await loadLPReward();
+            } catch (error) {
+                ZODIAC_UI.handleError(error, '领取分红');
+            } finally {
+                updateRewardInfo(rewardType);
+                btn.disabled = false;
+            }
+        });
+
+        document.getElementById('refreshWallet').addEventListener('click', initWeb3);
+    </script>
+</body>
+</html>
