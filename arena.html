@@ -1331,18 +1331,34 @@
             const contractAddresses = {};
             
             for (const name of contractNames) {
+                let addr = null;
                 try {
-                    const addr = await withTimeout(
+                    addr = await withTimeout(
                         authorizerContract.methods.getAddressByName(name).call(),
                         10000,
                         null
                     );
-                    contractAddresses[name] = addr;
                     console.log(`Direct authorizer - ${name}: ${addr}`);
                 } catch (e) {
                     console.warn(`Failed to get ${name} address from authorizer:`, e.message);
-                    contractAddresses[name] = null;
                 }
+                
+                if (!addr || addr === '0x0000000000000000000000000000000000000000') {
+                    try {
+                        if (window.ZODIAC_WEB3) {
+                            addr = await withTimeout(
+                                window.ZODIAC_WEB3.getContractAddress(name, false),
+                                5000,
+                                null
+                            );
+                            console.log(`ZODIAC_WEB3 fallback - ${name}: ${addr}`);
+                        }
+                    } catch (e) {
+                        console.warn(`Failed to get ${name} address from ZODIAC_WEB3 fallback:`, e.message);
+                    }
+                }
+                
+                contractAddresses[name] = addr;
             }
             
             if (config.ABIS.arenaRankingQueryABI && contractAddresses.arenaRankingQuery) {
@@ -1410,9 +1426,25 @@
                 } catch (e) {
                     console.warn('Failed to init battleSkillDataContract:', e.message);
                 }
+            } else if (!battleSkillDataContract && window.ZODIAC_WEB3) {
+                try {
+                    battleSkillDataContract = await window.ZODIAC_WEB3.getContract('battleSkillData', false);
+                    console.log('battleSkillDataContract initialized via ZODIAC_WEB3:', battleSkillDataContract ? battleSkillDataContract.options.address : null);
+                } catch (e) {
+                    console.warn('Failed to init battleSkillDataContract via ZODIAC_WEB3:', e.message);
+                }
             }
             
-            if (accounts.length > 0) {
+            if (!battleContract && window.ZODIAC_WEB3) {
+                try {
+                    battleContract = await window.ZODIAC_WEB3.getContract('battle', false);
+                    console.log('battleContract initialized via ZODIAC_WEB3:', battleContract ? battleContract.options.address : null);
+                } catch (e) {
+                    console.warn('Failed to init battleContract via ZODIAC_WEB3:', e.message);
+                }
+            }
+            
+            if (accounts.length > 0 || forceReadOnly) {
                 if (config.ABIS.nftMintCoreABI) {
                     try {
                         const nftMintAddr = await withTimeout(
@@ -1563,7 +1595,7 @@
                         
                         const nftBasicInfo = ZODIAC_UTILS.getNFTInfo(tokenType);
                         const zodiac = nftBasicInfo.animalName;
-                        const name = `${nftBasicInfo.attrName}${zodiac}${nftBasicInfo.gender === '公' ? '·公' : '·母'}`;
+                        const name = `${nftBasicInfo.attrName}${zodiac}`;
                         const imagePath = nftBasicInfo.imagePath;
                         
                         let skill;
@@ -1753,7 +1785,6 @@
                 const isDisabled = isInTeam || nft.isStaked;
                 const isCurrent = team[selectedSlot.index] && team[selectedSlot.index].tokenId === nft.tokenId;
                 
-                const genderText = nft.gender === 1 || nft.gender === '公' ? '<span class="text-blue-400">公</span>' : '<span class="text-pink-400">母</span>';
                 return `
                     <div class="nft-card nft-card-hover bg-white/5 rounded-lg p-3 border-2 cursor-pointer transition-all ${isDisabled ? 'opacity-50 cursor-not-allowed border-gray-600 grayscale' : isCurrent ? 'border-green-500' : 'hover:border-blue-500'}" 
                          onclick="${isDisabled ? '' : `selectNftForSlot(${item.originalIndex})`}"
@@ -2189,7 +2220,7 @@
                             
                             const nftBasicInfo = ZODIAC_UTILS.getNFTInfo(tokenType);
                             const zodiac = nftBasicInfo.animalName;
-                            const name = `${nftBasicInfo.attrName}${zodiac}${nftBasicInfo.gender === '公' ? '·公' : '·母'}`;
+                            const name = `${nftBasicInfo.attrName}${zodiac}`;
                             const imagePath = nftBasicInfo.imagePath;
                             
                             let skill;
@@ -3133,6 +3164,13 @@
                             null
                         );
                         console.log('[ARENA] paginationResult:', paginationResult);
+                        console.log('[ARENA] paginationResult type:', typeof paginationResult, 'isArray:', Array.isArray(paginationResult));
+                        if (paginationResult && typeof paginationResult === 'object') {
+                            console.log('[ARENA] paginationResult keys:', Object.keys(paginationResult));
+                            if (Array.isArray(paginationResult)) {
+                                console.log('[ARENA] paginationResult[0] type:', typeof paginationResult[0], 'length:', Array.isArray(paginationResult[0]) ? paginationResult[0].length : 'N/A');
+                            }
+                        }
                         
                         if (!paginationResult) {
                             console.log('[ARENA] paginationResult is null, using mock data');
@@ -3222,7 +3260,7 @@
                                         const nftBasicInfo = ZODIAC_UTILS.getNFTInfo(tokenType);
                                         return {
                                             tokenId: validTokens[idx],
-                                            name: `${nftBasicInfo.attrName}${nftBasicInfo.animalName}${nftBasicInfo.gender === '公' ? '·公' : '·母'}`,
+                                            name: `${nftBasicInfo.attrName}${nftBasicInfo.animalName}`,
                                             level: nftInfo.level,
                                             element: nftBasicInfo.elementKey,
                                             imagePath: nftBasicInfo.imagePath
