@@ -924,6 +924,8 @@
                 updateSaveButtons();
                 updateChallengeBtn();
                 
+                await initContracts(true);
+                
                 if (typeof window.ethereum !== 'undefined' && !accounts.length) {
                     try {
                         const connectedAccounts = await window.ethereum.request({ method: 'eth_accounts' });
@@ -1244,97 +1246,31 @@
             }
         }
 
-        async function initContracts() {
+        async function initContracts(forceReadOnly = false) {
             const config = ZODIAC_CONFIG;
-            try {
-                if (config.ABIS.battleABI) {
-                    let battleAddress = await window.ZODIAC_WEB3.getContractAddress('battle');
-                    if (!battleAddress && window.ZODIAC_WEB3) {
-                        try {
-                            const tempContract = await window.ZODIAC_WEB3.getContract('battle');
-                            if (tempContract && tempContract.options && tempContract.options.address) {
-                                battleAddress = tempContract.options.address;
-                            }
-                        } catch (e) { console.warn('Failed to get battle address via getContract:', e.message); }
-                    }
-                    if (battleAddress) {
-                        battleContract = new web3.eth.Contract(config.ABIS.battleABI, battleAddress);
-                    }
-                }
-            } catch (e) { console.warn('Failed to init battleContract via ABI:', e.message); }
+            const requireAccount = !forceReadOnly && accounts.length > 0;
             
-            if (!battleContract) {
+            if (!web3) {
                 try {
-                    battleContract = await window.ZODIAC_WEB3.getContract('battle');
-                } catch (e) { console.warn('Failed to init battleContract via ZODIAC_WEB3:', e.message); }
+                    web3 = window.ZODIAC_WEB3 ? window.ZODIAC_WEB3.getWeb3() : null;
+                    if (!web3 && typeof window.ethereum !== 'undefined') {
+                        web3 = new Web3(window.ethereum);
+                    } else if (!web3) {
+                        web3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
+                        console.log('arena: Created web3 from public RPC for read-only access');
+                    }
+                } catch (e) {
+                    console.warn('Failed to create web3 instance:', e.message);
+                    return;
+                }
             }
-            
-            try {
-                if (config.ABIS.battleSkillDataABI) {
-                    let battleSkillDataAddress = await window.ZODIAC_WEB3.getContractAddress('battleSkillData');
-                    if (!battleSkillDataAddress && window.ZODIAC_WEB3) {
-                        try {
-                            const tempContract = await window.ZODIAC_WEB3.getContract('battleSkillData');
-                            if (tempContract && tempContract.options && tempContract.options.address) {
-                                battleSkillDataAddress = tempContract.options.address;
-                            }
-                        } catch (e) { console.warn('Failed to get battleSkillData address via getContract:', e.message); }
-                    }
-                    if (battleSkillDataAddress) {
-                        battleSkillDataContract = new web3.eth.Contract(config.ABIS.battleSkillDataABI, battleSkillDataAddress);
-                    }
-                }
-            } catch (e) { console.warn('Failed to init battleSkillDataContract via ABI:', e.message); }
-            
-            if (!battleSkillDataContract) {
-                try {
-                    battleSkillDataContract = await window.ZODIAC_WEB3.getContract('battleSkillData');
-                } catch (e) { console.warn('Failed to init battleSkillDataContract via ZODIAC_WEB3:', e.message); }
-            }
-            
-            try {
-                if (config.ABIS.arenaRankingManagerABI) {
-                    const arenaAddress = await window.ZODIAC_WEB3.getContractAddress('arena');
-                    if (arenaAddress) {
-                        arenaContract = new web3.eth.Contract(config.ABIS.arenaRankingManagerABI, arenaAddress);
-                    }
-                }
-            } catch (e) { console.warn('Failed to init arenaContract:', e.message); }
-            
-            try {
-                if (config.ABIS.arenaRankingManagerABI) {
-                    const arenaRankingManagerAddress = await window.ZODIAC_WEB3.getContractAddress('arenaRankingManager');
-                    if (arenaRankingManagerAddress) {
-                        arenaRankingManagerContract = new web3.eth.Contract(config.ABIS.arenaRankingManagerABI, arenaRankingManagerAddress);
-                    }
-                }
-            } catch (e) { console.warn('Failed to init arenaRankingManagerContract:', e.message); }
-            
-            try {
-                const arenaModeManagerAddress = await window.ZODIAC_WEB3.getContractAddress('arenaModeManager');
-                if (arenaModeManagerAddress) {
-                    const minABI = [
-                        {"inputs":[],"name":"arenaMode","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},
-                        {"inputs":[],"name":"modeControlType","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"}
-                    ];
-                    arenaModeManagerContract = new web3.eth.Contract(minABI, arenaModeManagerAddress);
-                }
-            } catch (e) { console.warn('Failed to init arenaModeManagerContract:', e.message); }
-            
-            try {
-                arenaPlayerContract = await window.ZODIAC_WEB3.getContract('arenaPlayer');
-            } catch (e) { console.warn('Failed to init arenaPlayerContract:', e.message); }
-            
-            try {
-                arenaBattleContract = await window.ZODIAC_WEB3.getContract('arenaBattle');
-            } catch (e) { console.warn('Failed to init arenaBattleContract:', e.message); }
             
             try {
                 if (config.ABIS.arenaRankingQueryABI) {
-                    let arenaRankingQueryAddress = await window.ZODIAC_WEB3.getContractAddress('arenaRankingQuery');
-                    if (!arenaRankingQueryAddress && window.ZODIAC_WEB3) {
+                    let arenaRankingQueryAddress = await window.ZODIAC_WEB3.getContractAddress('arenaRankingQuery', false);
+                    if (!arenaRankingQueryAddress) {
                         try {
-                            const tempContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery');
+                            const tempContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery', false);
                             if (tempContract && tempContract.options && tempContract.options.address) {
                                 arenaRankingQueryAddress = tempContract.options.address;
                             }
@@ -1342,42 +1278,158 @@
                     }
                     if (arenaRankingQueryAddress) {
                         arenaRankingQueryContract = new web3.eth.Contract(config.ABIS.arenaRankingQueryABI, arenaRankingQueryAddress);
+                        console.log('arenaRankingQueryContract initialized:', arenaRankingQueryAddress);
                     }
                 }
             } catch (e) { console.warn('Failed to init arenaRankingQueryContract:', e.message); }
             
             try {
-                if (config.ABIS.arenaRewardABI) {
-                    let arenaRewardAddress = await window.ZODIAC_WEB3.getContractAddress('arenaReward');
-                    if (!arenaRewardAddress && window.ZODIAC_WEB3) {
+                if (config.ABIS.arenaRewardLPABI) {
+                    let arenaRewardLPAddress = await window.ZODIAC_WEB3.getContractAddress('arenaRewardLP', false);
+                    if (!arenaRewardLPAddress) {
                         try {
-                            const tempContract = await window.ZODIAC_WEB3.getContract('arenaReward');
+                            const tempContract = await window.ZODIAC_WEB3.getContract('arenaRewardLP', false);
                             if (tempContract && tempContract.options && tempContract.options.address) {
-                                arenaRewardAddress = tempContract.options.address;
+                                arenaRewardLPAddress = tempContract.options.address;
                             }
-                        } catch (e) { console.warn('Failed to get arenaReward address via getContract:', e.message); }
+                        } catch (e) { console.warn('Failed to get arenaRewardLP address via getContract:', e.message); }
                     }
-                    if (arenaRewardAddress) {
-                        arenaRewardContract = new web3.eth.Contract(config.ABIS.arenaRewardABI, arenaRewardAddress);
+                    if (arenaRewardLPAddress) {
+                        arenaRewardLPContract = new web3.eth.Contract(config.ABIS.arenaRewardLPABI, arenaRewardLPAddress);
+                        console.log('arenaRewardLPContract initialized:', arenaRewardLPAddress);
                     }
                 }
-            } catch (e) { console.warn('Failed to init arenaRewardContract:', e.message); }
-            
-            try {
-                arenaRewardLPContract = await window.ZODIAC_WEB3.getContract('arenaRewardLP');
             } catch (e) { console.warn('Failed to init arenaRewardLPContract:', e.message); }
             
             try {
-                nftContract = await window.ZODIAC_WEB3.getContract('nftMint');
-            } catch (e) { console.warn('Failed to init nftContract:', e.message); }
+                if (config.ABIS.arenaBattleABI) {
+                    let arenaBattleAddress = await window.ZODIAC_WEB3.getContractAddress('arenaBattle', false);
+                    if (!arenaBattleAddress) {
+                        try {
+                            const tempContract = await window.ZODIAC_WEB3.getContract('arenaBattle', false);
+                            if (tempContract && tempContract.options && tempContract.options.address) {
+                                arenaBattleAddress = tempContract.options.address;
+                            }
+                        } catch (e) { console.warn('Failed to get arenaBattle address via getContract:', e.message); }
+                    }
+                    if (arenaBattleAddress) {
+                        arenaBattleContract = new web3.eth.Contract(config.ABIS.arenaBattleABI, arenaBattleAddress);
+                        console.log('arenaBattleContract initialized:', arenaBattleAddress);
+                    }
+                }
+            } catch (e) { console.warn('Failed to init arenaBattleContract:', e.message); }
             
             try {
-                tokenContract = await window.ZODIAC_WEB3.getContract('tokenContract');
-            } catch (e) { console.warn('Failed to init tokenContract:', e.message); }
+                const arenaModeManagerAddress = await window.ZODIAC_WEB3.getContractAddress('arenaModeManager', false);
+                if (arenaModeManagerAddress) {
+                    const minABI = [
+                        {"inputs":[],"name":"arenaMode","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},
+                        {"inputs":[],"name":"modeControlType","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"}
+                    ];
+                    arenaModeManagerContract = new web3.eth.Contract(minABI, arenaModeManagerAddress);
+                    console.log('arenaModeManagerContract initialized:', arenaModeManagerAddress);
+                }
+            } catch (e) { console.warn('Failed to init arenaModeManagerContract:', e.message); }
+            
+            try {
+                if (config.ABIS.arenaPlayerABI) {
+                    let arenaPlayerAddress = await window.ZODIAC_WEB3.getContractAddress('arenaPlayer', false);
+                    if (!arenaPlayerAddress) {
+                        try {
+                            const tempContract = await window.ZODIAC_WEB3.getContract('arenaPlayer', false);
+                            if (tempContract && tempContract.options && tempContract.options.address) {
+                                arenaPlayerAddress = tempContract.options.address;
+                            }
+                        } catch (e) { console.warn('Failed to get arenaPlayer address via getContract:', e.message); }
+                    }
+                    if (arenaPlayerAddress) {
+                        arenaPlayerContract = new web3.eth.Contract(config.ABIS.arenaPlayerABI, arenaPlayerAddress);
+                        console.log('arenaPlayerContract initialized:', arenaPlayerAddress);
+                    }
+                }
+            } catch (e) { console.warn('Failed to init arenaPlayerContract:', e.message); }
+            
+            if (accounts.length > 0) {
+                try {
+                    if (config.ABIS.battleABI) {
+                        let battleAddress = await window.ZODIAC_WEB3.getContractAddress('battle');
+                        if (!battleAddress) {
+                            try {
+                                const tempContract = await window.ZODIAC_WEB3.getContract('battle');
+                                if (tempContract && tempContract.options && tempContract.options.address) {
+                                    battleAddress = tempContract.options.address;
+                                }
+                            } catch (e) { console.warn('Failed to get battle address via getContract:', e.message); }
+                        }
+                        if (battleAddress) {
+                            battleContract = new web3.eth.Contract(config.ABIS.battleABI, battleAddress);
+                            console.log('battleContract initialized:', battleAddress);
+                        }
+                    }
+                } catch (e) { console.warn('Failed to init battleContract via ABI:', e.message); }
+                
+                try {
+                    if (config.ABIS.battleSkillDataABI) {
+                        let battleSkillDataAddress = await window.ZODIAC_WEB3.getContractAddress('battleSkillData');
+                        if (!battleSkillDataAddress) {
+                            try {
+                                const tempContract = await window.ZODIAC_WEB3.getContract('battleSkillData');
+                                if (tempContract && tempContract.options && tempContract.options.address) {
+                                    battleSkillDataAddress = tempContract.options.address;
+                                }
+                            } catch (e) { console.warn('Failed to get battleSkillData address via getContract:', e.message); }
+                        }
+                        if (battleSkillDataAddress) {
+                            battleSkillDataContract = new web3.eth.Contract(config.ABIS.battleSkillDataABI, battleSkillDataAddress);
+                            console.log('battleSkillDataContract initialized:', battleSkillDataAddress);
+                        }
+                    }
+                } catch (e) { console.warn('Failed to init battleSkillDataContract via ABI:', e.message); }
+                
+                try {
+                    nftContract = await window.ZODIAC_WEB3.getContract('nftMint');
+                    console.log('nftContract initialized:', nftContract ? nftContract.options.address : null);
+                } catch (e) { console.warn('Failed to init nftContract:', e.message); }
+                
+                try {
+                    tokenContract = await window.ZODIAC_WEB3.getContract('tokenContract');
+                    console.log('tokenContract initialized:', tokenContract ? tokenContract.options.address : null);
+                } catch (e) { console.warn('Failed to init tokenContract:', e.message); }
+                
+                try {
+                    if (config.ABIS.arenaRankingManagerABI) {
+                        const arenaAddress = await window.ZODIAC_WEB3.getContractAddress('arena');
+                        if (arenaAddress) {
+                            arenaContract = new web3.eth.Contract(config.ABIS.arenaRankingManagerABI, arenaAddress);
+                            console.log('arenaContract initialized:', arenaAddress);
+                        }
+                    }
+                } catch (e) { console.warn('Failed to init arenaContract:', e.message); }
+                
+                try {
+                    if (config.ABIS.arenaRankingManagerABI) {
+                        const arenaRankingManagerAddress = await window.ZODIAC_WEB3.getContractAddress('arenaRankingManager');
+                        if (arenaRankingManagerAddress) {
+                            arenaRankingManagerContract = new web3.eth.Contract(config.ABIS.arenaRankingManagerABI, arenaRankingManagerAddress);
+                            console.log('arenaRankingManagerContract initialized:', arenaRankingManagerAddress);
+                        }
+                    }
+                } catch (e) { console.warn('Failed to init arenaRankingManagerContract:', e.message); }
+            }
             
             try {
                 await loadArenaConfig();
             } catch (e) { console.warn('Failed to load arena config:', e.message); }
+            
+            console.log('=== Arena Contract Initialization Status ===');
+            console.log('battleContract:', battleContract ? battleContract.options.address : null);
+            console.log('battleSkillDataContract:', battleSkillDataContract ? battleSkillDataContract.options.address : null);
+            console.log('arenaRankingQueryContract:', arenaRankingQueryContract ? arenaRankingQueryContract.options.address : null);
+            console.log('arenaRewardLPContract:', arenaRewardLPContract ? arenaRewardLPContract.options.address : null);
+            console.log('arenaBattleContract:', arenaBattleContract ? arenaBattleContract.options.address : null);
+            console.log('arenaPlayerContract:', arenaPlayerContract ? arenaPlayerContract.options.address : null);
+            console.log('arenaModeManagerContract:', arenaModeManagerContract ? arenaModeManagerContract.options.address : null);
+            console.log('============================================');
         }
 
         async function loadArenaConfig() {
@@ -2413,71 +2465,83 @@
             let rewardType = 2;
             
             try {
-                if (window.ZODIAC_WEB3 && web3) {
+                if (!web3) {
                     try {
-                        const rewardContract = await withTimeout(
-                            window.ZODIAC_WEB3.getContract('arenaRewardLP'),
+                        web3 = window.ZODIAC_WEB3 ? window.ZODIAC_WEB3.getWeb3() : null;
+                        if (!web3) {
+                            web3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
+                        }
+                    } catch (e) {
+                        console.warn('Failed to create web3 instance for loadRewardPool:', e.message);
+                    }
+                }
+                
+                if (!arenaRewardLPContract) {
+                    try {
+                        arenaRewardLPContract = await window.ZODIAC_WEB3.getContract('arenaRewardLP', false);
+                        console.log('arenaRewardLPContract initialized in loadRewardPool:', arenaRewardLPContract ? arenaRewardLPContract.options.address : null);
+                    } catch (e) {
+                        console.warn('Failed to get arenaRewardLP contract in loadRewardPool:', e.message);
+                    }
+                }
+                
+                if (arenaRewardLPContract) {
+                    try {
+                        rewardType = parseInt(await withTimeout(
+                            arenaRewardLPContract.methods.rewardType().call(),
                             5000,
-                            null
-                        );
-                        if (rewardContract) {
-                            arenaRewardLPContract = rewardContract;
-                            
-                            try {
-                                rewardType = parseInt(await withTimeout(
-                                    arenaRewardLPContract.methods.rewardType().call(),
+                            '2'
+                        ));
+                    } catch (e) {
+                        console.warn('获取奖励类型失败:', e);
+                        rewardType = 2;
+                    }
+                    
+                    try {
+                        if (rewardType === 0) {
+                            rewardPoolWei = await withTimeout(
+                                arenaRewardLPContract.methods.lpRewardPoolBalance().call(),
+                                5000,
+                                '0'
+                            );
+                        } else if (rewardType === 1) {
+                            rewardPoolWei = await withTimeout(
+                                arenaRewardLPContract.methods.tokenRewardPoolBalance().call(),
+                                5000,
+                                '0'
+                            );
+                        } else if (rewardType === 2) {
+                            rewardPoolWei = await withTimeout(
+                                arenaRewardLPContract.methods.bnbRewardPoolBalance().call(),
+                                5000,
+                                '0'
+                            );
+                            if (!rewardPoolWei || rewardPoolWei === '0') {
+                                const contractAddress = await withTimeout(
+                                    window.ZODIAC_WEB3.getContractAddress('arenaRewardLP', false),
                                     5000,
-                                    '2'
-                                ));
-                            } catch (e) {
-                                console.warn('获取奖励类型失败:', e);
-                                rewardType = 2;
-                            }
-                            
-                            try {
-                                if (rewardType === 0) {
+                                    null
+                                );
+                                if (contractAddress && contractAddress !== '0x0000000000000000000000000000000000000000' && web3) {
                                     rewardPoolWei = await withTimeout(
-                                        arenaRewardLPContract.methods.lpRewardPoolBalance().call(),
+                                        web3.eth.getBalance(contractAddress),
                                         5000,
                                         '0'
                                     );
-                                } else if (rewardType === 1) {
-                                    rewardPoolWei = await withTimeout(
-                                        arenaRewardLPContract.methods.tokenRewardPoolBalance().call(),
-                                        5000,
-                                        '0'
-                                    );
-                                } else if (rewardType === 2) {
-                                    rewardPoolWei = await withTimeout(
-                                        arenaRewardLPContract.methods.bnbRewardPoolBalance().call(),
-                                        5000,
-                                        '0'
-                                    );
-                                    if (!rewardPoolWei || rewardPoolWei === '0') {
-                                        const contractAddress = await withTimeout(
-                                            window.ZODIAC_WEB3.getContractAddress('arenaRewardLP'),
-                                            5000,
-                                            null
-                                        );
-                                        if (contractAddress && contractAddress !== '0x0000000000000000000000000000000000000000') {
-                                            rewardPoolWei = await withTimeout(
-                                                web3.eth.getBalance(contractAddress),
-                                                5000,
-                                                '0'
-                                            );
-                                        }
-                                    }
                                 }
-                            } catch (e) {
-                                console.warn('获取奖励池余额失败:', e);
                             }
                         }
                     } catch (e) {
-                        console.warn('获取arenaRewardLP合约失败:', e);
+                        console.warn('获取奖励池余额失败:', e);
                     }
                 }
                 
                 if (!rewardPoolWei || rewardPoolWei === '0') {
+                    if (!arenaRankingQueryContract) {
+                        try {
+                            arenaRankingQueryContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery', false);
+                        } catch (e) { console.warn('Failed to get arenaRankingQuery:', e.message); }
+                    }
                     if (arenaRankingQueryContract) {
                         try {
                             const seasonInfo = await arenaRankingQueryContract.methods.getCurrentSeasonInfo().call();
@@ -2491,7 +2555,7 @@
                 if (!rewardPoolWei || rewardPoolWei === '0') {
                     if (window.ZODIAC_WEB3 && web3) {
                         try {
-                            const contractAddress = await window.ZODIAC_WEB3.getContractAddress('arenaReward');
+                            const contractAddress = await window.ZODIAC_WEB3.getContractAddress('arenaReward', false);
                             if (contractAddress && contractAddress !== '0x0000000000000000000000000000000000000000') {
                                 rewardPoolWei = await web3.eth.getBalance(contractAddress).catch(() => '0');
                             }
@@ -2540,6 +2604,8 @@
                         rewardTipTextEl.textContent = '💡 LP奖励领取后会自动兑换为代币和WBNB发送到您的钱包';
                     }
                 }
+                
+                console.log(`Reward Pool: ${displayAmount} ${rewardUnit} (type: ${rewardType})`);
             } catch (error) {
                 console.error('加载奖励池失败:', error);
                 const rewardPoolAmountEl = document.getElementById('rewardPoolAmount');
@@ -2563,28 +2629,30 @@
                     return;
                 }
 
+                if (!web3) {
+                    try {
+                        web3 = window.ZODIAC_WEB3 ? window.ZODIAC_WEB3.getWeb3() : null;
+                        if (!web3) {
+                            web3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
+                        }
+                    } catch (e) {
+                        console.warn('Failed to create web3 instance for loadRewards:', e.message);
+                    }
+                }
+
                 let currentSeasonId = 1;
                 try {
+                    if (!arenaRankingQueryContract) {
+                        try {
+                            arenaRankingQueryContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery', false);
+                        } catch (e) { console.warn('Failed to get arenaRankingQuery:', e.message); }
+                    }
                     if (arenaRankingQueryContract) {
                         currentSeasonId = await withTimeout(
                             arenaRankingQueryContract.methods.currentSeasonId().call(),
                             5000,
                             1
                         );
-                    } else if (window.ZODIAC_WEB3) {
-                        const rankingContract = await withTimeout(
-                            window.ZODIAC_WEB3.getContract('arenaRankingQuery'),
-                            5000,
-                            null
-                        );
-                        if (rankingContract) {
-                            arenaRankingQueryContract = rankingContract;
-                            currentSeasonId = await withTimeout(
-                                arenaRankingQueryContract.methods.currentSeasonId().call(),
-                                5000,
-                                1
-                            );
-                        }
                     }
                 } catch (e) {
                     console.warn('获取当前赛季ID失败:', e);
@@ -2606,26 +2674,17 @@
 
                 let rewardType = 2;
                 try {
+                    if (!arenaRewardLPContract) {
+                        try {
+                            arenaRewardLPContract = await window.ZODIAC_WEB3.getContract('arenaRewardLP', false);
+                        } catch (e) { console.warn('Failed to get arenaRewardLP:', e.message); }
+                    }
                     if (arenaRewardLPContract) {
                         rewardType = parseInt(await withTimeout(
                             arenaRewardLPContract.methods.rewardType().call(),
                             5000,
                             '2'
                         ));
-                    } else if (window.ZODIAC_WEB3 && web3) {
-                        const rewardContract = await withTimeout(
-                            window.ZODIAC_WEB3.getContract('arenaRewardLP'),
-                            5000,
-                            null
-                        );
-                        if (rewardContract) {
-                            arenaRewardLPContract = rewardContract;
-                            rewardType = parseInt(await withTimeout(
-                                arenaRewardLPContract.methods.rewardType().call(),
-                                5000,
-                                '2'
-                            ));
-                        }
                     }
                 } catch (e) {
                     console.warn('获取奖励类型失败:', e);
@@ -2638,6 +2697,11 @@
                 if (seasonIsActive) {
                     let playerScore = '0';
                     try {
+                        if (!arenaBattleContract) {
+                            try {
+                                arenaBattleContract = await window.ZODIAC_WEB3.getContract('arenaBattle', false);
+                            } catch (e) { console.warn('Failed to get arenaBattle:', e.message); }
+                        }
                         if (arenaBattleContract) {
                             try {
                                 const playerRecord = await withTimeout(
@@ -2775,6 +2839,8 @@
                         claimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">暂无已领取奖励</div>';
                     }
                 }
+                
+                console.log(`loadRewards completed - seasonIsActive: ${seasonIsActive}, rewardType: ${rewardType}`);
             } catch (error) {
                 console.error('加载奖励失败:', error);
                 unclaimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">加载失败</div>';
@@ -2840,13 +2906,36 @@
                 let paginationResult = null;
                 
                 if (!arenaRankingQueryContract) {
+                    try {
+                        if (window.ZODIAC_WEB3) {
+                            arenaRankingQueryContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery', false);
+                            console.log('arenaRankingQueryContract initialized for read-only access');
+                        }
+                    } catch (e) {
+                        console.warn('Failed to get arenaRankingQuery contract:', e.message);
+                    }
+                }
+                
+                if (!arenaRankingQueryContract) {
                     useMockData = true;
                 } else {
                     try {
-                        const currentSeasonId = await arenaRankingQueryContract.methods.currentSeasonId().call();
-                        paginationResult = await arenaRankingQueryContract.methods.getLeaderboardByPage(currentSeasonId, page, size).call();
+                        const currentSeasonId = await withTimeout(
+                            arenaRankingQueryContract.methods.currentSeasonId().call(),
+                            5000,
+                            1
+                        );
+                        paginationResult = await withTimeout(
+                            arenaRankingQueryContract.methods.getLeaderboardByPage(currentSeasonId, page, size).call(),
+                            5000,
+                            null
+                        );
                         totalPages = parseInt(paginationResult.totalPages) || parseInt(paginationResult[0]) || 1;
                         totalPlayers = parseInt(paginationResult.totalPlayers) || parseInt(paginationResult[1]) || 0;
+                        
+                        if (totalPlayers === 0) {
+                            useMockData = true;
+                        }
                     } catch (e) {
                         console.log('获取排行榜失败，使用模拟数据:', e);
                         useMockData = true;
@@ -2905,9 +2994,21 @@
                         const rank = startRank + i;
                         
                         let team = [];
+                        if (!arenaPlayerContract && window.ZODIAC_WEB3) {
+                            try {
+                                arenaPlayerContract = await window.ZODIAC_WEB3.getContract('arenaPlayer', false);
+                            } catch (e) {
+                                console.warn('Failed to get arenaPlayer contract:', e.message);
+                            }
+                        }
+                        
                         if (arenaPlayerContract && window.ZODIAC_WEB3) {
                             try {
-                                const teamTokens = await arenaPlayerContract.methods.getPlayerBattleTeam(address).call();
+                                const teamTokens = await withTimeout(
+                                    arenaPlayerContract.methods.getPlayerBattleTeam(address).call(),
+                                    3000,
+                                    []
+                                );
                                 const validTokens = teamTokens.filter(t => t && t !== '0' && t !== 0);
                                 
                                 const nftDataPromises = validTokens.map(tokenId => 

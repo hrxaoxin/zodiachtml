@@ -289,12 +289,44 @@ window.ZODIAC_WEB3 = (function() {
         'authorizer': ABIS.authorizerABI
     };
 
-    async function getAuthorizerContract() {
+    async function getAuthorizerContract(requireAccount = true) {
         if (contracts.authorizer) return contracts.authorizer;
+        
+        const RPC_URL = 'https://bsc-dataseed1.binance.org/';
+        
         if (!web3) {
-            console.warn('[ZODIAC_WEB3] web3 is not initialized, cannot create authorizer contract');
-            return null;
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    web3 = new window.Web3(window.ethereum);
+                    console.log('[ZODIAC_WEB3] Created web3 instance from MetaMask');
+                } catch (e) {
+                    console.warn('[ZODIAC_WEB3] Failed to create web3 from MetaMask:', e);
+                    if (!requireAccount) {
+                        try {
+                            web3 = new window.Web3(new window.Web3.providers.HttpProvider(RPC_URL));
+                            console.log('[ZODIAC_WEB3] Created web3 instance from public RPC for read-only access');
+                        } catch (e2) {
+                            console.warn('[ZODIAC_WEB3] Failed to create web3 from public RPC:', e2);
+                            return null;
+                        }
+                    } else {
+                        return null;
+                    }
+                }
+            } else if (!requireAccount) {
+                try {
+                    web3 = new window.Web3(new window.Web3.providers.HttpProvider(RPC_URL));
+                    console.log('[ZODIAC_WEB3] Created web3 instance from public RPC for read-only access');
+                } catch (e) {
+                    console.warn('[ZODIAC_WEB3] Failed to create web3 from public RPC:', e);
+                    return null;
+                }
+            } else {
+                console.warn('[ZODIAC_WEB3] web3 is not initialized, cannot create authorizer contract');
+                return null;
+            }
         }
+        
         const authorizerAddr = CONTRACT_ADDRESSES.authorizer;
         if (!authorizerAddr || authorizerAddr === ZERO_ADDRESS || !ABIS.authorizerABI) return null;
         try {
@@ -306,12 +338,14 @@ window.ZODIAC_WEB3 = (function() {
         }
     }
 
-    async function getContractAddress(name) {
+    async function getContractAddress(name, requireAccount = true) {
         if (!name) return null;
         const cacheKey = name;
         if (addressCache[cacheKey] && addressCache[cacheKey] !== ZERO_ADDRESS) {
             return addressCache[cacheKey];
         }
+
+        const RPC_URL = 'https://bsc-dataseed1.binance.org/';
 
         if (!web3) {
             const fallbackAddress = CONTRACT_ADDRESSES[name] || CONTRACT_ADDRESSES[addressNameMap[name]] || null;
@@ -319,11 +353,38 @@ window.ZODIAC_WEB3 = (function() {
                 addressCache[cacheKey] = fallbackAddress;
                 return fallbackAddress;
             }
-            return null;
+            
+            if (requireAccount) {
+                return null;
+            }
+            
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    web3 = new window.Web3(window.ethereum);
+                    console.log('[ZODIAC_WEB3] Created web3 instance for read-only access');
+                } catch (e) {
+                    console.warn('[ZODIAC_WEB3] Failed to create web3 from MetaMask:', e);
+                    try {
+                        web3 = new window.Web3(new window.Web3.providers.HttpProvider(RPC_URL));
+                        console.log('[ZODIAC_WEB3] Created web3 instance from public RPC for read-only access');
+                    } catch (e2) {
+                        console.warn('[ZODIAC_WEB3] Failed to create web3 from public RPC:', e2);
+                        return null;
+                    }
+                }
+            } else {
+                try {
+                    web3 = new window.Web3(new window.Web3.providers.HttpProvider(RPC_URL));
+                    console.log('[ZODIAC_WEB3] Created web3 instance from public RPC for read-only access');
+                } catch (e) {
+                    console.warn('[ZODIAC_WEB3] Failed to create web3 from public RPC:', e);
+                    return null;
+                }
+            }
         }
 
         try {
-            const authorizerContract = await getAuthorizerContract();
+            const authorizerContract = await getAuthorizerContract(requireAccount);
             const authorizerKey = addressNameMap[name] || name;
             if (authorizerContract && typeof authorizerContract.methods.getAddressByName === 'function') {
                 const resolvedAddress = await authorizerContract.methods.getAddressByName(authorizerKey).call();
@@ -384,12 +445,39 @@ window.ZODIAC_WEB3 = (function() {
     async function getContract(name, requireAccount = true) {
         if (contracts[name]) return contracts[name];
         
+        const RPC_URL = 'https://bsc-dataseed1.binance.org/';
+        
         if (!web3) {
-            if (typeof window.ethereum === 'undefined') {
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    web3 = new window.Web3(window.ethereum);
+                    console.log('[ZODIAC_WEB3] Created web3 instance from MetaMask');
+                } catch (e) {
+                    console.warn('[ZODIAC_WEB3] Failed to create web3 from MetaMask:', e);
+                    if (!requireAccount) {
+                        try {
+                            web3 = new window.Web3(new window.Web3.providers.HttpProvider(RPC_URL));
+                            console.log('[ZODIAC_WEB3] Created web3 instance from public RPC for read-only access');
+                        } catch (e2) {
+                            console.error('[ZODIAC_WEB3] Failed to create web3 from public RPC:', e2);
+                            throw new Error('[ZODIAC_WEB3] Failed to create web3 instance');
+                        }
+                    } else {
+                        throw new Error('[ZODIAC_WEB3] MetaMask not detected');
+                    }
+                }
+            } else if (!requireAccount) {
+                try {
+                    web3 = new window.Web3(new window.Web3.providers.HttpProvider(RPC_URL));
+                    console.log('[ZODIAC_WEB3] Created web3 instance from public RPC for read-only access');
+                } catch (e) {
+                    console.error('[ZODIAC_WEB3] Failed to create web3 from public RPC:', e);
+                    throw new Error('[ZODIAC_WEB3] Failed to create web3 instance');
+                }
+            } else {
                 console.error('[ZODIAC_WEB3] MetaMask not detected');
                 throw new Error('[ZODIAC_WEB3] MetaMask not detected');
             }
-            web3 = new window.Web3(window.ethereum);
         }
         
         if (requireAccount && !account) {
@@ -447,7 +535,7 @@ window.ZODIAC_WEB3 = (function() {
         
         // tokenContract 从 authorizer 动态获取
         if (name === 'tokenContract') {
-            const tokenAddr = await getTokenAddressFromAuthorizer();
+            const tokenAddr = await getContractAddress('tokenContract', requireAccount);
             if (!tokenAddr || tokenAddr === '0x0000000000000000000000000000000000000000') {
                 throw new Error(`[ZODIAC_WEB3] Token address not found in authorizer`);
             }
@@ -455,12 +543,12 @@ window.ZODIAC_WEB3 = (function() {
             return contracts[name];
         }
         
-        let addr = await getContractAddress(name);
+        let addr = await getContractAddress(name, requireAccount);
         if (!addr && name === 'buyback') {
-            addr = await getContractAddress('nftBuyback');
+            addr = await getContractAddress('nftBuyback', requireAccount);
         }
         if (!addr && name === 'nftContract') {
-            addr = await getContractAddress('nftMint');
+            addr = await getContractAddress('nftMint', requireAccount);
         }
         if (!addr || addr === ZERO_ADDRESS) {
             throw new Error(`[ZODIAC_WEB3] Contract address not configured: ${name}`);

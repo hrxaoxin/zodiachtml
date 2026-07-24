@@ -673,7 +673,7 @@
         });
 
         async function loadFenHongData() {
-            const account = ZODIAC_WEB3.getAccount();
+            const account = ZODIAC_WEB3 ? ZODIAC_WEB3.getAccount() : null;
             
             // 初始化默认值
             document.getElementById('totalPool').textContent = '--';
@@ -683,27 +683,55 @@
             document.getElementById('userWeight').textContent = '--';
 
             try {
-                // 加载公共数据（无需连接钱包）
-                const dividendManager = await ZODIAC_WEB3.getContract('dividendManager', false);
-                if (!dividendManager) {
-                    console.error('DividendManager contract not available');
-                    return;
-                }
-                
-                const web3Instance = ZODIAC_WEB3.getWeb3();
+                let web3Instance = ZODIAC_WEB3 ? ZODIAC_WEB3.getWeb3() : null;
                 if (!web3Instance) {
-                    console.error('Web3 instance not available');
-                    return;
+                    try {
+                        web3Instance = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
+                        console.log('index: Created web3 from public RPC for read-only access');
+                    } catch (e) {
+                        console.warn('Failed to create web3 instance:', e.message);
+                        return;
+                    }
                 }
                 
-                // 加载总池金额
+                // 加载公共数据（无需连接钱包）
                 try {
-                    const poolStats = await dividendManager.methods.getDividendPoolStats().call();
-                    const totalPoolWei = poolStats.currentPool || poolStats['0'];
-                    const totalPool = web3Instance.utils.fromWei(totalPoolWei, 'ether');
-                    document.getElementById('totalPool').textContent = parseFloat(totalPool).toFixed(4);
+                    const dividendManager = await ZODIAC_WEB3.getContract('dividendManager', false);
+                    if (dividendManager) {
+                        // 加载总池金额
+                        try {
+                            const poolStats = await dividendManager.methods.getDividendPoolStats().call();
+                            const totalPoolWei = poolStats.currentPool || poolStats['0'];
+                            const totalPool = web3Instance.utils.fromWei(totalPoolWei, 'ether');
+                            document.getElementById('totalPool').textContent = parseFloat(totalPool).toFixed(4);
+                        } catch (e) {
+                            console.error('Failed to load total pool:', e);
+                        }
+                        
+                        // 如果已连接钱包，加载用户个人数据
+                        if (account) {
+                            // 加载待领取分红
+                            try {
+                                const userDivWei = await dividendManager.methods.getClaimableDividend(account).call();
+                                const userDiv = web3Instance.utils.fromWei(userDivWei, 'ether');
+                                document.getElementById('unclaimedDividend').textContent = parseFloat(userDiv).toFixed(4);
+                            } catch (e) {
+                                console.error('Failed to load user dividend:', e);
+                            }
+                            
+                            // 加载用户权重
+                            try {
+                                const userWeight = await dividendManager.methods.getUserWeight(account).call();
+                                document.getElementById('userWeight').textContent = userWeight.toString();
+                            } catch (e) {
+                                console.error('Load user weight failed:', e);
+                            }
+                        }
+                    } else {
+                        console.warn('DividendManager contract not available');
+                    }
                 } catch (e) {
-                    console.error('Failed to load total pool:', e);
+                    console.error('Failed to get dividendManager:', e);
                 }
                 
                 // 加载已分配金额（从 rewardManager 合约获取）
@@ -728,32 +756,8 @@
                 } catch (e) {
                     console.error('Failed to load NFT total supply:', e);
                 }
-
-                // 以下数据需要连接钱包
-                if (!account) {
-                    return;
-                }
-
-                // 加载待领取分红
-                try {
-                    const [userDivWei, userWeight] = await Promise.all([
-                        dividendManager.methods.getClaimableDividend(account).call(),
-                        dividendManager.methods.getUserWeight(account).call()
-                    ]);
-                    const userDiv = web3Instance.utils.fromWei(userDivWei, 'ether');
-                    document.getElementById('unclaimedDividend').textContent = parseFloat(userDiv).toFixed(4);
-                    document.getElementById('userWeight').textContent = userWeight.toString();
-                } catch (e) {
-                    console.error('Failed to load user dividend:', e);
-                    // 备用方案：单独加载用户权重
-                    try {
-                        const userWeight = await dividendManager.methods.getUserWeight(account).call();
-                        document.getElementById('userWeight').textContent = userWeight.toString();
-                    } catch (e2) {
-                        console.error('Load user weight failed:', e2);
-                    }
-                }
                 
+                console.log('loadFenHongData completed - account:', account ? 'connected' : 'not connected');
             } catch (error) {
                 console.error('Load dividend data failed:', error);
             }
