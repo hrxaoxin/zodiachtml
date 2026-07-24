@@ -927,7 +927,19 @@
                 updateSaveButtons();
                 updateChallengeBtn();
                 
+                if (window.ZODIAC_WEB3 && typeof window.ZODIAC_WEB3.initWeb3 === 'function') {
+                    try {
+                        await window.ZODIAC_WEB3.initWeb3();
+                        console.log('[ARENA] ZODIAC_WEB3.initWeb3 completed');
+                    } catch (e) {
+                        console.warn('[ARENA] ZODIAC_WEB3.initWeb3 failed (may be normal if no wallet):', e.message);
+                    }
+                }
+                
                 await initContracts(true);
+                
+                const contractsReady = checkContractsReady();
+                console.log('[ARENA] Contracts ready status:', contractsReady);
                 
                 if (typeof window.ethereum !== 'undefined' && !accounts.length) {
                     try {
@@ -947,6 +959,19 @@
             } catch (e) {
                 console.error('init 函数执行失败:', e);
             }
+        }
+
+        function checkContractsReady() {
+            return {
+                battleContract: !!battleContract,
+                battleSkillDataContract: !!battleSkillDataContract,
+                arenaRankingQueryContract: !!arenaRankingQueryContract,
+                arenaRewardLPContract: !!arenaRewardLPContract,
+                arenaBattleContract: !!arenaBattleContract,
+                arenaPlayerContract: !!arenaPlayerContract,
+                arenaModeManagerContract: !!arenaModeManagerContract,
+                web3: !!web3
+            };
         }
 
         let arenaUnsubscribeFunctions = [];
@@ -1253,19 +1278,37 @@
         }
 
         async function initContracts(forceReadOnly = false) {
-            console.log('arena.html initContracts version: 2024-fix-v6 - COMPLETE REWRITE');
+            console.log('arena.html initContracts version: 2024-fix-v8 - COMPLETE REWRITE with ZODIAC_WEB3 sync');
             
             const config = ZODIAC_CONFIG;
             const AUTHORIZER_ADDR = '0x11Feea2F23362478a8850c9f0daA746D057D2928';
             
             if (!web3) {
                 try {
-                    web3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
-                    window.web3 = web3;
-                    console.log('arena: Created web3 from public RPC for read-only access');
+                    if (typeof window.ethereum !== 'undefined' && accounts && accounts.length > 0) {
+                        web3 = new Web3(window.ethereum);
+                        window.web3 = web3;
+                        console.log('arena: Created web3 from MetaMask provider');
+                    } else {
+                        web3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
+                        window.web3 = web3;
+                        console.log('arena: Created web3 from public RPC for read-only access');
+                    }
                 } catch (e) {
                     console.error('Failed to create web3 instance:', e.message);
                     return;
+                }
+            }
+            
+            if (window.ZODIAC_WEB3 && !window.ZODIAC_WEB3.getWeb3()) {
+                try {
+                    const rpcUrl = 'https://bsc-dataseed1.binance.org/';
+                    const provider = typeof window.ethereum !== 'undefined' ? window.ethereum : new Web3.providers.HttpProvider(rpcUrl);
+                    const zWeb3 = new Web3(provider);
+                    window.ZODIAC_WEB3.web3 = zWeb3;
+                    console.log('[ARENA] ZODIAC_WEB3 web3 instance synced');
+                } catch (e) {
+                    console.warn('[ARENA] Failed to sync ZODIAC_WEB3 web3:', e.message);
                 }
             }
             
@@ -1291,7 +1334,11 @@
             
             for (const name of contractNames) {
                 try {
-                    const addr = await authorizerContract.methods.getAddressByName(name).call();
+                    const addr = await withTimeout(
+                        authorizerContract.methods.getAddressByName(name).call(),
+                        5000,
+                        null
+                    );
                     contractAddresses[name] = addr;
                     console.log(`Direct authorizer - ${name}: ${addr}`);
                 } catch (e) {
@@ -1370,7 +1417,11 @@
             if (accounts.length > 0) {
                 if (config.ABIS.nftMintCoreABI) {
                     try {
-                        const nftMintAddr = await authorizerContract.methods.getAddressByName('nftMintCore').call();
+                        const nftMintAddr = await withTimeout(
+                            authorizerContract.methods.getAddressByName('nftMintCore').call(),
+                            5000,
+                            null
+                        );
                         if (nftMintAddr) {
                             nftContract = new web3.eth.Contract(config.ABIS.nftMintCoreABI, nftMintAddr);
                             console.log('nftContract initialized:', nftMintAddr);
@@ -1380,7 +1431,11 @@
                 
                 if (config.ABIS.tokenABI) {
                     try {
-                        const tokenAddr = await authorizerContract.methods.getAddressByName('token').call();
+                        const tokenAddr = await withTimeout(
+                            authorizerContract.methods.getAddressByName('token').call(),
+                            5000,
+                            null
+                        );
                         if (tokenAddr) {
                             tokenContract = new web3.eth.Contract(config.ABIS.tokenABI, tokenAddr);
                             console.log('tokenContract initialized:', tokenAddr);
@@ -1390,7 +1445,11 @@
                 
                 if (config.ABIS.arenaRankingManagerABI) {
                     try {
-                        const arenaAddr = await authorizerContract.methods.getAddressByName('arenaRankingQuery').call();
+                        const arenaAddr = await withTimeout(
+                            authorizerContract.methods.getAddressByName('arenaRankingQuery').call(),
+                            5000,
+                            null
+                        );
                         if (arenaAddr) {
                             arenaContract = new web3.eth.Contract(config.ABIS.arenaRankingManagerABI, arenaAddr);
                             console.log('arenaContract initialized:', arenaAddr);
@@ -1398,13 +1457,24 @@
                     } catch (e) { console.warn('Failed to init arenaContract:', e.message); }
                     
                     try {
-                        const rankingManagerAddr = await authorizerContract.methods.getAddressByName('arenaRankingManager').call();
+                        const rankingManagerAddr = await withTimeout(
+                            authorizerContract.methods.getAddressByName('arenaRankingManager').call(),
+                            5000,
+                            null
+                        );
                         if (rankingManagerAddr) {
                             arenaRankingManagerContract = new web3.eth.Contract(config.ABIS.arenaRankingManagerABI, rankingManagerAddr);
                             console.log('arenaRankingManagerContract initialized:', rankingManagerAddr);
                         }
                     } catch (e) { console.warn('Failed to init arenaRankingManagerContract:', e.message); }
                 }
+            }
+            
+            if (!arenaContract && config.ABIS.arenaRankingManagerABI && contractAddresses.arenaRankingQuery) {
+                try {
+                    arenaContract = new web3.eth.Contract(config.ABIS.arenaRankingManagerABI, contractAddresses.arenaRankingQuery);
+                    console.log('arenaContract initialized for read-only access:', contractAddresses.arenaRankingQuery);
+                } catch (e) { console.warn('Failed to init arenaContract for read-only:', e.message); }
             }
             
             try {
@@ -2256,8 +2326,11 @@
             const myWinRateEl = document.getElementById('myWinRate');
             const myRankEl = document.getElementById('myRank');
             
+            console.log('[ARENA] loadMyStats called, accounts:', accounts ? accounts.length : 0);
+            
             try {
                 if (!accounts || accounts.length === 0) {
+                    console.log('[ARENA] No accounts connected');
                     if (myPointsEl) myPointsEl.textContent = '-';
                     if (myWinsEl) myWinsEl.textContent = '-';
                     if (myLossesEl) myLossesEl.textContent = '-';
@@ -2268,17 +2341,20 @@
                 
                 if (!web3) {
                     web3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
+                    console.log('[ARENA] Created web3 instance in loadMyStats');
                 }
                 
                 if (!arenaRankingQueryContract && window.ZODIAC_WEB3) {
                     try {
                         arenaRankingQueryContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery', false);
+                        console.log('[ARENA] arenaRankingQueryContract initialized:', arenaRankingQueryContract ? arenaRankingQueryContract.options.address : null);
                     } catch (e) { console.warn('Failed to get arenaRankingQuery:', e.message); }
                 }
                 
                 if (!arenaBattleContract && window.ZODIAC_WEB3) {
                     try {
                         arenaBattleContract = await window.ZODIAC_WEB3.getContract('arenaBattle', false);
+                        console.log('[ARENA] arenaBattleContract initialized:', arenaBattleContract ? arenaBattleContract.options.address : null);
                     } catch (e) { console.warn('Failed to get arenaBattle:', e.message); }
                 }
                 
@@ -2290,6 +2366,7 @@
                             5000,
                             1
                         );
+                        console.log('[ARENA] currentSeasonId:', currentSeasonId);
                     }
                 } catch (e) {
                     console.warn('获取当前赛季ID失败，使用默认值:', e);
@@ -2309,6 +2386,7 @@
                         points = playerRecord.score || playerRecord[0] || '0';
                         wins = playerRecord.wins || playerRecord[1] || '0';
                         losses = playerRecord.losses || playerRecord[2] || '0';
+                        console.log('[ARENA] Player record from arenaBattle (with seasonId):', playerRecord);
                     } catch (e) {
                         try {
                             const playerRecord = await withTimeout(
@@ -2319,10 +2397,13 @@
                             points = playerRecord.score || playerRecord[0] || '0';
                             wins = playerRecord.wins || playerRecord[1] || '0';
                             losses = playerRecord.losses || playerRecord[2] || '0';
+                            console.log('[ARENA] Player record from arenaBattle (without seasonId):', playerRecord);
                         } catch (e2) {
                             console.warn('从arenaBattleContract获取玩家数据失败:', e2);
                         }
                     }
+                } else {
+                    console.log('[ARENA] arenaBattleContract not available');
                 }
                 
                 if (myPointsEl) myPointsEl.textContent = points;
@@ -2336,27 +2417,35 @@
                 if (myWinRateEl) myWinRateEl.textContent = winRate;
 
                 let userRank = '0';
-                if (arenaRankingQueryContract) {
+                if (arenaRankingQueryContract && accounts[0]) {
                     try {
+                        console.log('[ARENA] Trying getPlayerRank with account:', accounts[0]);
                         userRank = await withTimeout(
-                            arenaRankingQueryContract.methods.getPlayerRank(currentSeasonId, accounts[0]).call(),
+                            arenaRankingQueryContract.methods.getPlayerRank(accounts[0]).call(),
                             5000,
                             '0'
                         );
+                        console.log('[ARENA] getPlayerRank result:', userRank);
                     } catch (e1) {
+                        console.warn('[ARENA] getPlayerRank failed:', e1.message);
                         try {
+                            console.log('[ARENA] Trying getPlayerRank with seasonId as fallback:', currentSeasonId, accounts[0]);
                             userRank = await withTimeout(
-                                arenaRankingQueryContract.methods.getPlayerRank(accounts[0]).call(),
+                                arenaRankingQueryContract.methods.getPlayerRank(currentSeasonId, accounts[0]).call(),
                                 5000,
                                 '0'
                             );
+                            console.log('[ARENA] getPlayerRank result (with seasonId):', userRank);
                         } catch (e2) {
                             console.warn('获取玩家排名失败:', e2.message);
                         }
                     }
+                } else {
+                    console.log('[ARENA] arenaRankingQueryContract or accounts not available for getPlayerRank');
                 }
                 
                 const userRankNum = parseInt(userRank) || 0;
+                console.log('[ARENA] Final user rank:', userRankNum);
                 if (myRankEl) myRankEl.textContent = userRankNum > 0 ? '#' + userRankNum : '-';
                 
                 console.log(`loadMyStats - points: ${points}, wins: ${wins}, losses: ${losses}, rank: ${userRankNum}`);
@@ -2406,13 +2495,114 @@
             }
         }
 
+        async function loadClaimedRewards(claimedDiv, rewardType, rewardUnit, rewardName, currentSeasonId) {
+            console.log('[ARENA] loadClaimedRewards called');
+            try {
+                let claimedHistory = [];
+                
+                if (arenaRewardLPContract && web3 && accounts.length > 0 && arenaRewardLPContract.events) {
+                    try {
+                        const maxSeasonsToCheck = 5;
+                        const startSeason = Math.max(1, currentSeasonId - maxSeasonsToCheck);
+                        const endSeason = currentSeasonId - 1;
+                        
+                        console.log(`[ARENA] Checking seasons ${startSeason} to ${endSeason}`);
+                        
+                        const checkSeasonPromises = [];
+                        
+                        for (let seasonId = startSeason; seasonId <= endSeason; seasonId++) {
+                            checkSeasonPromises.push(checkSeasonClaimed(seasonId, accounts[0], rewardType));
+                        }
+                        
+                        const results = await Promise.allSettled(checkSeasonPromises);
+                        
+                        results.forEach((result, index) => {
+                            if (result.status === 'fulfilled' && result.value) {
+                                claimedHistory.push(result.value);
+                            }
+                        });
+                        
+                    } catch (e) {
+                        console.warn('获取已领取奖励历史失败:', e.message);
+                    }
+                }
+                
+                if (claimedHistory.length > 0) {
+                    claimedDiv.innerHTML = claimedHistory.map(item => `
+                        <div class="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+                            <div class="text-green-400 text-sm font-medium">赛季 ${item.seasonId}</div>
+                            <div class="text-gray-300 text-xs mt-1">${item.amount}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    claimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">暂无已领取奖励</div>';
+                }
+            } catch (e) {
+                console.error('加载已领取奖励失败:', e);
+                claimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">暂无已领取奖励</div>';
+            }
+        }
+        
+        async function checkSeasonClaimed(seasonId, account, rewardType) {
+            try {
+                let claimed = false;
+                
+                if (arenaRankingQueryContract) {
+                    claimed = await withTimeout(
+                        arenaRankingQueryContract.methods.seasonRewardsClaimed(seasonId, account).call(),
+                        3000,
+                        false
+                    );
+                }
+                
+                if (claimed && (claimed === true || claimed === 'true')) {
+                    let rewardAmount = '0';
+                    try {
+                        const events = await withTimeout(
+                            arenaRewardLPContract.getPastEvents('RewardClaimed', {
+                                filter: { player: account },
+                                fromBlock: 'latest',
+                                toBlock: 'latest'
+                            }),
+                            3000,
+                            []
+                        );
+                        
+                        const seasonEvent = events.find(evt => {
+                            const eventSeasonId = evt.returnValues.seasonId || evt.returnValues[0];
+                            return parseInt(eventSeasonId) === seasonId;
+                        });
+                        
+                        if (seasonEvent) {
+                            const amountWei = seasonEvent.returnValues.amount || seasonEvent.returnValues[1] || '0';
+                            rewardAmount = web3.utils.fromWei(amountWei, 'ether');
+                        }
+                    } catch (e) {
+                        console.warn(`获取赛季${seasonId}奖励事件失败:`, e.message);
+                    }
+                    
+                    return {
+                        seasonId: seasonId,
+                        amount: parseFloat(rewardAmount) > 0 ? parseFloat(rewardAmount).toFixed(4) + ' ' + getRewardUnit(rewardType) : '已领取',
+                        unit: getRewardUnit(rewardType)
+                    };
+                }
+            } catch (e) {
+                console.warn(`检查赛季${seasonId}领取状态失败:`, e.message);
+            }
+            return null;
+        }
+
         async function loadRewardPool() {
             let rewardPoolWei = '0';
             let rewardType = 2;
             
+            console.log('[ARENA] loadRewardPool called');
+            
             try {
                 if (!web3) {
                     web3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
+                    console.log('[ARENA] Created web3 instance in loadRewardPool');
                 }
                 
                 if (!arenaRewardLPContract) {
@@ -2431,6 +2621,7 @@
                             5000,
                             '2'
                         ));
+                        console.log('[ARENA] rewardType:', rewardType);
                     } catch (e) {
                         console.warn('获取奖励类型失败:', e);
                         rewardType = 2;
@@ -2451,19 +2642,27 @@
                             );
                         } else if (rewardType === 2) {
                             try {
-                                rewardPoolWei = await withTimeout(
-                                    arenaRewardLPContract.methods.bnbRewardPoolBalance().call(),
-                                    5000,
-                                    '0'
-                                );
+                                if (arenaRewardLPContract.methods.bnbRewardPoolBalance) {
+                                    rewardPoolWei = await withTimeout(
+                                        arenaRewardLPContract.methods.bnbRewardPoolBalance().call(),
+                                        5000,
+                                        '0'
+                                    );
+                                    console.log('[ARENA] bnbRewardPoolBalance result:', rewardPoolWei);
+                                } else {
+                                    console.log('[ARENA] bnbRewardPoolBalance method not found, trying getBalance');
+                                }
                             } catch (e) {
                                 console.warn('调用bnbRewardPoolBalance失败:', e.message);
                             }
                             
-                            if (!rewardPoolWei || rewardPoolWei === '0' || rewardPoolWei === '0x0') {
+                            if (!rewardPoolWei || rewardPoolWei === '0' || rewardPoolWei === '0x0' || rewardPoolWei === '0x' || parseInt(rewardPoolWei) === 0) {
+                                console.log('[ARENA] bnbRewardPoolBalance returned 0 or invalid, trying getBalance');
                                 try {
-                                    let contractAddress = arenaRewardLPContract.options.address;
-                                    if (!contractAddress) {
+                                    let contractAddress = null;
+                                    if (arenaRewardLPContract && arenaRewardLPContract.options && arenaRewardLPContract.options.address) {
+                                        contractAddress = arenaRewardLPContract.options.address;
+                                    } else {
                                         contractAddress = await withTimeout(
                                             window.ZODIAC_WEB3.getContractAddress('arenaRewardLP', false),
                                             5000,
@@ -2579,6 +2778,8 @@
             const unclaimedDiv = document.getElementById('unclaimedRewards');
             const claimedDiv = document.getElementById('claimedRewards');
             
+            console.log('[ARENA] loadRewards called');
+            
             if (!unclaimedDiv || !claimedDiv) {
                 console.warn('unclaimedRewards or claimedRewards element not found');
                 return;
@@ -2590,16 +2791,19 @@
             try {
                 if (!web3) {
                     web3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
+                    console.log('[ARENA] Created web3 in loadRewards');
                 }
 
                 if (!arenaRankingQueryContract && window.ZODIAC_WEB3) {
                     try {
                         arenaRankingQueryContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery', false);
+                        console.log('[ARENA] arenaRankingQueryContract initialized:', arenaRankingQueryContract ? arenaRankingQueryContract.options.address : null);
                     } catch (e) { console.warn('Failed to get arenaRankingQuery:', e.message); }
                 }
                 if (!arenaRewardLPContract && window.ZODIAC_WEB3) {
                     try {
                         arenaRewardLPContract = await window.ZODIAC_WEB3.getContract('arenaRewardLP', false);
+                        console.log('[ARENA] arenaRewardLPContract initialized:', arenaRewardLPContract ? arenaRewardLPContract.options.address : null);
                     } catch (e) { console.warn('Failed to get arenaRewardLP:', e.message); }
                 }
 
@@ -2617,6 +2821,7 @@
                             5000,
                             1
                         );
+                        console.log('[ARENA] currentSeasonId:', currentSeasonId);
                     } catch (e) {
                         console.warn('获取当前赛季ID失败:', e);
                     }
@@ -2634,6 +2839,7 @@
                         if (typeof seasonIsActive === 'string') {
                             seasonIsActive = seasonIsActive.toLowerCase() === 'true';
                         }
+                        console.log('[ARENA] seasonIsActive:', seasonIsActive);
                     } catch (e) {
                         console.warn('获取赛季状态失败:', e);
                     }
@@ -2652,6 +2858,7 @@
                         rewardType = 2;
                     }
                 }
+                console.log('[ARENA] rewardType:', rewardType);
 
                 const rewardUnit = getRewardUnit(rewardType);
                 const rewardName = getRewardName(rewardType);
@@ -2695,7 +2902,8 @@
                             <div class="text-gray-500 text-xs mt-1">赛季结束后可领取${rewardName}</div>
                         </div>
                     `;
-                    claimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">暂无已领取奖励</div>';
+                    
+                    await loadClaimedRewards(claimedDiv, rewardType, rewardUnit, rewardName, currentSeasonId);
                 } else {
                     let claimed = false;
                     if (arenaRankingQueryContract) {
@@ -2724,12 +2932,29 @@
 
                     if (claimed) {
                         unclaimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">暂无待领取奖励</div>';
+                        let claimedAmount = '已领取';
+                        if (arenaRewardLPContract && web3) {
+                            try {
+                                const rewardWei = await withTimeout(
+                                    arenaRewardLPContract.methods.getPendingLPReward(accounts[0], currentSeasonId).call(),
+                                    5000,
+                                    '0'
+                                );
+                                const amount = web3.utils.fromWei(rewardWei, 'ether');
+                                if (parseFloat(amount) > 0) {
+                                    claimedAmount = parseFloat(amount).toFixed(4) + ' ' + rewardUnit;
+                                }
+                            } catch (e) {
+                                console.warn('获取已领取奖励金额失败:', e);
+                            }
+                        }
                         claimedDiv.innerHTML = `
                             <div class="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
-                                <div class="text-green-400 text-sm font-medium">已领取</div>
-                                <div class="text-gray-300 text-xs mt-1">${rewardName}已发放</div>
+                                <div class="text-green-400 text-sm font-medium">赛季 ${currentSeasonId} 已领取</div>
+                                <div class="text-gray-300 text-xs mt-1">${claimedAmount}</div>
                             </div>
                         `;
+                        await loadClaimedRewards(claimedDiv, rewardType, rewardUnit, rewardName, currentSeasonId);
                     } else {
                         let rewardAmount = '0';
                         if (arenaRewardLPContract && web3) {
@@ -2878,11 +3103,13 @@
                 let useMockData = false;
                 let paginationResult = null;
                 
+                console.log(`[ARENA] loadLeaderboard called - page: ${page}, size: ${size}, arenaRankingQueryContract: ${!!arenaRankingQueryContract}`);
+                
                 if (!arenaRankingQueryContract) {
                     try {
                         if (window.ZODIAC_WEB3) {
                             arenaRankingQueryContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery', false);
-                            console.log('arenaRankingQueryContract initialized for read-only access');
+                            console.log('arenaRankingQueryContract initialized for read-only access:', arenaRankingQueryContract ? arenaRankingQueryContract.options.address : null);
                         }
                     } catch (e) {
                         console.warn('Failed to get arenaRankingQuery contract:', e.message);
@@ -2890,6 +3117,7 @@
                 }
                 
                 if (!arenaRankingQueryContract) {
+                    console.log('[ARENA] arenaRankingQueryContract not available, using mock data');
                     useMockData = true;
                 } else {
                     try {
@@ -2898,19 +3126,26 @@
                             5000,
                             1
                         );
+                        console.log('[ARENA] Current season ID:', currentSeasonId);
+                        
                         paginationResult = await withTimeout(
                             arenaRankingQueryContract.methods.getLeaderboardByPage(currentSeasonId, page, size).call(),
                             5000,
                             null
                         );
+                        console.log('[ARENA] paginationResult:', paginationResult);
                         
                         if (!paginationResult) {
+                            console.log('[ARENA] paginationResult is null, using mock data');
                             useMockData = true;
                         } else {
                             totalPages = parseInt(paginationResult.totalPages) || parseInt(paginationResult[0]) || 1;
                             totalPlayers = parseInt(paginationResult.totalPlayers) || parseInt(paginationResult[1]) || 0;
                             
+                            console.log('[ARENA] totalPages:', totalPages, 'totalPlayers:', totalPlayers);
+                            
                             if (totalPlayers === 0) {
+                                console.log('[ARENA] totalPlayers is 0, using mock data');
                                 useMockData = true;
                             }
                         }
@@ -2926,9 +3161,27 @@
                     const mockPlayers = generateMockPlayers(startIndex, size, startRank);
                     topPlayers.push(...mockPlayers);
                 } else if (paginationResult) {
-                    const entries = Array.isArray(paginationResult) 
-                        ? (paginationResult[2] || []) 
-                        : (paginationResult.entries || []);
+                    let entries = [];
+                    
+                    if (Array.isArray(paginationResult)) {
+                        entries = paginationResult[2] || paginationResult.entries || [];
+                    } else if (paginationResult.entries) {
+                        entries = paginationResult.entries;
+                    } else if (paginationResult[2]) {
+                        entries = paginationResult[2];
+                    }
+                    
+                    if (!Array.isArray(entries)) {
+                        console.log('[ARENA] entries is not an array, trying to parse:', typeof entries);
+                        try {
+                            entries = JSON.parse(entries);
+                        } catch (e) {
+                            console.warn('[ARENA] Failed to parse entries:', e);
+                            entries = [];
+                        }
+                    }
+                    
+                    console.log('[ARENA] Parsed entries count:', entries.length);
                     
                     if (entries.length > 0) {
                         const playerPromises = entries.map(async (entry, i) => {
