@@ -2432,6 +2432,10 @@
 
                 let userRank = '0';
                 try {
+                    if (!arenaRankingQueryContract && window.ZODIAC_WEB3) {
+                        arenaRankingQueryContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery', false);
+                    }
+                    
                     if (arenaRankingQueryContract) {
                         try {
                             userRank = await withTimeout(
@@ -2448,6 +2452,18 @@
                                 );
                             } catch (e2) {
                                 console.warn('获取玩家排名失败:', e2.message);
+                            }
+                        }
+                        
+                        if (!userRank || userRank === '0' || userRank === '0x0') {
+                            try {
+                                userRank = await withTimeout(
+                                    arenaRankingQueryContract.methods.getPlayerRank(accounts[0]).call(),
+                                    5000,
+                                    '0'
+                                );
+                            } catch (e3) {
+                                console.warn('备用获取玩家排名失败:', e3.message);
                             }
                         }
                     } else if (window.ZODIAC_WEB3) {
@@ -2487,6 +2503,8 @@
                 
                 const userRankNum = parseInt(userRank) || 0;
                 if (myRankEl) myRankEl.textContent = userRankNum > 0 ? '#' + userRankNum : '-';
+                
+                console.log(`loadMyStats - points: ${points}, wins: ${wins}, losses: ${losses}, rank: ${userRankNum}`);
             } catch (error) {
                 console.error('加载战绩失败:', error);
                 if (myPointsEl) myPointsEl.textContent = '-';
@@ -2584,23 +2602,36 @@
                                 '0'
                             );
                         } else if (rewardType === 2) {
-                            rewardPoolWei = await withTimeout(
-                                arenaRewardLPContract.methods.bnbRewardPoolBalance().call(),
-                                5000,
-                                '0'
-                            );
-                            if (!rewardPoolWei || rewardPoolWei === '0') {
-                                const contractAddress = await withTimeout(
-                                    window.ZODIAC_WEB3.getContractAddress('arenaRewardLP', false),
+                            try {
+                                rewardPoolWei = await withTimeout(
+                                    arenaRewardLPContract.methods.bnbRewardPoolBalance().call(),
                                     5000,
-                                    null
+                                    '0'
                                 );
-                                if (contractAddress && contractAddress !== '0x0000000000000000000000000000000000000000' && web3) {
-                                    rewardPoolWei = await withTimeout(
-                                        web3.eth.getBalance(contractAddress),
-                                        5000,
-                                        '0'
-                                    );
+                            } catch (e) {
+                                console.warn('调用bnbRewardPoolBalance失败:', e.message);
+                            }
+                            
+                            if (!rewardPoolWei || rewardPoolWei === '0' || rewardPoolWei === '0x0') {
+                                try {
+                                    let contractAddress = arenaRewardLPContract.options.address;
+                                    if (!contractAddress) {
+                                        contractAddress = await withTimeout(
+                                            window.ZODIAC_WEB3.getContractAddress('arenaRewardLP', false),
+                                            5000,
+                                            null
+                                        );
+                                    }
+                                    if (contractAddress && contractAddress !== '0x0000000000000000000000000000000000000000' && web3) {
+                                        rewardPoolWei = await withTimeout(
+                                            web3.eth.getBalance(contractAddress),
+                                            5000,
+                                            '0'
+                                        );
+                                        console.log('BNB reward pool balance via getBalance:', rewardPoolWei);
+                                    }
+                                } catch (e) {
+                                    console.warn('获取BNB余额失败:', e.message);
                                 }
                             }
                         }
@@ -2609,7 +2640,7 @@
                     }
                 }
                 
-                if (!rewardPoolWei || rewardPoolWei === '0') {
+                if (!rewardPoolWei || rewardPoolWei === '0' || rewardPoolWei === '0x0') {
                     if (!arenaRankingQueryContract) {
                         try {
                             arenaRankingQueryContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery', false);
@@ -2625,7 +2656,7 @@
                     }
                 }
                 
-                if (!rewardPoolWei || rewardPoolWei === '0') {
+                if (!rewardPoolWei || rewardPoolWei === '0' || rewardPoolWei === '0x0') {
                     if (window.ZODIAC_WEB3 && web3) {
                         try {
                             const contractAddress = await window.ZODIAC_WEB3.getContractAddress('arenaReward', false);
@@ -2695,6 +2726,9 @@
                 return;
             }
             
+            unclaimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">加载中...</div>';
+            claimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">加载中...</div>';
+            
             try {
                 if (!web3) {
                     try {
@@ -2751,6 +2785,9 @@
                             { isActive: true }
                         );
                         seasonIsActive = seasonInfo.isActive !== undefined ? seasonInfo.isActive : true;
+                        if (typeof seasonIsActive === 'string') {
+                            seasonIsActive = seasonIsActive.toLowerCase() === 'true';
+                        }
                     }
                 } catch (e) {
                     console.warn('获取赛季状态失败:', e);
@@ -2873,6 +2910,10 @@
                         }
                     } catch (e) {
                         console.warn('检查奖励领取状态失败:', e.message);
+                    }
+
+                    if (typeof claimed === 'string') {
+                        claimed = claimed.toLowerCase() === 'true';
                     }
 
                     if (claimed) {
@@ -3022,11 +3063,16 @@
                             5000,
                             null
                         );
-                        totalPages = parseInt(paginationResult.totalPages) || parseInt(paginationResult[0]) || 1;
-                        totalPlayers = parseInt(paginationResult.totalPlayers) || parseInt(paginationResult[1]) || 0;
                         
-                        if (totalPlayers === 0) {
+                        if (!paginationResult) {
                             useMockData = true;
+                        } else {
+                            totalPages = parseInt(paginationResult.totalPages) || parseInt(paginationResult[0]) || 1;
+                            totalPlayers = parseInt(paginationResult.totalPlayers) || parseInt(paginationResult[1]) || 0;
+                            
+                            if (totalPlayers === 0) {
+                                useMockData = true;
+                            }
                         }
                     } catch (e) {
                         console.log('获取排行榜失败，使用模拟数据:', e);
@@ -3044,15 +3090,22 @@
                         return base + suffix;
                     };
                     
+                    const ZODIAC_NAMES = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
+                    const ATTR_NAMES = ['水', '风', '火', '暗', '光'];
+                    const ELEMENT_KEYS = ['water', 'wind', 'fire', 'dark', 'light'];
+                    
                     for (let i = 0; i < size; i++) {
                         const index = (page - 1) * size + i;
                         if (index >= totalPlayers) break;
                         
                         const address = generateMockAddress(index);
-                        const tokenType = ((index % 5) * 24) + ((index % 12) * 2) + (index % 2);
-                        const nftBasicInfo = ZODIAC_UTILS.getNFTInfo(tokenType);
-                        const elementKey = nftBasicInfo.elementKey || 'water';
-                        const imagePath = nftBasicInfo.imagePath || 'images/fu-cards/shuishu_0.jpg';
+                        const attrIndex = index % 5;
+                        const zodiacIndex = index % 12;
+                        const gender = index % 2 === 0 ? '雄' : '雌';
+                        const attrName = ATTR_NAMES[attrIndex];
+                        const zodiac = ZODIAC_NAMES[zodiacIndex];
+                        const elementKey = ELEMENT_KEYS[attrIndex];
+                        const imagePath = `images/fu-cards/${elementKey}${zodiac}_${index % 2}.jpg`;
                         
                         topPlayers.push({
                             address: address,
@@ -3061,90 +3114,135 @@
                             losses: 10 + Math.floor(Math.random() * 20),
                             rank: startRank + i,
                             team: [
-                                { tokenId: 1 + index * 6, name: nftBasicInfo.attrName + nftBasicInfo.animalName, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
-                                { tokenId: 2 + index * 6, name: nftBasicInfo.attrName + nftBasicInfo.animalName, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
-                                { tokenId: 3 + index * 6, name: nftBasicInfo.attrName + nftBasicInfo.animalName, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
-                                { tokenId: 4 + index * 6, name: nftBasicInfo.attrName + nftBasicInfo.animalName, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
-                                { tokenId: 5 + index * 6, name: nftBasicInfo.attrName + nftBasicInfo.animalName, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
-                                { tokenId: 6 + index * 6, name: nftBasicInfo.attrName + nftBasicInfo.animalName, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath }
+                                { tokenId: 1 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
+                                { tokenId: 2 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
+                                { tokenId: 3 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
+                                { tokenId: 4 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
+                                { tokenId: 5 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
+                                { tokenId: 6 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath }
                             ]
                         });
                     }
                 }
                 
-                const entries = Array.isArray(paginationResult) 
-                    ? (paginationResult[2] || []) 
-                    : (paginationResult ? (paginationResult.entries || []) : []);
-                
-                
-                if (!useMockData && entries.length > 0) {
-                    const playerPromises = entries.map(async (entry, i) => {
-                        const address = entry.playerAddress || entry[0] || '';
-                        const points = parseInt(entry.points || entry[1] || '0');
-                        const wins = parseInt(entry.wins || entry[2] || '0');
-                        const losses = parseInt(entry.losses || entry[3] || '0');
-                        const rank = startRank + i;
-                        
-                        let team = [];
-                        if (!arenaPlayerContract && window.ZODIAC_WEB3) {
-                            try {
-                                arenaPlayerContract = await window.ZODIAC_WEB3.getContract('arenaPlayer', false);
-                            } catch (e) {
-                                console.warn('Failed to get arenaPlayer contract:', e.message);
+                if (!useMockData && paginationResult) {
+                    const entries = Array.isArray(paginationResult) 
+                        ? (paginationResult[2] || []) 
+                        : (paginationResult.entries || []);
+                    
+                    if (entries.length > 0) {
+                        const playerPromises = entries.map(async (entry, i) => {
+                            const address = entry.playerAddress || entry[0] || '';
+                            const points = parseInt(entry.points || entry[1] || '0');
+                            const wins = parseInt(entry.wins || entry[2] || '0');
+                            const losses = parseInt(entry.losses || entry[3] || '0');
+                            const rank = startRank + i;
+                            
+                            let team = [];
+                            if (!arenaPlayerContract && window.ZODIAC_WEB3) {
+                                try {
+                                    arenaPlayerContract = await window.ZODIAC_WEB3.getContract('arenaPlayer', false);
+                                } catch (e) {
+                                    console.warn('Failed to get arenaPlayer contract:', e.message);
+                                }
                             }
-                        }
-                        
-                        if (arenaPlayerContract && window.ZODIAC_WEB3) {
-                            try {
-                                const teamTokens = await withTimeout(
-                                    arenaPlayerContract.methods.getPlayerBattleTeam(address).call(),
-                                    3000,
-                                    []
-                                );
-                                const validTokens = teamTokens.filter(t => t && t !== '0' && t !== 0);
-                                
-                                const nftDataPromises = validTokens.map(tokenId => 
-                                    window.ZODIAC_WEB3.getNFTFullInfo(tokenId).catch(() => null)
-                                );
-                                const nftDataResults = await Promise.all(nftDataPromises);
-                                
-                                team = nftDataResults.map((nftInfo, idx) => {
-                                    if (!nftInfo || nftInfo.tokenType === 0) {
+                            
+                            if (arenaPlayerContract && window.ZODIAC_WEB3) {
+                                try {
+                                    const teamTokens = await withTimeout(
+                                        arenaPlayerContract.methods.getPlayerBattleTeam(address).call(),
+                                        3000,
+                                        []
+                                    );
+                                    const validTokens = teamTokens.filter(t => t && t !== '0' && t !== 0);
+                                    
+                                    const nftDataPromises = validTokens.map(tokenId => 
+                                        window.ZODIAC_WEB3.getNFTFullInfo(tokenId).catch(() => null)
+                                    );
+                                    const nftDataResults = await Promise.all(nftDataPromises);
+                                    
+                                    team = nftDataResults.map((nftInfo, idx) => {
+                                        if (!nftInfo || nftInfo.tokenType === 0) {
+                                            return {
+                                                tokenId: validTokens[idx],
+                                                name: '未知',
+                                                level: 1,
+                                                element: 'water',
+                                                imagePath: `images/fu-cards/shuishu_0.jpg`
+                                            };
+                                        }
+                                        const tokenType = nftInfo.tokenType;
+                                        const nftBasicInfo = ZODIAC_UTILS.getNFTInfo(tokenType);
                                         return {
                                             tokenId: validTokens[idx],
-                                            name: '未知',
-                                            level: 1,
-                                            element: 'water',
-                                            imagePath: `images/fu-cards/shuishu_0.jpg`
+                                            name: `${nftBasicInfo.attrName}${nftBasicInfo.animalName}${nftBasicInfo.gender === '公' ? '·雄' : '·雌'}`,
+                                            level: nftInfo.level,
+                                            element: nftBasicInfo.elementKey,
+                                            imagePath: nftBasicInfo.imagePath
                                         };
-                                    }
-                                    const tokenType = nftInfo.tokenType;
-                                    const nftBasicInfo = ZODIAC_UTILS.getNFTInfo(tokenType);
-                                    return {
-                                        tokenId: validTokens[idx],
-                                        name: `${nftBasicInfo.attrName}${nftBasicInfo.animalName}${nftBasicInfo.gender === '公' ? '·雄' : '·雌'}`,
-                                        level: nftInfo.level,
-                                        element: nftBasicInfo.elementKey,
-                                        imagePath: nftBasicInfo.imagePath
-                                    };
-                                });
-                            } catch (e) {
-                                console.warn(`获取玩家 ${shortenAddress(address)} 战队信息失败:`, e);
+                                    });
+                                } catch (e) {
+                                    console.warn(`获取玩家 ${shortenAddress(address)} 战队信息失败:`, e);
+                                }
                             }
-                        }
+                            
+                            return {
+                                address: address,
+                                points: points,
+                                wins: wins,
+                                losses: losses,
+                                rank: rank,
+                                team: team
+                            };
+                        });
                         
-                        return {
-                            address: address,
-                            points: points,
-                            wins: wins,
-                            losses: losses,
-                            rank: rank,
-                            team: team
+                        const playersData = await Promise.all(playerPromises);
+                        topPlayers.push(...playersData);
+                    } else {
+                        useMockData = true;
+                        totalPages = 10;
+                        totalPlayers = 100;
+                        
+                        const generateMockAddress = (index) => {
+                            const base = '0x742d35Cc6634C0532925a3b844Bc9e7595f7';
+                            const suffix = (0x0000 + index).toString(16).padStart(4, '0');
+                            return base + suffix;
                         };
-                    });
-                    
-                    const playersData = await Promise.all(playerPromises);
-                    topPlayers.push(...playersData);
+                        
+                        const ZODIAC_NAMES = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
+                        const ATTR_NAMES = ['水', '风', '火', '暗', '光'];
+                        const ELEMENT_KEYS = ['water', 'wind', 'fire', 'dark', 'light'];
+                        
+                        for (let i = 0; i < size; i++) {
+                            const index = (page - 1) * size + i;
+                            if (index >= totalPlayers) break;
+                            
+                            const address = generateMockAddress(index);
+                            const attrIndex = index % 5;
+                            const zodiacIndex = index % 12;
+                            const gender = index % 2 === 0 ? '雄' : '雌';
+                            const attrName = ATTR_NAMES[attrIndex];
+                            const zodiac = ZODIAC_NAMES[zodiacIndex];
+                            const elementKey = ELEMENT_KEYS[attrIndex];
+                            const imagePath = `images/fu-cards/${elementKey}${zodiac}_${index % 2}.jpg`;
+                            
+                            topPlayers.push({
+                                address: address,
+                                points: 10000 - index * 500,
+                                wins: 50 + Math.floor(Math.random() * 30),
+                                losses: 10 + Math.floor(Math.random() * 20),
+                                rank: startRank + i,
+                                team: [
+                                    { tokenId: 1 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
+                                    { tokenId: 2 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
+                                    { tokenId: 3 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
+                                    { tokenId: 4 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
+                                    { tokenId: 5 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
+                                    { tokenId: 6 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath }
+                                ]
+                            });
+                        }
+                    }
                 }
                 
                 const totalPagesEl = document.getElementById('totalPages');
@@ -3164,7 +3262,7 @@
                     leaderboardEl.dataset.leaderboardData = JSON.stringify(topPlayers);
                 }
                 
-                if (accounts.length > 0 && !useMockData && arenaRankingQueryContract && arenaBattleContract) {
+                if (accounts.length > 0 && arenaRankingQueryContract && arenaBattleContract) {
                     try {
                         const [userRank, myStats] = await Promise.all([
                             arenaRankingQueryContract.methods.getPlayerRank(accounts[0]).call().catch(() => '0'),

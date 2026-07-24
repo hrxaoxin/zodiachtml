@@ -462,7 +462,10 @@ window.ZODIAC_WEB3 = (function() {
                             console.log('[ZODIAC_WEB3] Created web3 instance from public RPC for read-only access');
                         } catch (e2) {
                             console.error('[ZODIAC_WEB3] Failed to create web3 from public RPC:', e2);
-                            throw new Error('[ZODIAC_WEB3] Failed to create web3 instance');
+                            if (requireAccount) {
+                                throw new Error('[ZODIAC_WEB3] Failed to create web3 instance');
+                            }
+                            return null;
                         }
                     } else {
                         throw new Error('[ZODIAC_WEB3] MetaMask not detected');
@@ -474,7 +477,7 @@ window.ZODIAC_WEB3 = (function() {
                     console.log('[ZODIAC_WEB3] Created web3 instance from public RPC for read-only access');
                 } catch (e) {
                     console.error('[ZODIAC_WEB3] Failed to create web3 from public RPC:', e);
-                    throw new Error('[ZODIAC_WEB3] Failed to create web3 instance');
+                    return null;
                 }
             } else {
                 console.error('[ZODIAC_WEB3] MetaMask not detected');
@@ -533,13 +536,22 @@ window.ZODIAC_WEB3 = (function() {
         };
         
         const abi = dynamicABI_MAP[name];
-        if (!abi) throw new Error(`[ZODIAC_WEB3] No ABI for contract: ${name}`);
+        if (!abi) {
+            if (requireAccount) {
+                throw new Error(`[ZODIAC_WEB3] No ABI for contract: ${name}`);
+            }
+            console.warn(`[ZODIAC_WEB3] No ABI for contract: ${name}`);
+            return null;
+        }
         
-        // tokenContract 从 authorizer 动态获取
         if (name === 'tokenContract') {
             const tokenAddr = await getContractAddress('tokenContract', requireAccount);
             if (!tokenAddr || tokenAddr === '0x0000000000000000000000000000000000000000') {
-                throw new Error(`[ZODIAC_WEB3] Token address not found in authorizer`);
+                if (requireAccount) {
+                    throw new Error(`[ZODIAC_WEB3] Token address not found in authorizer`);
+                }
+                console.warn(`[ZODIAC_WEB3] Token address not found in authorizer`);
+                return null;
             }
             contracts[name] = new web3.eth.Contract(abi, tokenAddr);
             return contracts[name];
@@ -553,7 +565,11 @@ window.ZODIAC_WEB3 = (function() {
             addr = await getContractAddress('nftMint', requireAccount);
         }
         if (!addr || addr === ZERO_ADDRESS) {
-            throw new Error(`[ZODIAC_WEB3] Contract address not configured: ${name}`);
+            if (requireAccount) {
+                throw new Error(`[ZODIAC_WEB3] Contract address not configured: ${name}`);
+            }
+            console.warn(`[ZODIAC_WEB3] Contract address not configured: ${name}`);
+            return null;
         }
         
         try {
@@ -561,7 +577,10 @@ window.ZODIAC_WEB3 = (function() {
             return contracts[name];
         } catch (e) {
             console.error(`[ZODIAC_WEB3] Failed to create contract instance for ${name}:`, e);
-            throw new Error(`[ZODIAC_WEB3] Failed to initialize contract: ${name}`);
+            if (requireAccount) {
+                throw new Error(`[ZODIAC_WEB3] Failed to initialize contract: ${name}`);
+            }
+            return null;
         }
     }
 
