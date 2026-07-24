@@ -937,7 +937,10 @@
                     }
                 }
                 
-                loadLeaderboard();
+                await loadLeaderboard();
+                await loadRewardPool();
+                await loadMyStats();
+                await loadRewards();
             } catch (e) {
                 console.error('init 函数执行失败:', e);
             }
@@ -1263,6 +1266,18 @@
                     console.warn('Failed to create web3 instance:', e.message);
                     return;
                 }
+            }
+            
+            try {
+                const testAddr1 = await window.ZODIAC_WEB3.getContractAddress('arenaRankingQuery', false);
+                const testAddr2 = await window.ZODIAC_WEB3.getContractAddress('arenaRewardLP', false);
+                console.log('=== Contract Address Diagnostic ===');
+                console.log('arenaRankingQuery address:', testAddr1);
+                console.log('arenaRewardLP address:', testAddr2);
+                console.log('web3 instance:', web3 ? 'OK' : 'null');
+                console.log('==================================');
+            } catch (e) {
+                console.error('Contract address diagnostic failed:', e.message);
             }
             
             try {
@@ -2266,6 +2281,17 @@
                     if (myLossesEl) myLossesEl.textContent = '-';
                     if (myWinRateEl) myWinRateEl.textContent = '-';
                     if (myRankEl) myRankEl.textContent = '-';
+                    
+                    try {
+                        if (!arenaRankingQueryContract && window.ZODIAC_WEB3) {
+                            arenaRankingQueryContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery', false);
+                        }
+                        if (!arenaBattleContract && window.ZODIAC_WEB3) {
+                            arenaBattleContract = await window.ZODIAC_WEB3.getContract('arenaBattle', false);
+                        }
+                    } catch (e) {
+                        console.warn('初始化合约失败（loadMyStats）:', e.message);
+                    }
                     return;
                 }
                 
@@ -2623,12 +2649,6 @@
             }
             
             try {
-                if (!accounts || accounts.length === 0) {
-                    unclaimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">请先连接钱包</div>';
-                    claimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">请先连接钱包</div>';
-                    return;
-                }
-
                 if (!web3) {
                     try {
                         web3 = window.ZODIAC_WEB3 ? window.ZODIAC_WEB3.getWeb3() : null;
@@ -2638,6 +2658,23 @@
                     } catch (e) {
                         console.warn('Failed to create web3 instance for loadRewards:', e.message);
                     }
+                }
+
+                if (!arenaRankingQueryContract && window.ZODIAC_WEB3) {
+                    try {
+                        arenaRankingQueryContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery', false);
+                    } catch (e) { console.warn('Failed to get arenaRankingQuery:', e.message); }
+                }
+                if (!arenaRewardLPContract && window.ZODIAC_WEB3) {
+                    try {
+                        arenaRewardLPContract = await window.ZODIAC_WEB3.getContract('arenaRewardLP', false);
+                    } catch (e) { console.warn('Failed to get arenaRewardLP:', e.message); }
+                }
+
+                if (!accounts || accounts.length === 0) {
+                    unclaimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">请先连接钱包</div>';
+                    claimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">请先连接钱包</div>';
+                    return;
                 }
 
                 let currentSeasonId = 1;
@@ -2804,11 +2841,19 @@
                         try {
                             if (arenaRewardLPContract && web3) {
                                 try {
-                                    const rewardWei = await arenaRewardLPContract.methods.getPendingLPReward(accounts[0], currentSeasonId).call();
+                                    const rewardWei = await withTimeout(
+                                        arenaRewardLPContract.methods.getPendingLPReward(accounts[0], currentSeasonId).call(),
+                                        5000,
+                                        '0'
+                                    );
                                     rewardAmount = web3.utils.fromWei(rewardWei, 'ether');
                                 } catch (e) {
                                     try {
-                                        const rewardWei = await arenaRewardLPContract.methods.getPendingLPReward(accounts[0]).call();
+                                        const rewardWei = await withTimeout(
+                                            arenaRewardLPContract.methods.getPendingLPReward(accounts[0]).call(),
+                                            5000,
+                                            '0'
+                                        );
                                         rewardAmount = web3.utils.fromWei(rewardWei, 'ether');
                                     } catch (e2) {
                                         console.warn('获取待领取奖励失败:', e2);
