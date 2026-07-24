@@ -3,6 +3,8 @@
  * 提供钱包连接、合约实例获取、事件监听、Gas 估算、交易跟踪等功能
  */
 window.ZODIAC_WEB3 = (function() {
+    console.log('[ZODIAC_WEB3] web3-utils.js v4 loaded at ' + new Date().toISOString());
+    
     const config = window.ZODIAC_CONFIG || {};
     const NETWORK_ID = config.NETWORK_ID || 56;
     const NETWORK_NAME = config.NETWORK_NAME || 'Binance Mainnet';
@@ -289,7 +291,7 @@ window.ZODIAC_WEB3 = (function() {
         'authorizer': ABIS.authorizerABI
     };
 
-    async function getAuthorizerContract(requireAccount = true) {
+    async function getAuthorizerContract(requireAccount = false) {
         if (contracts.authorizer) return contracts.authorizer;
         
         const RPC_URL = 'https://bsc-dataseed1.binance.org/';
@@ -338,7 +340,7 @@ window.ZODIAC_WEB3 = (function() {
         }
     }
 
-    async function getContractAddress(name, requireAccount = true) {
+    async function getContractAddress(name, requireAccount = false) {
         if (!name) return null;
         const cacheKey = name;
         if (addressCache[cacheKey] && addressCache[cacheKey] !== ZERO_ADDRESS) {
@@ -442,7 +444,7 @@ window.ZODIAC_WEB3 = (function() {
         }
     }
 
-    async function getContract(name, requireAccount = true) {
+    async function getContract(name, requireAccount = false) {
         if (contracts[name]) return contracts[name];
         
         const RPC_URL = 'https://bsc-dataseed1.binance.org/';
