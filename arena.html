@@ -913,12 +913,6 @@
                     });
                 }
                 
-                try {
-                    setupEventListeners();
-                } catch (e) {
-                    console.warn('设置事件监听器失败:', e);
-                }
-                
                 renderTeamSlots();
                 updateSaveButtons();
                 updateChallengeBtn();
@@ -1017,65 +1011,67 @@
             try {
                 startLeaderboardRefresh();
                 
-                const unsubScoreUpdated = await ZODIAC_WEB3.listenToEvent('arena', 'ScoreUpdated', async (event) => {
+                const listenToEventSafe = async (contractName, eventName, callback) => {
+                    try {
+                        const unsub = await ZODIAC_WEB3.listenToEvent(contractName, eventName, callback);
+                        if (unsub) {
+                            arenaUnsubscribeFunctions.push(unsub);
+                        }
+                    } catch (e) {
+                        console.warn(`Failed to listen to ${contractName}.${eventName}:`, e.message);
+                    }
+                };
+
+                await listenToEventSafe('arena', 'ScoreUpdated', async (event) => {
                     console.log('Score updated:', event.returnValues);
                     await loadMyStats();
                     await loadLeaderboard();
                 });
-                arenaUnsubscribeFunctions.push(unsubScoreUpdated);
 
-                const unsubChallengeResult = await ZODIAC_WEB3.listenToEvent('arena', 'ChallengeResult', async (event) => {
+                await listenToEventSafe('arena', 'ChallengeResult', async (event) => {
                     console.log('Challenge result:', event.returnValues);
                     await loadRemainingAttempts();
                     await loadMyStats();
                 });
-                arenaUnsubscribeFunctions.push(unsubChallengeResult);
 
-                const unsubRewardClaimed = await ZODIAC_WEB3.listenToEvent('arena', 'RewardClaimed', async (event) => {
+                await listenToEventSafe('arena', 'RewardClaimed', async (event) => {
                     console.log('Reward claimed:', event.returnValues);
                     await loadRewards();
                 });
-                arenaUnsubscribeFunctions.push(unsubRewardClaimed);
 
-                const unsubSeasonStarted = await ZODIAC_WEB3.listenToEvent('arena', 'SeasonStarted', async (event) => {
+                await listenToEventSafe('arena', 'SeasonStarted', async (event) => {
                     console.log('New season started:', event.returnValues);
                     await loadLeaderboard();
                     await loadMyStats();
                 });
-                arenaUnsubscribeFunctions.push(unsubSeasonStarted);
 
-                const unsubNFTsStaked = await ZODIAC_WEB3.listenToEvent('arena', 'NFTsStaked', async (event) => {
+                await listenToEventSafe('arena', 'NFTsStaked', async (event) => {
                     console.log('NFTs staked:', event.returnValues);
                     await loadMyNfts();
                     await loadMyTeam();
                 });
-                arenaUnsubscribeFunctions.push(unsubNFTsStaked);
 
-                const unsubNFTsUnstaked = await ZODIAC_WEB3.listenToEvent('arena', 'NFTsUnstaked', async (event) => {
+                await listenToEventSafe('arena', 'NFTsUnstaked', async (event) => {
                     console.log('NFTs unstaked:', event.returnValues);
                     await loadMyNfts();
                     await loadMyTeam();
                 });
-                arenaUnsubscribeFunctions.push(unsubNFTsUnstaked);
 
-                const unsubBattleTeamSet = await ZODIAC_WEB3.listenToEvent('arena', 'BattleTeamSet', async (event) => {
+                await listenToEventSafe('arena', 'BattleTeamSet', async (event) => {
                     console.log('Battle team set:', event.returnValues);
                     await loadMyTeam();
                 });
-                arenaUnsubscribeFunctions.push(unsubBattleTeamSet);
 
-                const unsubBattleTeamCleared = await ZODIAC_WEB3.listenToEvent('arena', 'BattleTeamCleared', async (event) => {
+                await listenToEventSafe('arena', 'BattleTeamCleared', async (event) => {
                     console.log('Battle team cleared:', event.returnValues);
                     await loadMyTeam();
                 });
-                arenaUnsubscribeFunctions.push(unsubBattleTeamCleared);
 
-                const unsubBattleEnded = await ZODIAC_WEB3.listenToEvent('battle', 'BattleEnded', async (event) => {
+                await listenToEventSafe('battle', 'BattleEnded', async (event) => {
                     console.log('Battle ended:', event.returnValues);
                     await loadLeaderboard();
                     await loadMyStats();
                 });
-                arenaUnsubscribeFunctions.push(unsubBattleEnded);
 
                 console.log('Arena event listeners setup complete');
             } catch (error) {
@@ -1128,6 +1124,7 @@
                     document.getElementById('connectWalletBtn').textContent = '已连接';
                     
                     await initContracts();
+                    await setupEventListeners();
                     await updateTokenBalance();
                     await updateApprovalStatus();
                     await loadMyNfts();
@@ -2077,22 +2074,65 @@
 
         async function loadMyStats() {
             try {
-                if (!arenaBattleContract) return;
+                if (!accounts || accounts.length === 0) {
+                    document.getElementById('myPoints').textContent = '-';
+                    document.getElementById('myWins').textContent = '-';
+                    document.getElementById('myLosses').textContent = '-';
+                    document.getElementById('myWinRate').textContent = '-';
+                    document.getElementById('myRank').textContent = '-';
+                    return;
+                }
                 
                 let currentSeasonId = 1;
                 try {
                     if (arenaRankingQueryContract) {
                         currentSeasonId = await arenaRankingQueryContract.methods.currentSeasonId().call();
+                    } else if (window.ZODIAC_WEB3) {
+                        const rankingContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery');
+                        if (rankingContract) {
+                            arenaRankingQueryContract = rankingContract;
+                            currentSeasonId = await arenaRankingQueryContract.methods.currentSeasonId().call();
+                        }
                     }
                 } catch (e) {
                     console.warn('获取当前赛季ID失败，使用默认值:', e);
                 }
                 
-                const playerRecord = await arenaBattleContract.methods.players(currentSeasonId, accounts[0]).call();
-                const points = playerRecord.score || playerRecord[0] || '0';
-                const wins = playerRecord.wins || playerRecord[1] || '0';
-                const losses = playerRecord.losses || playerRecord[2] || '0';
-
+                let points = '0';
+                let wins = '0';
+                let losses = '0';
+                
+                if (arenaBattleContract) {
+                    try {
+                        const playerRecord = await arenaBattleContract.methods.players(currentSeasonId, accounts[0]).call();
+                        points = playerRecord.score || playerRecord[0] || '0';
+                        wins = playerRecord.wins || playerRecord[1] || '0';
+                        losses = playerRecord.losses || playerRecord[2] || '0';
+                    } catch (e) {
+                        try {
+                            const playerRecord = await arenaBattleContract.methods.players(accounts[0]).call();
+                            points = playerRecord.score || playerRecord[0] || '0';
+                            wins = playerRecord.wins || playerRecord[1] || '0';
+                            losses = playerRecord.losses || playerRecord[2] || '0';
+                        } catch (e2) {
+                            console.warn('从arenaBattleContract获取玩家数据失败:', e2);
+                        }
+                    }
+                } else if (window.ZODIAC_WEB3) {
+                    try {
+                        const battleContract = await window.ZODIAC_WEB3.getContract('arenaBattle');
+                        if (battleContract) {
+                            arenaBattleContract = battleContract;
+                            const playerRecord = await arenaBattleContract.methods.players(currentSeasonId, accounts[0]).call();
+                            points = playerRecord.score || playerRecord[0] || '0';
+                            wins = playerRecord.wins || playerRecord[1] || '0';
+                            losses = playerRecord.losses || playerRecord[2] || '0';
+                        }
+                    } catch (e) {
+                        console.warn('从ZODIAC_WEB3获取玩家数据失败:', e);
+                    }
+                }
+                
                 document.getElementById('myPoints').textContent = points;
                 document.getElementById('myWins').textContent = wins;
                 document.getElementById('myLosses').textContent = losses;
@@ -2103,18 +2143,30 @@
                 const winRate = total > 0 ? ((totalWins / total) * 100).toFixed(1) + '%' : '-';
                 document.getElementById('myWinRate').textContent = winRate;
 
+                let userRank = '0';
                 try {
-                    const userRank = await arenaRankingQueryContract.methods.getPlayerRank(currentSeasonId, accounts[0]).call();
-                    const userRankNum = parseInt(userRank) || 0;
-                    document.getElementById('myRank').textContent = userRankNum > 0 ? '#' + userRankNum : '-';
+                    if (arenaRankingQueryContract) {
+                        try {
+                            userRank = await arenaRankingQueryContract.methods.getPlayerRank(currentSeasonId, accounts[0]).call();
+                        } catch (e1) {
+                            try {
+                                userRank = await arenaRankingQueryContract.methods.getPlayerRank(accounts[0]).call();
+                            } catch (e2) {
+                                console.warn('获取玩家排名失败:', e2);
+                            }
+                        }
+                    }
                 } catch (e) {
-                    document.getElementById('myRank').textContent = '-';
+                    console.warn('获取玩家排名失败:', e);
                 }
+                
+                const userRankNum = parseInt(userRank) || 0;
+                document.getElementById('myRank').textContent = userRankNum > 0 ? '#' + userRankNum : '-';
             } catch (error) {
                 console.error('加载战绩失败:', error);
-                document.getElementById('myPoints').textContent = '0';
-                document.getElementById('myWins').textContent = '0';
-                document.getElementById('myLosses').textContent = '0';
+                document.getElementById('myPoints').textContent = '-';
+                document.getElementById('myWins').textContent = '-';
+                document.getElementById('myLosses').textContent = '-';
                 document.getElementById('myWinRate').textContent = '-';
                 document.getElementById('myRank').textContent = '-';
             }
@@ -2161,35 +2213,70 @@
                 let rewardPoolWei = '0';
                 let rewardType = 0;
                 
-                try {
-                    rewardType = parseInt(await arenaRewardLPContract.methods.rewardType().call());
-                } catch (e) {
-                    rewardType = 0;
+                if (window.ZODIAC_WEB3 && web3) {
+                    try {
+                        const rewardContract = await window.ZODIAC_WEB3.getContract('arenaRewardLP');
+                        if (rewardContract) {
+                            arenaRewardLPContract = rewardContract;
+                            
+                            try {
+                                rewardType = parseInt(await arenaRewardLPContract.methods.rewardType().call());
+                            } catch (e) {
+                                console.warn('获取奖励类型失败:', e);
+                                rewardType = 0;
+                            }
+                            
+                            try {
+                                if (rewardType === 0) {
+                                    rewardPoolWei = await arenaRewardLPContract.methods.lpRewardPoolBalance().call().catch(() => '0');
+                                } else if (rewardType === 1) {
+                                    rewardPoolWei = await arenaRewardLPContract.methods.tokenRewardPoolBalance().call().catch(() => '0');
+                                } else if (rewardType === 2) {
+                                    rewardPoolWei = await arenaRewardLPContract.methods.bnbRewardPoolBalance().call().catch(() => '0');
+                                    if (rewardPoolWei === '0') {
+                                        const contractAddress = await window.ZODIAC_WEB3.getContractAddress('arenaRewardLP');
+                                        if (contractAddress && contractAddress !== '0x0000000000000000000000000000000000000000') {
+                                            rewardPoolWei = await web3.eth.getBalance(contractAddress).catch(() => '0');
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn('获取奖励池余额失败:', e);
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('获取arenaRewardLP合约失败:', e);
+                    }
                 }
                 
-                try {
-                    if (rewardType === 0) {
-                        rewardPoolWei = await arenaRewardLPContract.methods.lpRewardPoolBalance().call().catch(() => '0');
-                    } else if (rewardType === 1) {
-                        rewardPoolWei = await arenaRewardLPContract.methods.tokenRewardPoolBalance().call().catch(() => '0');
-                    } else if (rewardType === 2) {
-                        rewardPoolWei = await arenaRewardLPContract.methods.bnbRewardPoolBalance().call().catch(() => '0');
-                    }
-                } catch (e) {
+                if (rewardPoolWei === '0' && arenaRankingQueryContract) {
                     try {
                         const seasonInfo = await arenaRankingQueryContract.methods.getCurrentSeasonInfo().call();
-                        rewardPoolWei = seasonInfo.rewardPool || '0';
-                    } catch (e2) {
-                        try {
-                            rewardPoolWei = await window.ZODIAC_WEB3.getWeb3().eth.getBalance(await window.ZODIAC_WEB3.getContractAddress('arenaReward'));
-                        } catch (e3) {
-                            rewardPoolWei = '0';
-                        }
+                        rewardPoolWei = seasonInfo.rewardPool || seasonInfo[2] || '0';
+                    } catch (e) {
+                        console.warn('从赛季信息获取奖励池失败:', e);
                     }
                 }
                 
-                const rewardPoolEth = web3.utils.fromWei(rewardPoolWei, 'ether');
-                document.getElementById('rewardPoolAmount').textContent = parseFloat(rewardPoolEth) > 0 ? rewardPoolEth : '--';
+                if (rewardPoolWei === '0' && web3) {
+                    try {
+                        const contractAddress = await window.ZODIAC_WEB3.getContractAddress('arenaReward');
+                        if (contractAddress && contractAddress !== '0x0000000000000000000000000000000000000000') {
+                            rewardPoolWei = await web3.eth.getBalance(contractAddress).catch(() => '0');
+                        }
+                    } catch (e) {
+                        console.warn('从合约地址获取余额失败:', e);
+                    }
+                }
+                
+                let displayAmount = '--';
+                if (rewardPoolWei && web3) {
+                    const rewardPoolEth = web3.utils.fromWei(rewardPoolWei, 'ether');
+                    const amount = parseFloat(rewardPoolEth);
+                    displayAmount = amount > 0 ? amount.toFixed(4) : '--';
+                }
+                
+                document.getElementById('rewardPoolAmount').textContent = displayAmount;
                 
                 const rewardUnit = getRewardUnit(rewardType);
                 const rewardName = getRewardName(rewardType);
@@ -2210,61 +2297,133 @@
                 }
             } catch (error) {
                 console.error('加载奖励池失败:', error);
+                document.getElementById('rewardPoolAmount').textContent = '--';
             }
         }
 
         async function loadRewards() {
+            const unclaimedDiv = document.getElementById('unclaimedRewards');
+            const claimedDiv = document.getElementById('claimedRewards');
+            
             try {
-                const unclaimedDiv = document.getElementById('unclaimedRewards');
-                const claimedDiv = document.getElementById('claimedRewards');
-
-                // 检查当前赛季状态
-                let seasonIsActive = true;
-                try {
-                    const seasonInfo = await arenaRankingQueryContract.methods.getCurrentSeasonInfo().call();
-                    seasonIsActive = seasonInfo.isActive;
-                } catch (e) {
-                    // 如果无法获取赛季信息，使用默认值
+                if (!accounts || accounts.length === 0) {
+                    unclaimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">请先连接钱包</div>';
+                    claimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">请先连接钱包</div>';
+                    return;
                 }
 
-                if (seasonIsActive) {
-                    // 赛季进行中：显示当前积分对应的潜在奖励
-                    try {
-                        const playerRecord = await arenaBattleContract.methods.players(accounts[0]).call();
-                        const playerScore = playerRecord.score || '0';
-                        let estimatedReward = '0';
-                        let rewardType = 0;
-                        try {
-                            const rewardWei = await arenaRewardLPContract.methods.getPendingLPReward(accounts[0], currentSeasonId).call();
-                            estimatedReward = web3.utils.fromWei(rewardWei, 'ether');
-                            rewardType = parseInt(await arenaRewardLPContract.methods.rewardType().call());
-                        } catch (e) { /* ignore */ }
-
-                        const rewardUnit = getRewardUnit(rewardType);
-                        const rewardName = getRewardName(rewardType);
-
-                        unclaimedDiv.innerHTML = `
-                            <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
-                                <div class="text-yellow-400 text-sm font-medium">赛季进行中</div>
-                                <div class="text-gray-300 text-xs mt-1">
-                                    当前积分: ${playerScore || '0'} 
-                                    ${parseFloat(estimatedReward) > 0 ? ` | 预估${rewardName}: ${estimatedReward} ${rewardUnit}` : ''}
-                                </div>
-                                <div class="text-gray-500 text-xs mt-1">赛季结束后可领取${rewardName}</div>
-                            </div>
-                        `;
-                    } catch (e) {
-                        unclaimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">赛季进行中，结束后可领取</div>';
+                let currentSeasonId = 1;
+                try {
+                    if (arenaRankingQueryContract) {
+                        currentSeasonId = await arenaRankingQueryContract.methods.currentSeasonId().call();
+                    } else if (window.ZODIAC_WEB3) {
+                        const rankingContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery');
+                        if (rankingContract) {
+                            arenaRankingQueryContract = rankingContract;
+                            currentSeasonId = await arenaRankingQueryContract.methods.currentSeasonId().call();
+                        }
                     }
+                } catch (e) {
+                    console.warn('获取当前赛季ID失败:', e);
+                }
+
+                let seasonIsActive = true;
+                try {
+                    if (arenaRankingQueryContract) {
+                        const seasonInfo = await arenaRankingQueryContract.methods.getCurrentSeasonInfo().call();
+                        seasonIsActive = seasonInfo.isActive !== undefined ? seasonInfo.isActive : true;
+                    }
+                } catch (e) {
+                    console.warn('获取赛季状态失败:', e);
+                }
+
+                let rewardType = 0;
+                try {
+                    if (arenaRewardLPContract) {
+                        rewardType = parseInt(await arenaRewardLPContract.methods.rewardType().call());
+                    } else if (window.ZODIAC_WEB3 && web3) {
+                        const rewardContract = await window.ZODIAC_WEB3.getContract('arenaRewardLP');
+                        if (rewardContract) {
+                            arenaRewardLPContract = rewardContract;
+                            rewardType = parseInt(await arenaRewardLPContract.methods.rewardType().call());
+                        }
+                    }
+                } catch (e) {
+                    rewardType = 0;
+                }
+
+                const rewardUnit = getRewardUnit(rewardType);
+                const rewardName = getRewardName(rewardType);
+
+                if (seasonIsActive) {
+                    let playerScore = '0';
+                    try {
+                        if (arenaBattleContract) {
+                            try {
+                                const playerRecord = await arenaBattleContract.methods.players(currentSeasonId, accounts[0]).call();
+                                playerScore = playerRecord.score || playerRecord[0] || '0';
+                            } catch (e) {
+                                try {
+                                    const playerRecord = await arenaBattleContract.methods.players(accounts[0]).call();
+                                    playerScore = playerRecord.score || playerRecord[0] || '0';
+                                } catch (e2) {
+                                    console.warn('获取玩家记录失败:', e2);
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('获取玩家分数失败:', e);
+                    }
+
+                    let estimatedReward = '0';
+                    try {
+                        if (arenaRewardLPContract && web3) {
+                            try {
+                                const rewardWei = await arenaRewardLPContract.methods.getPendingLPReward(accounts[0], currentSeasonId).call();
+                                estimatedReward = web3.utils.fromWei(rewardWei, 'ether');
+                            } catch (e) {
+                                try {
+                                    const rewardWei = await arenaRewardLPContract.methods.getPendingLPReward(accounts[0]).call();
+                                    estimatedReward = web3.utils.fromWei(rewardWei, 'ether');
+                                } catch (e2) {
+                                    console.warn('获取预估奖励失败:', e2);
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('获取预估奖励失败:', e);
+                    }
+
+                    unclaimedDiv.innerHTML = `
+                        <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+                            <div class="text-yellow-400 text-sm font-medium">赛季进行中</div>
+                            <div class="text-gray-300 text-xs mt-1">
+                                当前积分: ${playerScore || '0'} 
+                                ${parseFloat(estimatedReward) > 0 ? ` | 预估${rewardName}: ${parseFloat(estimatedReward).toFixed(4)} ${rewardUnit}` : ''}
+                            </div>
+                            <div class="text-gray-500 text-xs mt-1">赛季结束后可领取${rewardName}</div>
+                        </div>
+                    `;
+                    claimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">暂无已领取奖励</div>';
                 } else {
-                    // 赛季已结束：检查是否已领取奖励
-                    const claimed = await arenaRankingQueryContract.methods.seasonRewardsClaimed(currentSeasonId, accounts[0]).call();
-                    const rewardType = parseInt(await arenaRewardLPContract.methods.rewardType().call());
-                    const rewardUnit = getRewardUnit(rewardType);
-                    const rewardName = getRewardName(rewardType);
+                    let claimed = false;
+                    try {
+                        if (arenaRankingQueryContract) {
+                            try {
+                                claimed = await arenaRankingQueryContract.methods.seasonRewardsClaimed(currentSeasonId, accounts[0]).call();
+                            } catch (e) {
+                                try {
+                                    claimed = await arenaRankingQueryContract.methods.seasonRewardsClaimed(accounts[0]).call();
+                                } catch (e2) {
+                                    console.warn('检查奖励领取状态失败:', e2);
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('检查奖励领取状态失败:', e);
+                    }
 
                     if (claimed) {
-                        // 已领取
                         unclaimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">暂无待领取奖励</div>';
                         claimedDiv.innerHTML = `
                             <div class="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
@@ -2273,64 +2432,66 @@
                             </div>
                         `;
                     } else {
-                        // 未领取：显示可领取的奖励
+                        let rewardAmount = '0';
                         try {
-                            const rewardWei = await arenaRewardLPContract.methods.getPendingLPReward(accounts[0], currentSeasonId).call();
-                            const rewardAmount = web3.utils.fromWei(rewardWei, 'ether');
-
-                            if (parseFloat(rewardAmount) > 0) {
-                                unclaimedDiv.innerHTML = `
-                                    <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
-                                        <div class="flex justify-between items-center">
-                                            <div>
-                                                <div class="text-blue-400 text-sm font-medium">赛季奖励</div>
-                                                <div class="text-white text-xs mt-1">${rewardAmount} ${rewardUnit}</div>
-                                            </div>
-                                            <button onclick="claimSeasonReward()" class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg transition-colors">
-                                                领取
-                                            </button>
-                                        </div>
-                                    </div>
-                                `;
-                            } else {
-                                unclaimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">赛季结束，无奖励可领取</div>';
+                            if (arenaRewardLPContract && web3) {
+                                try {
+                                    const rewardWei = await arenaRewardLPContract.methods.getPendingLPReward(accounts[0], currentSeasonId).call();
+                                    rewardAmount = web3.utils.fromWei(rewardWei, 'ether');
+                                } catch (e) {
+                                    try {
+                                        const rewardWei = await arenaRewardLPContract.methods.getPendingLPReward(accounts[0]).call();
+                                        rewardAmount = web3.utils.fromWei(rewardWei, 'ether');
+                                    } catch (e2) {
+                                        console.warn('获取待领取奖励失败:', e2);
+                                    }
+                                }
                             }
                         } catch (e) {
-                            unclaimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">暂无待领取奖励</div>';
+                            console.warn('获取待领取奖励失败:', e);
+                        }
+
+                        if (parseFloat(rewardAmount) > 0) {
+                            unclaimedDiv.innerHTML = `
+                                <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <div class="text-blue-400 text-sm font-medium">赛季奖励</div>
+                                            <div class="text-white text-xs mt-1">${parseFloat(rewardAmount).toFixed(4)} ${rewardUnit}</div>
+                                        </div>
+                                        <button onclick="claimSeasonReward()" class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg transition-colors">
+                                            领取
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            unclaimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">赛季结束，无奖励可领取</div>';
                         }
                         claimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">暂无已领取奖励</div>';
                     }
                 }
-
-                function getRewardUnit(type) {
-                    switch(type) {
-                        case 0: return 'LP';
-                        case 1: return 'TOKEN';
-                        case 2: return 'BNB';
-                        default: return 'LP';
-                    }
-                }
-
-                function getRewardName(type) {
-                    switch(type) {
-                        case 0: return 'LP奖励';
-                        case 1: return '代币奖励';
-                        case 2: return 'BNB奖励';
-                        default: return 'LP奖励';
-                    }
-                }
             } catch (error) {
                 console.error('加载奖励失败:', error);
-                document.getElementById('unclaimedRewards').innerHTML = '<div class="text-center text-gray-500 py-2">加载失败</div>';
-                document.getElementById('claimedRewards').innerHTML = '<div class="text-center text-gray-500 py-2">加载失败</div>';
+                unclaimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">加载失败</div>';
+                claimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">加载失败</div>';
             }
         }
 
         async function claimSeasonRewardHandler() {
             try {
+                let currentSeasonId = 1;
+                try {
+                    if (arenaRankingQueryContract) {
+                        currentSeasonId = await arenaRankingQueryContract.methods.currentSeasonId().call();
+                    }
+                } catch (e) {
+                    console.warn('获取当前赛季ID失败:', e);
+                }
+                
                 const rewardType = parseInt(await arenaRewardLPContract.methods.rewardType().call());
                 
-                await arenaRewardLPContract.methods.claimLPReward(currentSeasonId).send({ from: account });
+                await arenaRewardLPContract.methods.claimLPReward(currentSeasonId).send({ from: accounts[0] });
                 
                 let successMsg = '';
                 switch(rewardType) {
@@ -2391,6 +2552,39 @@
                 if (useMockData) {
                     totalPages = 10;
                     totalPlayers = 100;
+                    
+                    const generateMockAddress = (index) => {
+                        const base = '0x742d35Cc6634C0532925a3b844Bc9e7595f7';
+                        const suffix = (0x0000 + index).toString(16).padStart(4, '0');
+                        return base + suffix;
+                    };
+                    
+                    for (let i = 0; i < size; i++) {
+                        const index = (page - 1) * size + i;
+                        if (index >= totalPlayers) break;
+                        
+                        const address = generateMockAddress(index);
+                        const tokenType = ((index % 5) * 24) + ((index % 12) * 2) + (index % 2);
+                        const nftBasicInfo = ZODIAC_UTILS.getNFTInfo(tokenType);
+                        const elementKey = nftBasicInfo.elementKey || 'water';
+                        const imagePath = nftBasicInfo.imagePath || 'images/fu-cards/shuishu_0.jpg';
+                        
+                        topPlayers.push({
+                            address: address,
+                            points: 10000 - index * 500,
+                            wins: 50 + Math.floor(Math.random() * 30),
+                            losses: 10 + Math.floor(Math.random() * 20),
+                            rank: startRank + i,
+                            team: [
+                                { tokenId: 1 + index * 6, name: nftBasicInfo.attrName + nftBasicInfo.animalName, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
+                                { tokenId: 2 + index * 6, name: nftBasicInfo.attrName + nftBasicInfo.animalName, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
+                                { tokenId: 3 + index * 6, name: nftBasicInfo.attrName + nftBasicInfo.animalName, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
+                                { tokenId: 4 + index * 6, name: nftBasicInfo.attrName + nftBasicInfo.animalName, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
+                                { tokenId: 5 + index * 6, name: nftBasicInfo.attrName + nftBasicInfo.animalName, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
+                                { tokenId: 6 + index * 6, name: nftBasicInfo.attrName + nftBasicInfo.animalName, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath }
+                            ]
+                        });
+                    }
                 }
                 
                 document.getElementById('totalPages').textContent = totalPages;
