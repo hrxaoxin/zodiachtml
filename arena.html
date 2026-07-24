@@ -760,7 +760,7 @@
         
         function withTimeout(promise, ms, fallbackValue) {
             return Promise.race([
-                promise,
+                Promise.resolve(promise).catch(() => fallbackValue),
                 new Promise((resolve) => setTimeout(() => resolve(fallbackValue), ms))
             ]);
         }
@@ -1278,7 +1278,7 @@
         }
 
         async function initContracts(forceReadOnly = false) {
-            console.log('arena.html initContracts version: 2024-fix-v8 - COMPLETE REWRITE with ZODIAC_WEB3 sync');
+            console.log('arena.html initContracts version: 2024-fix-v9 - proper ZODIAC_WEB3 sync');
             
             const config = ZODIAC_CONFIG;
             const AUTHORIZER_ADDR = '0x11Feea2F23362478a8850c9f0daA746D057D2928';
@@ -1302,13 +1302,11 @@
             
             if (window.ZODIAC_WEB3 && !window.ZODIAC_WEB3.getWeb3()) {
                 try {
-                    const rpcUrl = 'https://bsc-dataseed1.binance.org/';
-                    const provider = typeof window.ethereum !== 'undefined' ? window.ethereum : new Web3.providers.HttpProvider(rpcUrl);
-                    const zWeb3 = new Web3(provider);
-                    window.ZODIAC_WEB3.web3 = zWeb3;
-                    console.log('[ARENA] ZODIAC_WEB3 web3 instance synced');
+                    console.log('[ARENA] Triggering ZODIAC_WEB3 internal web3 init via getContract');
+                    await window.ZODIAC_WEB3.getContract('authorizer', false);
+                    console.log('[ARENA] ZODIAC_WEB3 web3 initialized, getWeb3:', !!window.ZODIAC_WEB3.getWeb3());
                 } catch (e) {
-                    console.warn('[ARENA] Failed to sync ZODIAC_WEB3 web3:', e.message);
+                    console.warn('[ARENA] Failed to init ZODIAC_WEB3 web3:', e.message);
                 }
             }
             
@@ -1336,7 +1334,7 @@
                 try {
                     const addr = await withTimeout(
                         authorizerContract.methods.getAddressByName(name).call(),
-                        5000,
+                        10000,
                         null
                     );
                     contractAddresses[name] = addr;
@@ -1565,7 +1563,7 @@
                         
                         const nftBasicInfo = ZODIAC_UTILS.getNFTInfo(tokenType);
                         const zodiac = nftBasicInfo.animalName;
-                        const name = `${nftBasicInfo.attrName}${zodiac}${nftBasicInfo.gender === '公' ? '·雄' : '·雌'}`;
+                        const name = `${nftBasicInfo.attrName}${zodiac}${nftBasicInfo.gender === '公' ? '·公' : '·母'}`;
                         const imagePath = nftBasicInfo.imagePath;
                         
                         let skill;
@@ -1765,7 +1763,7 @@
                                 <img src="${nft.imagePath}" alt="${nft.name}" class="w-12 h-12 rounded-lg object-cover mb-2 ${isDisabled ? 'grayscale' : ''}">
                                 ${nft.isStaked ? '<div class="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center text-xs">🔒</div>' : ''}
                             </div>
-                            <div class="text-white text-sm font-medium">${nft.name} ${genderText}</div>
+                            <div class="text-white text-sm font-medium">${nft.name}</div>
                             <div class="text-gray-400 text-xs">Lv.${nft.level} 成长:${nft.growth}</div>
                             ${isCurrent ? '<div class="text-xs text-green-400 mt-1">✓ 当前选中</div>' : ''}
                             ${isInTeam ? '<div class="text-xs text-red-400 mt-1">已在队伍中</div>' : ''}
@@ -2133,11 +2131,10 @@
                 <div class="space-y-2">
                     <div class="grid grid-cols-3 gap-2">
                         ${battleTeam.slice(0, 3).map(nft => {
-                            const genderText = nft.gender === 1 || nft.gender === '公' ? '<span class="text-blue-300">公</span>' : '<span class="text-pink-300">母</span>';
                             return `
                             <div class="text-center p-2 bg-blue-500/20 rounded-lg">
                                 <img src="${nft.imagePath}" alt="${nft.name}" class="w-10 h-10 rounded-lg object-cover mx-auto mb-1">
-                                <div class="text-white text-xs">${nft.name} ${genderText}</div>
+                                <div class="text-white text-xs">${nft.name}</div>
                                 <div class="text-gray-400 text-xs">Lv.${nft.level}</div>
                                 <div class="text-green-400 text-xs">成长: ${nft.growth || 0}</div>
                             </div>
@@ -2145,11 +2142,10 @@
                     </div>
                     <div class="grid grid-cols-3 gap-2">
                         ${battleTeam.slice(3, 6).map(nft => {
-                            const genderText = nft.gender === 1 || nft.gender === '公' ? '<span class="text-blue-300">公</span>' : '<span class="text-pink-300">母</span>';
                             return `
                             <div class="text-center p-2 bg-purple-500/20 rounded-lg">
                                 <img src="${nft.imagePath}" alt="${nft.name}" class="w-10 h-10 rounded-lg object-cover mx-auto mb-1">
-                                <div class="text-white text-xs">${nft.name} ${genderText}</div>
+                                <div class="text-white text-xs">${nft.name}</div>
                                 <div class="text-gray-400 text-xs">Lv.${nft.level}</div>
                                 <div class="text-green-400 text-xs">成长: ${nft.growth || 0}</div>
                             </div>
@@ -2193,7 +2189,7 @@
                             
                             const nftBasicInfo = ZODIAC_UTILS.getNFTInfo(tokenType);
                             const zodiac = nftBasicInfo.animalName;
-                            const name = `${nftBasicInfo.attrName}${zodiac}${nftBasicInfo.gender === '公' ? '·雄' : '·雌'}`;
+                            const name = `${nftBasicInfo.attrName}${zodiac}${nftBasicInfo.gender === '公' ? '·公' : '·母'}`;
                             const imagePath = nftBasicInfo.imagePath;
                             
                             let skill;
@@ -2548,34 +2544,43 @@
                 let claimed = false;
                 
                 if (arenaRankingQueryContract) {
-                    claimed = await withTimeout(
-                        arenaRankingQueryContract.methods.seasonRewardsClaimed(seasonId, account).call(),
-                        3000,
-                        false
-                    );
+                    try {
+                        claimed = await withTimeout(
+                            arenaRankingQueryContract.methods.seasonRewardsClaimed(seasonId, account).call(),
+                            5000,
+                            false
+                        );
+                    } catch (e) {
+                        console.warn(`[ARENA] seasonRewardsClaimed(${seasonId}) failed:`, e.message);
+                        return null;
+                    }
+                } else {
+                    return null;
                 }
                 
-                if (claimed && (claimed === true || claimed === 'true')) {
+                if (claimed === true || claimed === 'true') {
                     let rewardAmount = '0';
                     try {
-                        const events = await withTimeout(
-                            arenaRewardLPContract.getPastEvents('RewardClaimed', {
-                                filter: { player: account },
-                                fromBlock: 'latest',
-                                toBlock: 'latest'
-                            }),
-                            3000,
-                            []
-                        );
-                        
-                        const seasonEvent = events.find(evt => {
-                            const eventSeasonId = evt.returnValues.seasonId || evt.returnValues[0];
-                            return parseInt(eventSeasonId) === seasonId;
-                        });
-                        
-                        if (seasonEvent) {
-                            const amountWei = seasonEvent.returnValues.amount || seasonEvent.returnValues[1] || '0';
-                            rewardAmount = web3.utils.fromWei(amountWei, 'ether');
+                        if (arenaRewardLPContract && arenaRewardLPContract.getPastEvents) {
+                            const events = await withTimeout(
+                                arenaRewardLPContract.getPastEvents('RewardClaimed', {
+                                    filter: { player: account },
+                                    fromBlock: 0,
+                                    toBlock: 'latest'
+                                }),
+                                5000,
+                                []
+                            );
+                            
+                            const seasonEvent = events.find(evt => {
+                                const eventSeasonId = evt.returnValues.seasonId || evt.returnValues[0];
+                                return parseInt(eventSeasonId) === seasonId;
+                            });
+                            
+                            if (seasonEvent) {
+                                const amountWei = seasonEvent.returnValues.amount || seasonEvent.returnValues[1] || '0';
+                                rewardAmount = web3.utils.fromWei(String(amountWei), 'ether');
+                            }
                         }
                     } catch (e) {
                         console.warn(`获取赛季${seasonId}奖励事件失败:`, e.message);
@@ -2716,27 +2721,21 @@
                     }
                 }
                 
-                let displayAmount = '--';
-                if (rewardPoolWei && web3) {
+                let displayAmount = '0';
+                if (rewardPoolWei && rewardPoolWei !== '0' && rewardPoolWei !== '0x0') {
                     try {
-                        const rewardPoolEth = web3.utils.fromWei(rewardPoolWei, 'ether');
+                        if (!web3) {
+                            web3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
+                        }
+                        const rewardPoolEth = web3.utils.fromWei(String(rewardPoolWei), 'ether');
                         const amount = parseFloat(rewardPoolEth);
-                        displayAmount = amount > 0 ? amount.toFixed(4) : '--';
+                        displayAmount = amount.toFixed(4);
                     } catch (e) {
                         console.warn('转换奖励池金额失败:', e);
-                        displayAmount = '--';
-                    }
-                } else if (rewardPoolWei && !web3) {
-                    try {
-                        const tempWeb3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
-                        const rewardPoolEth = tempWeb3.utils.fromWei(rewardPoolWei, 'ether');
-                        const amount = parseFloat(rewardPoolEth);
-                        displayAmount = amount > 0 ? amount.toFixed(4) : '--';
-                    } catch (e) {
-                        console.warn('转换奖励池金额失败:', e);
-                        displayAmount = '--';
+                        displayAmount = '0';
                     }
                 }
+                console.log(`[ARENA] Final rewardPoolWei: ${rewardPoolWei}, displayAmount: ${displayAmount}, rewardType: ${rewardType}`);
                 
                 const rewardUnit = getRewardUnit(rewardType);
                 const rewardName = getRewardName(rewardType);
@@ -3066,7 +3065,7 @@
                 const address = generateMockAddress(index);
                 const attrIndex = index % 5;
                 const zodiacIndex = index % 12;
-                const gender = index % 2 === 0 ? '雄' : '雌';
+                const gender = index % 2 === 0 ? '公' : '母';
                 const attrName = ATTR_NAMES[attrIndex];
                 const zodiac = ZODIAC_NAMES[zodiacIndex];
                 const elementKey = ELEMENT_KEYS[attrIndex];
@@ -3139,8 +3138,8 @@
                             console.log('[ARENA] paginationResult is null, using mock data');
                             useMockData = true;
                         } else {
-                            totalPages = parseInt(paginationResult.totalPages) || parseInt(paginationResult[0]) || 1;
-                            totalPlayers = parseInt(paginationResult.totalPlayers) || parseInt(paginationResult[1]) || 0;
+                            totalPages = parseInt(paginationResult.totalPages) || parseInt(paginationResult[1]) || 1;
+                            totalPlayers = parseInt(paginationResult.totalPlayers) || parseInt(paginationResult[2]) || 0;
                             
                             console.log('[ARENA] totalPages:', totalPages, 'totalPlayers:', totalPlayers);
                             
@@ -3163,22 +3162,17 @@
                 } else if (paginationResult) {
                     let entries = [];
                     
-                    if (Array.isArray(paginationResult)) {
-                        entries = paginationResult[2] || paginationResult.entries || [];
-                    } else if (paginationResult.entries) {
+                    if (paginationResult.entries && Array.isArray(paginationResult.entries)) {
                         entries = paginationResult.entries;
-                    } else if (paginationResult[2]) {
-                        entries = paginationResult[2];
+                    } else if (Array.isArray(paginationResult[0])) {
+                        entries = paginationResult[0];
+                    } else if (paginationResult[0] && typeof paginationResult[0] === 'object') {
+                        entries = paginationResult[0];
                     }
                     
                     if (!Array.isArray(entries)) {
-                        console.log('[ARENA] entries is not an array, trying to parse:', typeof entries);
-                        try {
-                            entries = JSON.parse(entries);
-                        } catch (e) {
-                            console.warn('[ARENA] Failed to parse entries:', e);
-                            entries = [];
-                        }
+                        console.log('[ARENA] entries is not an array, trying to parse:', typeof entries, 'value:', entries);
+                        entries = [];
                     }
                     
                     console.log('[ARENA] Parsed entries count:', entries.length);
@@ -3228,7 +3222,7 @@
                                         const nftBasicInfo = ZODIAC_UTILS.getNFTInfo(tokenType);
                                         return {
                                             tokenId: validTokens[idx],
-                                            name: `${nftBasicInfo.attrName}${nftBasicInfo.animalName}${nftBasicInfo.gender === '公' ? '·雄' : '·雌'}`,
+                                            name: `${nftBasicInfo.attrName}${nftBasicInfo.animalName}${nftBasicInfo.gender === '公' ? '·公' : '·母'}`,
                                             level: nftInfo.level,
                                             element: nftBasicInfo.elementKey,
                                             imagePath: nftBasicInfo.imagePath
