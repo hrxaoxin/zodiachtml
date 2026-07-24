@@ -293,7 +293,12 @@ window.ZODIAC_WEB3 = (function() {
     };
 
     function ensureWeb3(requireAccount = false) {
-        if (web3) return web3;
+        console.log('[ZODIAC_WEB3] ensureWeb3 called, requireAccount:', requireAccount, 'existing web3:', !!web3, 'window.web3:', !!window.web3);
+        
+        if (web3) {
+            console.log('[ZODIAC_WEB3] ensureWeb3 returning existing web3');
+            return web3;
+        }
         
         const RPC_URL = 'https://bsc-dataseed1.binance.org/';
         
@@ -319,6 +324,7 @@ window.ZODIAC_WEB3 = (function() {
             }
         }
         
+        console.error('[ZODIAC_WEB3] ensureWeb3 returning null - web3 not initialized');
         return null;
     }
 

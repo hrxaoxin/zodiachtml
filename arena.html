@@ -12,11 +12,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/web3@1.7.3/dist/web3.min.js"></script>
-    <script src="config.js?v=5"></script>
-    <script src="components.js?v=5"></script>
-    <script src="utils.js?v=5"></script>
-    <script src="web3-utils.js?v=5"></script>
-    <script src="ui-utils.js?v=5"></script>
+    <script src="config.js?v=6"></script>
+    <script src="components.js?v=6"></script>
+    <script src="utils.js?v=6"></script>
+    <script src="web3-utils.js?v=6"></script>
+    <script src="ui-utils.js?v=6"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap');
@@ -1253,245 +1253,158 @@
         }
 
         async function initContracts(forceReadOnly = false) {
-            console.log('arena.html initContracts version: 2024-fix-v5');
-            
-            web3 = window.web3 || web3;
+            console.log('arena.html initContracts version: 2024-fix-v6 - COMPLETE REWRITE');
             
             const config = ZODIAC_CONFIG;
-            const requireAccount = !forceReadOnly && accounts.length > 0;
-            
-            console.log('=== DIRECT AUTHORIZER TEST ===');
-            try {
-                const testWeb3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
-                const authorizerAddr = '0x11Feea2F23362478a8850c9f0daA746D057D2928';
-                const minABI = [
-                    {"inputs":[{"internalType":"string","name":"name","type":"string"}],"name":"getAddressByName","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}
-                ];
-                const auth = new testWeb3.eth.Contract(minABI, authorizerAddr);
-                const battleAddr = await auth.methods.getAddressByName('battle').call();
-                const rankingAddr = await auth.methods.getAddressByName('arenaRankingQuery').call();
-                const rewardAddr = await auth.methods.getAddressByName('arenaRewardLP').call();
-                console.log('Direct authorizer test - battle address:', battleAddr);
-                console.log('Direct authorizer test - arenaRankingQuery address:', rankingAddr);
-                console.log('Direct authorizer test - arenaRewardLP address:', rewardAddr);
-            } catch (e) {
-                console.error('Direct authorizer test FAILED:', e.message);
-            }
-            console.log('==============================');
+            const AUTHORIZER_ADDR = '0x11Feea2F23362478a8850c9f0daA746D057D2928';
             
             if (!web3) {
                 try {
-                    web3 = window.ZODIAC_WEB3 ? window.ZODIAC_WEB3.getWeb3() : null;
-                    if (!web3 && typeof window.ethereum !== 'undefined') {
-                        web3 = new Web3(window.ethereum);
-                    } else if (!web3) {
-                        web3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
-                        console.log('arena: Created web3 from public RPC for read-only access');
-                    }
+                    web3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
+                    window.web3 = web3;
+                    console.log('arena: Created web3 from public RPC for read-only access');
                 } catch (e) {
-                    console.warn('Failed to create web3 instance:', e.message);
+                    console.error('Failed to create web3 instance:', e.message);
                     return;
                 }
             }
             
+            const authorizerABI = [
+                {"inputs":[{"internalType":"string","name":"name","type":"string"}],"name":"getAddressByName","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}
+            ];
+            
+            let authorizerContract = null;
             try {
-                console.log('=== Contract Address Diagnostic ===');
-                console.log('authorizer address from config:', CONTRACT_ADDRESSES.authorizer);
-                
-                const authorizerContract = await window.ZODIAC_WEB3.getContract('authorizer', false);
-                console.log('authorizer contract:', authorizerContract ? 'OK' : 'null');
-                
-                if (authorizerContract && authorizerContract.options && authorizerContract.options.address) {
-                    console.log('authorizer contract address:', authorizerContract.options.address);
-                }
-                
-                const testAddr1 = await window.ZODIAC_WEB3.getContractAddress('arenaRankingQuery', false);
-                const testAddr2 = await window.ZODIAC_WEB3.getContractAddress('arenaRewardLP', false);
-                const testAddr3 = await window.ZODIAC_WEB3.getContractAddress('arenaBattle', false);
-                const testAddr4 = await window.ZODIAC_WEB3.getContractAddress('battle', false);
-                const testAddr5 = await window.ZODIAC_WEB3.getContractAddress('battleSkillData', false);
-                
-                console.log('arenaRankingQuery address:', testAddr1);
-                console.log('arenaRewardLP address:', testAddr2);
-                console.log('arenaBattle address:', testAddr3);
-                console.log('battle address:', testAddr4);
-                console.log('battleSkillData address:', testAddr5);
-                console.log('web3 instance:', web3 ? 'OK' : 'null');
-                console.log('==================================');
+                authorizerContract = new web3.eth.Contract(authorizerABI, AUTHORIZER_ADDR);
+                console.log('authorizerContract created:', AUTHORIZER_ADDR);
             } catch (e) {
-                console.error('Contract address diagnostic failed:', e.message);
-                console.error('Error stack:', e.stack);
+                console.error('Failed to create authorizerContract:', e.message);
+                return;
             }
             
-            try {
-                if (config.ABIS.arenaRankingQueryABI) {
-                    let arenaRankingQueryAddress = await window.ZODIAC_WEB3.getContractAddress('arenaRankingQuery', false);
-                    if (!arenaRankingQueryAddress) {
-                        try {
-                            const tempContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery', false);
-                            if (tempContract && tempContract.options && tempContract.options.address) {
-                                arenaRankingQueryAddress = tempContract.options.address;
-                            }
-                        } catch (e) { console.warn('Failed to get arenaRankingQuery address via getContract:', e.message); }
-                    }
-                    if (arenaRankingQueryAddress) {
-                        arenaRankingQueryContract = new web3.eth.Contract(config.ABIS.arenaRankingQueryABI, arenaRankingQueryAddress);
-                        console.log('arenaRankingQueryContract initialized:', arenaRankingQueryAddress);
-                    }
-                }
-            } catch (e) { console.warn('Failed to init arenaRankingQueryContract:', e.message); }
+            const contractNames = [
+                'battle', 'battleSkillData', 'arenaRankingQuery', 'arenaRewardLP', 
+                'arenaBattle', 'arenaPlayer', 'arenaModeManager'
+            ];
             
-            try {
-                if (config.ABIS.arenaRewardLPABI) {
-                    let arenaRewardLPAddress = await window.ZODIAC_WEB3.getContractAddress('arenaRewardLP', false);
-                    if (!arenaRewardLPAddress) {
-                        try {
-                            const tempContract = await window.ZODIAC_WEB3.getContract('arenaRewardLP', false);
-                            if (tempContract && tempContract.options && tempContract.options.address) {
-                                arenaRewardLPAddress = tempContract.options.address;
-                            }
-                        } catch (e) { console.warn('Failed to get arenaRewardLP address via getContract:', e.message); }
-                    }
-                    if (arenaRewardLPAddress) {
-                        arenaRewardLPContract = new web3.eth.Contract(config.ABIS.arenaRewardLPABI, arenaRewardLPAddress);
-                        console.log('arenaRewardLPContract initialized:', arenaRewardLPAddress);
-                    }
-                }
-            } catch (e) { console.warn('Failed to init arenaRewardLPContract:', e.message); }
+            const contractAddresses = {};
             
-            try {
-                if (config.ABIS.arenaBattleABI) {
-                    let arenaBattleAddress = await window.ZODIAC_WEB3.getContractAddress('arenaBattle', false);
-                    if (!arenaBattleAddress) {
-                        try {
-                            const tempContract = await window.ZODIAC_WEB3.getContract('arenaBattle', false);
-                            if (tempContract && tempContract.options && tempContract.options.address) {
-                                arenaBattleAddress = tempContract.options.address;
-                            }
-                        } catch (e) { console.warn('Failed to get arenaBattle address via getContract:', e.message); }
-                    }
-                    if (arenaBattleAddress) {
-                        arenaBattleContract = new web3.eth.Contract(config.ABIS.arenaBattleABI, arenaBattleAddress);
-                        console.log('arenaBattleContract initialized:', arenaBattleAddress);
-                    }
+            for (const name of contractNames) {
+                try {
+                    const addr = await authorizerContract.methods.getAddressByName(name).call();
+                    contractAddresses[name] = addr;
+                    console.log(`Direct authorizer - ${name}: ${addr}`);
+                } catch (e) {
+                    console.warn(`Failed to get ${name} address from authorizer:`, e.message);
+                    contractAddresses[name] = null;
                 }
-            } catch (e) { console.warn('Failed to init arenaBattleContract:', e.message); }
+            }
             
-            try {
-                const arenaModeManagerAddress = await window.ZODIAC_WEB3.getContractAddress('arenaModeManager', false);
-                if (arenaModeManagerAddress) {
+            if (config.ABIS.arenaRankingQueryABI && contractAddresses.arenaRankingQuery) {
+                try {
+                    arenaRankingQueryContract = new web3.eth.Contract(config.ABIS.arenaRankingQueryABI, contractAddresses.arenaRankingQuery);
+                    console.log('arenaRankingQueryContract initialized:', contractAddresses.arenaRankingQuery);
+                } catch (e) {
+                    console.warn('Failed to init arenaRankingQueryContract:', e.message);
+                }
+            }
+            
+            if (config.ABIS.arenaRewardLPABI && contractAddresses.arenaRewardLP) {
+                try {
+                    arenaRewardLPContract = new web3.eth.Contract(config.ABIS.arenaRewardLPABI, contractAddresses.arenaRewardLP);
+                    console.log('arenaRewardLPContract initialized:', contractAddresses.arenaRewardLP);
+                } catch (e) {
+                    console.warn('Failed to init arenaRewardLPContract:', e.message);
+                }
+            }
+            
+            if (config.ABIS.arenaBattleABI && contractAddresses.arenaBattle) {
+                try {
+                    arenaBattleContract = new web3.eth.Contract(config.ABIS.arenaBattleABI, contractAddresses.arenaBattle);
+                    console.log('arenaBattleContract initialized:', contractAddresses.arenaBattle);
+                } catch (e) {
+                    console.warn('Failed to init arenaBattleContract:', e.message);
+                }
+            }
+            
+            if (contractAddresses.arenaModeManager) {
+                try {
                     const minABI = [
                         {"inputs":[],"name":"arenaMode","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},
                         {"inputs":[],"name":"modeControlType","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"}
                     ];
-                    arenaModeManagerContract = new web3.eth.Contract(minABI, arenaModeManagerAddress);
-                    console.log('arenaModeManagerContract initialized:', arenaModeManagerAddress);
+                    arenaModeManagerContract = new web3.eth.Contract(minABI, contractAddresses.arenaModeManager);
+                    console.log('arenaModeManagerContract initialized:', contractAddresses.arenaModeManager);
+                } catch (e) {
+                    console.warn('Failed to init arenaModeManagerContract:', e.message);
                 }
-            } catch (e) { console.warn('Failed to init arenaModeManagerContract:', e.message); }
+            }
             
-            try {
-                if (config.ABIS.arenaPlayerABI) {
-                    let arenaPlayerAddress = await window.ZODIAC_WEB3.getContractAddress('arenaPlayer', false);
-                    if (!arenaPlayerAddress) {
-                        try {
-                            const tempContract = await window.ZODIAC_WEB3.getContract('arenaPlayer', false);
-                            if (tempContract && tempContract.options && tempContract.options.address) {
-                                arenaPlayerAddress = tempContract.options.address;
-                            }
-                        } catch (e) { console.warn('Failed to get arenaPlayer address via getContract:', e.message); }
-                    }
-                    if (arenaPlayerAddress) {
-                        arenaPlayerContract = new web3.eth.Contract(config.ABIS.arenaPlayerABI, arenaPlayerAddress);
-                        console.log('arenaPlayerContract initialized:', arenaPlayerAddress);
-                    }
+            if (config.ABIS.arenaPlayerABI && contractAddresses.arenaPlayer) {
+                try {
+                    arenaPlayerContract = new web3.eth.Contract(config.ABIS.arenaPlayerABI, contractAddresses.arenaPlayer);
+                    console.log('arenaPlayerContract initialized:', contractAddresses.arenaPlayer);
+                } catch (e) {
+                    console.warn('Failed to init arenaPlayerContract:', e.message);
                 }
-            } catch (e) { console.warn('Failed to init arenaPlayerContract:', e.message); }
+            }
             
-            try {
-                if (config.ABIS.battleABI) {
-                    let battleAddress = await window.ZODIAC_WEB3.getContractAddress('battle', false);
-                    if (!battleAddress) {
-                        try {
-                            const tempContract = await window.ZODIAC_WEB3.getContract('battle', false);
-                            if (tempContract && tempContract.options && tempContract.options.address) {
-                                battleAddress = tempContract.options.address;
-                            }
-                        } catch (e) { console.warn('Failed to get battle address via getContract:', e.message); }
-                    }
-                    if (!battleAddress) {
-                        try {
-                            const authAddr = '0x11Feea2F23362478a8850c9f0daA746D057D2928';
-                            const minABI = [{"inputs":[{"internalType":"string","name":"name","type":"string"}],"name":"getAddressByName","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}];
-                            const auth = new web3.eth.Contract(minABI, authAddr);
-                            battleAddress = await auth.methods.getAddressByName('battle').call();
-                            console.log('Direct authorizer - battle address:', battleAddress);
-                        } catch (e) { console.warn('Failed to get battle address via direct authorizer:', e.message); }
-                    }
-                    if (battleAddress && battleAddress !== '0x0000000000000000000000000000000000000000') {
-                        battleContract = new web3.eth.Contract(config.ABIS.battleABI, battleAddress);
-                        console.log('battleContract initialized:', battleAddress);
-                    }
+            if (config.ABIS.battleABI && contractAddresses.battle) {
+                try {
+                    battleContract = new web3.eth.Contract(config.ABIS.battleABI, contractAddresses.battle);
+                    console.log('battleContract initialized:', contractAddresses.battle);
+                } catch (e) {
+                    console.warn('Failed to init battleContract:', e.message);
                 }
-            } catch (e) { console.warn('Failed to init battleContract via ABI:', e.message); }
+            }
             
-            try {
-                if (config.ABIS.battleSkillDataABI) {
-                    let battleSkillDataAddress = await window.ZODIAC_WEB3.getContractAddress('battleSkillData', false);
-                    if (!battleSkillDataAddress) {
-                        try {
-                            const tempContract = await window.ZODIAC_WEB3.getContract('battleSkillData', false);
-                            if (tempContract && tempContract.options && tempContract.options.address) {
-                                battleSkillDataAddress = tempContract.options.address;
-                            }
-                        } catch (e) { console.warn('Failed to get battleSkillData address via getContract:', e.message); }
-                    }
-                    if (!battleSkillDataAddress) {
-                        try {
-                            const authAddr = '0x11Feea2F23362478a8850c9f0daA746D057D2928';
-                            const minABI = [{"inputs":[{"internalType":"string","name":"name","type":"string"}],"name":"getAddressByName","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}];
-                            const auth = new web3.eth.Contract(minABI, authAddr);
-                            battleSkillDataAddress = await auth.methods.getAddressByName('battleSkillData').call();
-                            console.log('Direct authorizer - battleSkillData address:', battleSkillDataAddress);
-                        } catch (e) { console.warn('Failed to get battleSkillData address via direct authorizer:', e.message); }
-                    }
-                    if (battleSkillDataAddress && battleSkillDataAddress !== '0x0000000000000000000000000000000000000000') {
-                        battleSkillDataContract = new web3.eth.Contract(config.ABIS.battleSkillDataABI, battleSkillDataAddress);
-                        console.log('battleSkillDataContract initialized:', battleSkillDataAddress);
-                    }
+            if (config.ABIS.battleSkillDataABI && contractAddresses.battleSkillData) {
+                try {
+                    battleSkillDataContract = new web3.eth.Contract(config.ABIS.battleSkillDataABI, contractAddresses.battleSkillData);
+                    console.log('battleSkillDataContract initialized:', contractAddresses.battleSkillData);
+                } catch (e) {
+                    console.warn('Failed to init battleSkillDataContract:', e.message);
                 }
-            } catch (e) { console.warn('Failed to init battleSkillDataContract via ABI:', e.message); }
+            }
             
             if (accounts.length > 0) {
-                
-                try {
-                    nftContract = await window.ZODIAC_WEB3.getContract('nftMint');
-                    console.log('nftContract initialized:', nftContract ? nftContract.options.address : null);
-                } catch (e) { console.warn('Failed to init nftContract:', e.message); }
-                
-                try {
-                    tokenContract = await window.ZODIAC_WEB3.getContract('tokenContract');
-                    console.log('tokenContract initialized:', tokenContract ? tokenContract.options.address : null);
-                } catch (e) { console.warn('Failed to init tokenContract:', e.message); }
-                
-                try {
-                    if (config.ABIS.arenaRankingManagerABI) {
-                        const arenaAddress = await window.ZODIAC_WEB3.getContractAddress('arena');
-                        if (arenaAddress) {
-                            arenaContract = new web3.eth.Contract(config.ABIS.arenaRankingManagerABI, arenaAddress);
-                            console.log('arenaContract initialized:', arenaAddress);
+                if (config.ABIS.nftMintCoreABI) {
+                    try {
+                        const nftMintAddr = await authorizerContract.methods.getAddressByName('nftMintCore').call();
+                        if (nftMintAddr) {
+                            nftContract = new web3.eth.Contract(config.ABIS.nftMintCoreABI, nftMintAddr);
+                            console.log('nftContract initialized:', nftMintAddr);
                         }
-                    }
-                } catch (e) { console.warn('Failed to init arenaContract:', e.message); }
+                    } catch (e) { console.warn('Failed to init nftContract:', e.message); }
+                }
                 
-                try {
-                    if (config.ABIS.arenaRankingManagerABI) {
-                        const arenaRankingManagerAddress = await window.ZODIAC_WEB3.getContractAddress('arenaRankingManager');
-                        if (arenaRankingManagerAddress) {
-                            arenaRankingManagerContract = new web3.eth.Contract(config.ABIS.arenaRankingManagerABI, arenaRankingManagerAddress);
-                            console.log('arenaRankingManagerContract initialized:', arenaRankingManagerAddress);
+                if (config.ABIS.tokenABI) {
+                    try {
+                        const tokenAddr = await authorizerContract.methods.getAddressByName('token').call();
+                        if (tokenAddr) {
+                            tokenContract = new web3.eth.Contract(config.ABIS.tokenABI, tokenAddr);
+                            console.log('tokenContract initialized:', tokenAddr);
                         }
-                    }
-                } catch (e) { console.warn('Failed to init arenaRankingManagerContract:', e.message); }
+                    } catch (e) { console.warn('Failed to init tokenContract:', e.message); }
+                }
+                
+                if (config.ABIS.arenaRankingManagerABI) {
+                    try {
+                        const arenaAddr = await authorizerContract.methods.getAddressByName('arenaRankingQuery').call();
+                        if (arenaAddr) {
+                            arenaContract = new web3.eth.Contract(config.ABIS.arenaRankingManagerABI, arenaAddr);
+                            console.log('arenaContract initialized:', arenaAddr);
+                        }
+                    } catch (e) { console.warn('Failed to init arenaContract:', e.message); }
+                    
+                    try {
+                        const rankingManagerAddr = await authorizerContract.methods.getAddressByName('arenaRankingManager').call();
+                        if (rankingManagerAddr) {
+                            arenaRankingManagerContract = new web3.eth.Contract(config.ABIS.arenaRankingManagerABI, rankingManagerAddr);
+                            console.log('arenaRankingManagerContract initialized:', rankingManagerAddr);
+                        }
+                    } catch (e) { console.warn('Failed to init arenaRankingManagerContract:', e.message); }
+                }
             }
             
             try {
