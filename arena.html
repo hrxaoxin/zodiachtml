@@ -1009,10 +1009,20 @@
 
         async function setupEventListeners() {
             try {
+                if (!window.ZODIAC_WEB3 || !web3 || !accounts || accounts.length === 0) {
+                    console.warn('ZODIAC_WEB3, web3 or accounts not ready, skipping event listener setup');
+                    return;
+                }
+                
                 startLeaderboardRefresh();
                 
                 const listenToEventSafe = async (contractName, eventName, callback) => {
                     try {
+                        const contract = await window.ZODIAC_WEB3.getContract(contractName);
+                        if (!contract) {
+                            console.warn(`Contract ${contractName} not available, skipping event ${eventName}`);
+                            return;
+                        }
                         const unsub = await ZODIAC_WEB3.listenToEvent(contractName, eventName, callback);
                         if (unsub) {
                             arenaUnsubscribeFunctions.push(unsub);
@@ -1183,7 +1193,13 @@
                         battleContract = new web3.eth.Contract(config.ABIS.battleABI, battleAddress);
                     }
                 }
-            } catch (e) { console.warn('Failed to init battleContract:', e.message); }
+            } catch (e) { console.warn('Failed to init battleContract via ABI:', e.message); }
+            
+            if (!battleContract) {
+                try {
+                    battleContract = await window.ZODIAC_WEB3.getContract('battle');
+                } catch (e) { console.warn('Failed to init battleContract via ZODIAC_WEB3:', e.message); }
+            }
             
             try {
                 if (config.ABIS.battleSkillDataABI) {
@@ -1192,7 +1208,13 @@
                         battleSkillDataContract = new web3.eth.Contract(config.ABIS.battleSkillDataABI, battleSkillDataAddress);
                     }
                 }
-            } catch (e) { console.warn('Failed to init battleSkillDataContract:', e.message); }
+            } catch (e) { console.warn('Failed to init battleSkillDataContract via ABI:', e.message); }
+            
+            if (!battleSkillDataContract) {
+                try {
+                    battleSkillDataContract = await window.ZODIAC_WEB3.getContract('battleSkillData');
+                } catch (e) { console.warn('Failed to init battleSkillDataContract via ZODIAC_WEB3:', e.message); }
+            }
             
             try {
                 if (config.ABIS.arenaRankingManagerABI) {
@@ -1284,6 +1306,13 @@
                 
                 // 从合约读取属性克制加成
                 try {
+                    if (!battleContract && window.ZODIAC_WEB3) {
+                        try {
+                            battleContract = await window.ZODIAC_WEB3.getContract('battle');
+                        } catch (e) {
+                            console.warn('Failed to get battleContract on-demand:', e.message);
+                        }
+                    }
                     if (!battleContract) {
                         console.warn('battleContract not initialized, skipping element bonus');
                         return;
@@ -1340,6 +1369,13 @@
                             skill = skillCache[tokenType];
                         } else {
                             try {
+                                if (!battleSkillDataContract && window.ZODIAC_WEB3) {
+                                    try {
+                                        battleSkillDataContract = await window.ZODIAC_WEB3.getContract('battleSkillData');
+                                    } catch (e) {
+                                        console.warn('Failed to get battleSkillDataContract on-demand:', e.message);
+                                    }
+                                }
                                 if (!battleSkillDataContract) {
                                     console.warn('battleSkillDataContract not initialized, using local skill data');
                                     throw new Error('Contract not initialized');
@@ -2073,13 +2109,19 @@
         }
 
         async function loadMyStats() {
+            const myPointsEl = document.getElementById('myPoints');
+            const myWinsEl = document.getElementById('myWins');
+            const myLossesEl = document.getElementById('myLosses');
+            const myWinRateEl = document.getElementById('myWinRate');
+            const myRankEl = document.getElementById('myRank');
+            
             try {
                 if (!accounts || accounts.length === 0) {
-                    document.getElementById('myPoints').textContent = '-';
-                    document.getElementById('myWins').textContent = '-';
-                    document.getElementById('myLosses').textContent = '-';
-                    document.getElementById('myWinRate').textContent = '-';
-                    document.getElementById('myRank').textContent = '-';
+                    if (myPointsEl) myPointsEl.textContent = '-';
+                    if (myWinsEl) myWinsEl.textContent = '-';
+                    if (myLossesEl) myLossesEl.textContent = '-';
+                    if (myWinRateEl) myWinRateEl.textContent = '-';
+                    if (myRankEl) myRankEl.textContent = '-';
                     return;
                 }
                 
@@ -2133,15 +2175,15 @@
                     }
                 }
                 
-                document.getElementById('myPoints').textContent = points;
-                document.getElementById('myWins').textContent = wins;
-                document.getElementById('myLosses').textContent = losses;
+                if (myPointsEl) myPointsEl.textContent = points;
+                if (myWinsEl) myWinsEl.textContent = wins;
+                if (myLossesEl) myLossesEl.textContent = losses;
 
                 const totalWins = parseInt(wins, 10);
                 const totalLosses = parseInt(losses, 10);
                 const total = totalWins + totalLosses;
                 const winRate = total > 0 ? ((totalWins / total) * 100).toFixed(1) + '%' : '-';
-                document.getElementById('myWinRate').textContent = winRate;
+                if (myWinRateEl) myWinRateEl.textContent = winRate;
 
                 let userRank = '0';
                 try {
@@ -2155,20 +2197,34 @@
                                 console.warn('获取玩家排名失败:', e2);
                             }
                         }
+                    } else if (window.ZODIAC_WEB3) {
+                        const rankingContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery');
+                        if (rankingContract) {
+                            arenaRankingQueryContract = rankingContract;
+                            try {
+                                userRank = await arenaRankingQueryContract.methods.getPlayerRank(currentSeasonId, accounts[0]).call();
+                            } catch (e1) {
+                                try {
+                                    userRank = await arenaRankingQueryContract.methods.getPlayerRank(accounts[0]).call();
+                                } catch (e2) {
+                                    console.warn('获取玩家排名失败:', e2);
+                                }
+                            }
+                        }
                     }
                 } catch (e) {
                     console.warn('获取玩家排名失败:', e);
                 }
                 
                 const userRankNum = parseInt(userRank) || 0;
-                document.getElementById('myRank').textContent = userRankNum > 0 ? '#' + userRankNum : '-';
+                if (myRankEl) myRankEl.textContent = userRankNum > 0 ? '#' + userRankNum : '-';
             } catch (error) {
                 console.error('加载战绩失败:', error);
-                document.getElementById('myPoints').textContent = '-';
-                document.getElementById('myWins').textContent = '-';
-                document.getElementById('myLosses').textContent = '-';
-                document.getElementById('myWinRate').textContent = '-';
-                document.getElementById('myRank').textContent = '-';
+                if (myPointsEl) myPointsEl.textContent = '-';
+                if (myWinsEl) myWinsEl.textContent = '-';
+                if (myLossesEl) myLossesEl.textContent = '-';
+                if (myWinRateEl) myWinRateEl.textContent = '-';
+                if (myRankEl) myRankEl.textContent = '-';
             }
         }
 
@@ -2209,10 +2265,10 @@
         }
 
         async function loadRewardPool() {
+            let rewardPoolWei = '0';
+            let rewardType = 2;
+            
             try {
-                let rewardPoolWei = '0';
-                let rewardType = 0;
-                
                 if (window.ZODIAC_WEB3 && web3) {
                     try {
                         const rewardContract = await window.ZODIAC_WEB3.getContract('arenaRewardLP');
@@ -2223,7 +2279,7 @@
                                 rewardType = parseInt(await arenaRewardLPContract.methods.rewardType().call());
                             } catch (e) {
                                 console.warn('获取奖励类型失败:', e);
-                                rewardType = 0;
+                                rewardType = 2;
                             }
                             
                             try {
@@ -2233,7 +2289,7 @@
                                     rewardPoolWei = await arenaRewardLPContract.methods.tokenRewardPoolBalance().call().catch(() => '0');
                                 } else if (rewardType === 2) {
                                     rewardPoolWei = await arenaRewardLPContract.methods.bnbRewardPoolBalance().call().catch(() => '0');
-                                    if (rewardPoolWei === '0') {
+                                    if (!rewardPoolWei || rewardPoolWei === '0') {
                                         const contractAddress = await window.ZODIAC_WEB3.getContractAddress('arenaRewardLP');
                                         if (contractAddress && contractAddress !== '0x0000000000000000000000000000000000000000') {
                                             rewardPoolWei = await web3.eth.getBalance(contractAddress).catch(() => '0');
@@ -2249,61 +2305,84 @@
                     }
                 }
                 
-                if (rewardPoolWei === '0' && arenaRankingQueryContract) {
-                    try {
-                        const seasonInfo = await arenaRankingQueryContract.methods.getCurrentSeasonInfo().call();
-                        rewardPoolWei = seasonInfo.rewardPool || seasonInfo[2] || '0';
-                    } catch (e) {
-                        console.warn('从赛季信息获取奖励池失败:', e);
+                if (!rewardPoolWei || rewardPoolWei === '0') {
+                    if (arenaRankingQueryContract) {
+                        try {
+                            const seasonInfo = await arenaRankingQueryContract.methods.getCurrentSeasonInfo().call();
+                            rewardPoolWei = seasonInfo.rewardPool || seasonInfo[2] || '0';
+                        } catch (e) {
+                            console.warn('从赛季信息获取奖励池失败:', e);
+                        }
                     }
                 }
                 
-                if (rewardPoolWei === '0' && web3) {
-                    try {
-                        const contractAddress = await window.ZODIAC_WEB3.getContractAddress('arenaReward');
-                        if (contractAddress && contractAddress !== '0x0000000000000000000000000000000000000000') {
-                            rewardPoolWei = await web3.eth.getBalance(contractAddress).catch(() => '0');
+                if (!rewardPoolWei || rewardPoolWei === '0') {
+                    if (window.ZODIAC_WEB3 && web3) {
+                        try {
+                            const contractAddress = await window.ZODIAC_WEB3.getContractAddress('arenaReward');
+                            if (contractAddress && contractAddress !== '0x0000000000000000000000000000000000000000') {
+                                rewardPoolWei = await web3.eth.getBalance(contractAddress).catch(() => '0');
+                            }
+                        } catch (e) {
+                            console.warn('从合约地址获取余额失败:', e);
                         }
-                    } catch (e) {
-                        console.warn('从合约地址获取余额失败:', e);
                     }
                 }
                 
                 let displayAmount = '--';
                 if (rewardPoolWei && web3) {
-                    const rewardPoolEth = web3.utils.fromWei(rewardPoolWei, 'ether');
-                    const amount = parseFloat(rewardPoolEth);
-                    displayAmount = amount > 0 ? amount.toFixed(4) : '--';
+                    try {
+                        const rewardPoolEth = web3.utils.fromWei(rewardPoolWei, 'ether');
+                        const amount = parseFloat(rewardPoolEth);
+                        displayAmount = amount > 0 ? amount.toFixed(4) : '--';
+                    } catch (e) {
+                        console.warn('转换奖励池金额失败:', e);
+                        displayAmount = '--';
+                    }
                 }
-                
-                document.getElementById('rewardPoolAmount').textContent = displayAmount;
                 
                 const rewardUnit = getRewardUnit(rewardType);
                 const rewardName = getRewardName(rewardType);
                 
-                document.getElementById('rewardPoolLabel').textContent = rewardUnit + '总奖励';
-                document.getElementById('rewardRateInfo').textContent = '奖励由' + rewardName + '合约发放';
+                const rewardPoolAmountEl = document.getElementById('rewardPoolAmount');
+                const rewardPoolLabelEl = document.getElementById('rewardPoolLabel');
+                const rewardRateInfoEl = document.getElementById('rewardRateInfo');
+                const rewardSectionTitleEl = document.getElementById('rewardSectionTitle');
+                const unclaimedRewardTitleEl = document.getElementById('unclaimedRewardTitle');
+                const claimedRewardTitleEl = document.getElementById('claimedRewardTitle');
+                const rewardTipTextEl = document.getElementById('rewardTipText');
                 
-                document.getElementById('rewardSectionTitle').textContent = rewardName + '领取';
-                document.getElementById('unclaimedRewardTitle').textContent = '可领取' + rewardName;
-                document.getElementById('claimedRewardTitle').textContent = '已领取' + rewardName;
+                if (rewardPoolAmountEl) rewardPoolAmountEl.textContent = displayAmount;
+                if (rewardPoolLabelEl) rewardPoolLabelEl.textContent = rewardUnit + '总奖励';
+                if (rewardRateInfoEl) rewardRateInfoEl.textContent = '奖励由' + rewardName + '合约发放';
+                if (rewardSectionTitleEl) rewardSectionTitleEl.textContent = rewardName + '领取';
+                if (unclaimedRewardTitleEl) unclaimedRewardTitleEl.textContent = '可领取' + rewardName;
+                if (claimedRewardTitleEl) claimedRewardTitleEl.textContent = '已领取' + rewardName;
                 
-                if (rewardType === 2) {
-                    document.getElementById('rewardTipText').textContent = '💡 BNB奖励直接发放到您的钱包';
-                } else if (rewardType === 1) {
-                    document.getElementById('rewardTipText').textContent = '💡 代币奖励直接发放到您的钱包';
-                } else {
-                    document.getElementById('rewardTipText').textContent = '💡 LP奖励领取后会自动兑换为代币和WBNB发送到您的钱包';
+                if (rewardTipTextEl) {
+                    if (rewardType === 2) {
+                        rewardTipTextEl.textContent = '💡 BNB奖励直接发放到您的钱包';
+                    } else if (rewardType === 1) {
+                        rewardTipTextEl.textContent = '💡 代币奖励直接发放到您的钱包';
+                    } else {
+                        rewardTipTextEl.textContent = '💡 LP奖励领取后会自动兑换为代币和WBNB发送到您的钱包';
+                    }
                 }
             } catch (error) {
                 console.error('加载奖励池失败:', error);
-                document.getElementById('rewardPoolAmount').textContent = '--';
+                const rewardPoolAmountEl = document.getElementById('rewardPoolAmount');
+                if (rewardPoolAmountEl) rewardPoolAmountEl.textContent = '--';
             }
         }
 
         async function loadRewards() {
             const unclaimedDiv = document.getElementById('unclaimedRewards');
             const claimedDiv = document.getElementById('claimedRewards');
+            
+            if (!unclaimedDiv || !claimedDiv) {
+                console.warn('unclaimedRewards or claimedRewards element not found');
+                return;
+            }
             
             try {
                 if (!accounts || accounts.length === 0) {
@@ -2337,7 +2416,7 @@
                     console.warn('获取赛季状态失败:', e);
                 }
 
-                let rewardType = 0;
+                let rewardType = 2;
                 try {
                     if (arenaRewardLPContract) {
                         rewardType = parseInt(await arenaRewardLPContract.methods.rewardType().call());
@@ -2349,7 +2428,8 @@
                         }
                     }
                 } catch (e) {
-                    rewardType = 0;
+                    console.warn('获取奖励类型失败:', e);
+                    rewardType = 2;
                 }
 
                 const rewardUnit = getRewardUnit(rewardType);
@@ -2587,13 +2667,6 @@
                     }
                 }
                 
-                document.getElementById('totalPages').textContent = totalPages;
-                document.getElementById('currentPage').textContent = page;
-                document.getElementById('leaderboardStats').textContent = `共 ${totalPlayers} 名玩家`;
-                
-                document.getElementById('prevPage').disabled = page <= 1;
-                document.getElementById('nextPage').disabled = page >= totalPages;
-                
                 if (!useMockData && paginationResult && paginationResult.entries && paginationResult.entries.length > 0) {
                     const entries = paginationResult.entries;
                     
@@ -2604,63 +2677,74 @@
                         const losses = parseInt(entry.losses || '0');
                         const rank = startRank + i;
                         
-                        try {
-                            const teamTokens = await arenaPlayerContract.methods.getPlayerBattleTeam(address).call();
-                            const validTokens = teamTokens.filter(t => t && t !== '0' && t !== 0);
-                            
-                            const nftDataPromises = validTokens.map(tokenId => 
-                                window.ZODIAC_WEB3.getNFTFullInfo(tokenId).catch(() => null)
-                            );
-                            const nftDataResults = await Promise.all(nftDataPromises);
-                            
-                            const team = nftDataResults.map((nftInfo, idx) => {
-                                if (!nftInfo || nftInfo.tokenType === 0) {
+                        let team = [];
+                        if (arenaPlayerContract && window.ZODIAC_WEB3) {
+                            try {
+                                const teamTokens = await arenaPlayerContract.methods.getPlayerBattleTeam(address).call();
+                                const validTokens = teamTokens.filter(t => t && t !== '0' && t !== 0);
+                                
+                                const nftDataPromises = validTokens.map(tokenId => 
+                                    window.ZODIAC_WEB3.getNFTFullInfo(tokenId).catch(() => null)
+                                );
+                                const nftDataResults = await Promise.all(nftDataPromises);
+                                
+                                team = nftDataResults.map((nftInfo, idx) => {
+                                    if (!nftInfo || nftInfo.tokenType === 0) {
+                                        return {
+                                            tokenId: validTokens[idx],
+                                            name: '未知',
+                                            level: 1,
+                                            element: 'water',
+                                            imagePath: `images/fu-cards/shuishu_0.jpg`
+                                        };
+                                    }
+                                    const tokenType = nftInfo.tokenType;
+                                    const nftBasicInfo = ZODIAC_UTILS.getNFTInfo(tokenType);
                                     return {
                                         tokenId: validTokens[idx],
-                                        name: '未知',
-                                        level: 1,
-                                        element: 'water',
-                                        imagePath: `images/fu-cards/shuishu_0.jpg`
+                                        name: `${nftBasicInfo.attrName}${nftBasicInfo.animalName}${nftBasicInfo.gender === '公' ? '·雄' : '·雌'}`,
+                                        level: nftInfo.level,
+                                        element: nftBasicInfo.elementKey,
+                                        imagePath: nftBasicInfo.imagePath
                                     };
-                                }
-                                const tokenType = nftInfo.tokenType;
-                                const nftBasicInfo = ZODIAC_UTILS.getNFTInfo(tokenType);
-                                return {
-                                    tokenId: validTokens[idx],
-                                    name: `${nftBasicInfo.attrName}${nftBasicInfo.animalName}${nftBasicInfo.gender === '公' ? '·雄' : '·雌'}`,
-                                    level: nftInfo.level,
-                                    element: nftBasicInfo.elementKey,
-                                    imagePath: nftBasicInfo.imagePath
-                                };
-                            });
-                            
-                            return {
-                                address: address,
-                                points: points,
-                                wins: wins,
-                                losses: losses,
-                                rank: rank,
-                                team: team
-                            };
-                        } catch (e) {
-                            return {
-                                address: address,
-                                points: points,
-                                wins: wins,
-                                losses: losses,
-                                rank: rank,
-                                team: []
-                            };
+                                });
+                            } catch (e) {
+                                console.warn(`获取玩家 ${shortenAddress(address)} 战队信息失败:`, e);
+                            }
                         }
+                        
+                        return {
+                            address: address,
+                            points: points,
+                            wins: wins,
+                            losses: losses,
+                            rank: rank,
+                            team: team
+                        };
                     });
                     
                     const playersData = await Promise.all(playerPromises);
                     topPlayers.push(...playersData);
                 }
                 
-                document.getElementById('leaderboard').dataset.leaderboardData = JSON.stringify(topPlayers);
+                const totalPagesEl = document.getElementById('totalPages');
+                const currentPageEl = document.getElementById('currentPage');
+                const leaderboardStatsEl = document.getElementById('leaderboardStats');
+                const prevPageEl = document.getElementById('prevPage');
+                const nextPageEl = document.getElementById('nextPage');
+                const leaderboardEl = document.getElementById('leaderboard');
                 
-                if (accounts.length > 0 && !useMockData) {
+                if (totalPagesEl) totalPagesEl.textContent = totalPages;
+                if (currentPageEl) currentPageEl.textContent = page;
+                if (leaderboardStatsEl) leaderboardStatsEl.textContent = `共 ${totalPlayers} 名玩家`;
+                if (prevPageEl) prevPageEl.disabled = page <= 1;
+                if (nextPageEl) nextPageEl.disabled = page >= totalPages;
+                
+                if (leaderboardEl) {
+                    leaderboardEl.dataset.leaderboardData = JSON.stringify(topPlayers);
+                }
+                
+                if (accounts.length > 0 && !useMockData && arenaRankingQueryContract && arenaBattleContract) {
                     try {
                         const [userRank, myStats] = await Promise.all([
                             arenaRankingQueryContract.methods.getPlayerRank(accounts[0]).call().catch(() => '0'),
@@ -2682,90 +2766,100 @@
                 let rewardTypeLabel = 'Token';
                 
                 try {
-                    const arenaRewardLPContract = await window.ZODIAC_WEB3.getContract('arenaRewardLP');
-                    if (arenaRewardLPContract && web3) {
-                        const rewardType = await arenaRewardLPContract.methods.rewardType().call().catch(() => '2');
-                        let rewardPoolBalance = '0';
-                        
-                        if (rewardType === '0') {
-                            rewardTypeLabel = 'LP';
-                        } else if (rewardType === '1') {
-                            rewardTypeLabel = 'Token';
-                        } else {
-                            rewardTypeLabel = 'BNB';
-                        }
-                        
-                        try {
-                            if (arenaRankingQueryContract) {
-                                const seasonInfo = await arenaRankingQueryContract.methods.getCurrentSeasonInfo().call();
-                                rewardPoolBalance = seasonInfo.rewardPool || '0';
+                    if (window.ZODIAC_WEB3 && web3) {
+                        const arenaRewardLPContract = await window.ZODIAC_WEB3.getContract('arenaRewardLP');
+                        if (arenaRewardLPContract) {
+                            const rewardType = await arenaRewardLPContract.methods.rewardType().call().catch(() => '2');
+                            let rewardPoolBalance = '0';
+                            
+                            if (rewardType === '0') {
+                                rewardTypeLabel = 'LP';
+                            } else if (rewardType === '1') {
+                                rewardTypeLabel = 'Token';
+                            } else {
+                                rewardTypeLabel = 'BNB';
                             }
-                        } catch (e) {
-                            console.warn('获取奖励池余额失败:', e);
+                            
+                            try {
+                                if (arenaRankingQueryContract) {
+                                    const seasonInfo = await arenaRankingQueryContract.methods.getCurrentSeasonInfo().call();
+                                    rewardPoolBalance = seasonInfo.rewardPool || '0';
+                                }
+                            } catch (e) {
+                                console.warn('获取奖励池余额失败:', e);
+                            }
+                            
+                            const balanceNum = parseFloat(web3.utils.fromWei(rewardPoolBalance, 'ether'));
+                            const totalPlayers = topPlayers.length;
+                            
+                            if (balanceNum > 0 && totalPlayers > 0) {
+                                rewards = topPlayers.map(player => {
+                                    return String(calculateRankReward(player.rank, balanceNum, totalPlayers));
+                                });
+                            } else {
+                                rewards = topPlayers.map(player => {
+                                    const baseRewards = [5000, 3000, 2000, 1500, 1200, 1000, 900, 800, 700, 600];
+                                    return player.rank <= 10 ? String(baseRewards[player.rank - 1]) : String(Math.max(50, 500 - (player.rank - 10) * 5));
+                                });
+                            }
                         }
-                        
-                        const balanceNum = parseFloat(web3.utils.fromWei(rewardPoolBalance, 'ether'));
-                        const totalPlayers = topPlayers.length;
-                        
-                        if (balanceNum > 0 && totalPlayers > 0) {
-                            rewards = topPlayers.map(player => {
-                                return String(calculateRankReward(player.rank, balanceNum, totalPlayers));
-                            });
-                        } else {
-                            rewards = topPlayers.map(player => {
-                                const baseRewards = [5000, 3000, 2000, 1500, 1200, 1000, 900, 800, 700, 600];
-                                return player.rank <= 10 ? String(baseRewards[player.rank - 1]) : String(Math.max(50, 500 - (player.rank - 10) * 5));
-                            });
-                        }
-                    } else {
-                        rewards = topPlayers.map(player => {
-                            const baseRewards = [5000, 3000, 2000, 1500, 1200, 1000, 900, 800, 700, 600];
-                            return player.rank <= 10 ? String(baseRewards[player.rank - 1]) : String(Math.max(50, 500 - (player.rank - 10) * 5));
-                        });
                     }
                 } catch (e) {
                     console.log('获取奖励信息失败:', e);
+                }
+                
+                if (!rewards || rewards.length === 0) {
                     rewards = topPlayers.map(player => {
                         const baseRewards = [5000, 3000, 2000, 1500, 1200, 1000, 900, 800, 700, 600];
                         return player.rank <= 10 ? String(baseRewards[player.rank - 1]) : String(Math.max(50, 500 - (player.rank - 10) * 5));
                     });
                 }
                 
-                const leaderboard = document.getElementById('leaderboard');
-                leaderboard.innerHTML = topPlayers.map((player, index) => {
-                    const rankBadgeColor = player.rank === 1 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' : 
-                                           player.rank === 2 ? 'bg-gradient-to-br from-gray-300 to-gray-500' :
-                                           player.rank === 3 ? 'bg-gradient-to-br from-amber-600 to-amber-800' :
-                                           'bg-gray-700';
-                    const rankTextColor = player.rank <= 3 ? 'text-yellow-400' : 'text-gray-400';
-                    return `
-                    <div class="p-3 bg-white/5 hover:bg-white/10 rounded-xl cursor-pointer transition-all duration-200 flex items-center group border border-transparent hover:border-blue-500/30" 
-                         onclick="selectOpponent(${index})">
-                        <div class="${rankBadgeColor} w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3 shadow-lg flex-shrink-0">
-                            ${player.rank}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="text-white text-sm font-semibold truncate mb-1">${shortenAddress(player.address)}</div>
-                            <div class="flex gap-1 items-center">
-                                ${player.team && player.team.length > 0 ? player.team.slice(0, 6).map(nft => `
-                                    <div class="relative w-6 h-6">
-                                        <img src="${nft.imagePath}" alt="${nft.name}" class="w-6 h-6 rounded object-cover border border-white/20" />
-                                        <span class="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold border border-gray-900">${nft.level}</span>
+                if (leaderboardEl) {
+                    if (topPlayers.length === 0) {
+                        leaderboardEl.innerHTML = '<div class="text-center text-gray-500 py-8">暂无玩家数据</div>';
+                    } else {
+                        leaderboardEl.innerHTML = topPlayers.map((player, index) => {
+                            const rankBadgeColor = player.rank === 1 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' : 
+                                                   player.rank === 2 ? 'bg-gradient-to-br from-gray-300 to-gray-500' :
+                                                   player.rank === 3 ? 'bg-gradient-to-br from-amber-600 to-amber-800' :
+                                                   'bg-gray-700';
+                            const rankTextColor = player.rank <= 3 ? 'text-yellow-400' : 'text-gray-400';
+                            const rewardAmount = parseFloat(rewards[index] || '0');
+                            return `
+                            <div class="p-3 bg-white/5 hover:bg-white/10 rounded-xl cursor-pointer transition-all duration-200 flex items-center group border border-transparent hover:border-blue-500/30" 
+                                 onclick="selectOpponent(${index})">
+                                <div class="${rankBadgeColor} w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3 shadow-lg flex-shrink-0">
+                                    ${player.rank}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-white text-sm font-semibold truncate mb-1">${shortenAddress(player.address)}</div>
+                                    <div class="flex gap-1 items-center">
+                                        ${player.team && player.team.length > 0 ? player.team.slice(0, 6).map(nft => `
+                                            <div class="relative w-6 h-6">
+                                                <img src="${nft.imagePath}" alt="${nft.name}" class="w-6 h-6 rounded object-cover border border-white/20" />
+                                                <span class="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold border border-gray-900">${nft.level}</span>
+                                            </div>
+                                        `).join('') : '<span class="text-gray-500 text-xs">暂无战队</span>'}
                                     </div>
-                                `).join('') : '<span class="text-gray-500 text-xs">暂无战队</span>'}
+                                </div>
+                                <div class="text-right ml-3 flex-shrink-0">
+                                    <div class="text-yellow-400 text-sm font-bold">${rewardAmount.toFixed(2)} <span class="text-xs text-yellow-600">${rewardTypeLabel}</span></div>
+                                    <div class="text-white/80 text-xs mt-0.5 flex items-center justify-end">
+                                        <span class="${rankTextColor} font-semibold">${player.points}</span>
+                                        <span class="text-gray-500 ml-1">积分</span>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="text-right ml-3 flex-shrink-0">
-                            <div class="text-yellow-400 text-sm font-bold">${parseFloat(rewards[index]).toFixed(2)} <span class="text-xs text-yellow-600">${rewardTypeLabel}</span></div>
-                            <div class="text-white/80 text-xs mt-0.5 flex items-center justify-end">
-                                <span class="${rankTextColor} font-semibold">${player.points}</span>
-                                <span class="text-gray-500 ml-1">积分</span>
-                            </div>
-                        </div>
-                    </div>
-                `}).join('');
+                        `}).join('');
+                    }
+                }
             } catch (error) {
                 console.error('加载排行榜失败:', error);
+                const leaderboardEl = document.getElementById('leaderboard');
+                if (leaderboardEl) {
+                    leaderboardEl.innerHTML = '<div class="text-center text-gray-500 py-8">加载失败，请稍后重试</div>';
+                }
             }
         }
 
