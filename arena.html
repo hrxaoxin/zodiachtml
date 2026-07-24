@@ -1023,10 +1023,17 @@
                             console.warn(`Contract ${contractName} not available, skipping event ${eventName}`);
                             return;
                         }
-                        const unsub = await ZODIAC_WEB3.listenToEvent(contractName, eventName, callback);
-                        if (unsub) {
-                            arenaUnsubscribeFunctions.push(unsub);
+                        const eventEmitter = contract.events[eventName];
+                        if (!eventEmitter) {
+                            console.warn(`Event ${eventName} not found on contract ${contractName}`);
+                            return;
                         }
+                        const subscription = eventEmitter({}, (error, event) => {
+                            if (!error && event) {
+                                callback(event);
+                            }
+                        });
+                        arenaUnsubscribeFunctions.push(() => subscription.unsubscribe());
                     } catch (e) {
                         console.warn(`Failed to listen to ${contractName}.${eventName}:`, e.message);
                     }
@@ -1132,6 +1139,10 @@
                     document.getElementById('walletAddress').classList.remove('hidden');
                     document.getElementById('connectionStatus').textContent = '已连接';
                     document.getElementById('connectWalletBtn').textContent = '已连接';
+                    
+                    if (window.ZODIAC_WEB3 && typeof window.ZODIAC_WEB3.initWeb3 === 'function') {
+                        await window.ZODIAC_WEB3.initWeb3();
+                    }
                     
                     await initContracts();
                     await setupEventListeners();
@@ -2194,26 +2205,30 @@
                             try {
                                 userRank = await arenaRankingQueryContract.methods.getPlayerRank(accounts[0]).call();
                             } catch (e2) {
-                                console.warn('获取玩家排名失败:', e2);
+                                console.warn('获取玩家排名失败:', e2.message);
                             }
                         }
                     } else if (window.ZODIAC_WEB3) {
-                        const rankingContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery');
-                        if (rankingContract) {
-                            arenaRankingQueryContract = rankingContract;
-                            try {
-                                userRank = await arenaRankingQueryContract.methods.getPlayerRank(currentSeasonId, accounts[0]).call();
-                            } catch (e1) {
+                        try {
+                            const rankingContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery');
+                            if (rankingContract) {
+                                arenaRankingQueryContract = rankingContract;
                                 try {
-                                    userRank = await arenaRankingQueryContract.methods.getPlayerRank(accounts[0]).call();
-                                } catch (e2) {
-                                    console.warn('获取玩家排名失败:', e2);
+                                    userRank = await arenaRankingQueryContract.methods.getPlayerRank(currentSeasonId, accounts[0]).call();
+                                } catch (e1) {
+                                    try {
+                                        userRank = await arenaRankingQueryContract.methods.getPlayerRank(accounts[0]).call();
+                                    } catch (e2) {
+                                        console.warn('获取玩家排名失败:', e2.message);
+                                    }
                                 }
                             }
+                        } catch (e) {
+                            console.warn('获取arenaRankingQuery合约失败:', e.message);
                         }
                     }
                 } catch (e) {
-                    console.warn('获取玩家排名失败:', e);
+                    console.warn('获取玩家排名失败:', e.message);
                 }
                 
                 const userRankNum = parseInt(userRank) || 0;
@@ -2495,12 +2510,12 @@
                                 try {
                                     claimed = await arenaRankingQueryContract.methods.seasonRewardsClaimed(accounts[0]).call();
                                 } catch (e2) {
-                                    console.warn('检查奖励领取状态失败:', e2);
+                                    console.warn('检查奖励领取状态失败:', e2.message);
                                 }
                             }
                         }
                     } catch (e) {
-                        console.warn('检查奖励领取状态失败:', e);
+                        console.warn('检查奖励领取状态失败:', e.message);
                     }
 
                     if (claimed) {
@@ -2621,8 +2636,8 @@
                     try {
                         const currentSeasonId = await arenaRankingQueryContract.methods.currentSeasonId().call();
                         paginationResult = await arenaRankingQueryContract.methods.getLeaderboardByPage(currentSeasonId, page, size).call();
-                        totalPages = parseInt(paginationResult.totalPages) || 1;
-                        totalPlayers = parseInt(paginationResult.totalPlayers) || 0;
+                        totalPages = parseInt(paginationResult.totalPages) || parseInt(paginationResult[0]) || 1;
+                        totalPlayers = parseInt(paginationResult.totalPlayers) || parseInt(paginationResult[1]) || 0;
                     } catch (e) {
                         console.log('获取排行榜失败，使用模拟数据:', e);
                         useMockData = true;
@@ -2667,14 +2682,17 @@
                     }
                 }
                 
-                if (!useMockData && paginationResult && paginationResult.entries && paginationResult.entries.length > 0) {
-                    const entries = paginationResult.entries;
-                    
+                const entries = Array.isArray(paginationResult) 
+                    ? (paginationResult[2] || []) 
+                    : (paginationResult ? (paginationResult.entries || []) : []);
+                
+                
+                if (!useMockData && entries.length > 0) {
                     const playerPromises = entries.map(async (entry, i) => {
-                        const address = entry.playerAddress;
-                        const points = parseInt(entry.points || '0');
-                        const wins = parseInt(entry.wins || '0');
-                        const losses = parseInt(entry.losses || '0');
+                        const address = entry.playerAddress || entry[0] || '';
+                        const points = parseInt(entry.points || entry[1] || '0');
+                        const wins = parseInt(entry.wins || entry[2] || '0');
+                        const losses = parseInt(entry.losses || entry[3] || '0');
                         const rank = startRank + i;
                         
                         let team = [];
