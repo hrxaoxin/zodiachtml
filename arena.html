@@ -12,11 +12,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/web3@1.7.3/dist/web3.min.js"></script>
-    <script src="config.js?v=4"></script>
-    <script src="components.js?v=4"></script>
-    <script src="utils.js?v=4"></script>
-    <script src="web3-utils.js?v=4"></script>
-    <script src="ui-utils.js?v=4"></script>
+    <script src="config.js?v=5"></script>
+    <script src="components.js?v=5"></script>
+    <script src="utils.js?v=5"></script>
+    <script src="web3-utils.js?v=5"></script>
+    <script src="ui-utils.js?v=5"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap');
@@ -1253,6 +1253,10 @@
         }
 
         async function initContracts(forceReadOnly = false) {
+            console.log('arena.html initContracts version: 2024-fix-v5');
+            
+            web3 = window.web3 || web3;
+            
             const config = ZODIAC_CONFIG;
             const requireAccount = !forceReadOnly && accounts.length > 0;
             

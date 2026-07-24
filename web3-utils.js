@@ -3,7 +3,8 @@
  * 提供钱包连接、合约实例获取、事件监听、Gas 估算、交易跟踪等功能
  */
 window.ZODIAC_WEB3 = (function() {
-    console.log('[ZODIAC_WEB3] web3-utils.js v4 loaded at ' + new Date().toISOString());
+    const VERSION = 'v5-' + Date.now();
+    console.log('[ZODIAC_WEB3] web3-utils.js ' + VERSION + ' loaded at ' + new Date().toISOString());
     
     const config = window.ZODIAC_CONFIG || {};
     const NETWORK_ID = config.NETWORK_ID || 56;
