@@ -1253,6 +1253,25 @@
             const config = ZODIAC_CONFIG;
             const requireAccount = !forceReadOnly && accounts.length > 0;
             
+            console.log('=== DIRECT AUTHORIZER TEST ===');
+            try {
+                const testWeb3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
+                const authorizerAddr = '0x11Feea2F23362478a8850c9f0daA746D057D2928';
+                const minABI = [
+                    {"inputs":[{"internalType":"string","name":"name","type":"string"}],"name":"getAddressByName","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}
+                ];
+                const auth = new testWeb3.eth.Contract(minABI, authorizerAddr);
+                const battleAddr = await auth.methods.getAddressByName('battle').call();
+                const rankingAddr = await auth.methods.getAddressByName('arenaRankingQuery').call();
+                const rewardAddr = await auth.methods.getAddressByName('arenaRewardLP').call();
+                console.log('Direct authorizer test - battle address:', battleAddr);
+                console.log('Direct authorizer test - arenaRankingQuery address:', rankingAddr);
+                console.log('Direct authorizer test - arenaRewardLP address:', rewardAddr);
+            } catch (e) {
+                console.error('Direct authorizer test FAILED:', e.message);
+            }
+            console.log('==============================');
+            
             if (!web3) {
                 try {
                     web3 = window.ZODIAC_WEB3 ? window.ZODIAC_WEB3.getWeb3() : null;
@@ -1269,15 +1288,32 @@
             }
             
             try {
+                console.log('=== Contract Address Diagnostic ===');
+                console.log('authorizer address from config:', CONTRACT_ADDRESSES.authorizer);
+                
+                const authorizerContract = await window.ZODIAC_WEB3.getContract('authorizer', false);
+                console.log('authorizer contract:', authorizerContract ? 'OK' : 'null');
+                
+                if (authorizerContract && authorizerContract.options && authorizerContract.options.address) {
+                    console.log('authorizer contract address:', authorizerContract.options.address);
+                }
+                
                 const testAddr1 = await window.ZODIAC_WEB3.getContractAddress('arenaRankingQuery', false);
                 const testAddr2 = await window.ZODIAC_WEB3.getContractAddress('arenaRewardLP', false);
-                console.log('=== Contract Address Diagnostic ===');
+                const testAddr3 = await window.ZODIAC_WEB3.getContractAddress('arenaBattle', false);
+                const testAddr4 = await window.ZODIAC_WEB3.getContractAddress('battle', false);
+                const testAddr5 = await window.ZODIAC_WEB3.getContractAddress('battleSkillData', false);
+                
                 console.log('arenaRankingQuery address:', testAddr1);
                 console.log('arenaRewardLP address:', testAddr2);
+                console.log('arenaBattle address:', testAddr3);
+                console.log('battle address:', testAddr4);
+                console.log('battleSkillData address:', testAddr5);
                 console.log('web3 instance:', web3 ? 'OK' : 'null');
                 console.log('==================================');
             } catch (e) {
                 console.error('Contract address diagnostic failed:', e.message);
+                console.error('Error stack:', e.stack);
             }
             
             try {
@@ -1364,42 +1400,43 @@
                 }
             } catch (e) { console.warn('Failed to init arenaPlayerContract:', e.message); }
             
+            try {
+                if (config.ABIS.battleABI) {
+                    let battleAddress = await window.ZODIAC_WEB3.getContractAddress('battle', false);
+                    if (!battleAddress) {
+                        try {
+                            const tempContract = await window.ZODIAC_WEB3.getContract('battle', false);
+                            if (tempContract && tempContract.options && tempContract.options.address) {
+                                battleAddress = tempContract.options.address;
+                            }
+                        } catch (e) { console.warn('Failed to get battle address via getContract:', e.message); }
+                    }
+                    if (battleAddress) {
+                        battleContract = new web3.eth.Contract(config.ABIS.battleABI, battleAddress);
+                        console.log('battleContract initialized:', battleAddress);
+                    }
+                }
+            } catch (e) { console.warn('Failed to init battleContract via ABI:', e.message); }
+            
+            try {
+                if (config.ABIS.battleSkillDataABI) {
+                    let battleSkillDataAddress = await window.ZODIAC_WEB3.getContractAddress('battleSkillData', false);
+                    if (!battleSkillDataAddress) {
+                        try {
+                            const tempContract = await window.ZODIAC_WEB3.getContract('battleSkillData', false);
+                            if (tempContract && tempContract.options && tempContract.options.address) {
+                                battleSkillDataAddress = tempContract.options.address;
+                            }
+                        } catch (e) { console.warn('Failed to get battleSkillData address via getContract:', e.message); }
+                    }
+                    if (battleSkillDataAddress) {
+                        battleSkillDataContract = new web3.eth.Contract(config.ABIS.battleSkillDataABI, battleSkillDataAddress);
+                        console.log('battleSkillDataContract initialized:', battleSkillDataAddress);
+                    }
+                }
+            } catch (e) { console.warn('Failed to init battleSkillDataContract via ABI:', e.message); }
+            
             if (accounts.length > 0) {
-                try {
-                    if (config.ABIS.battleABI) {
-                        let battleAddress = await window.ZODIAC_WEB3.getContractAddress('battle');
-                        if (!battleAddress) {
-                            try {
-                                const tempContract = await window.ZODIAC_WEB3.getContract('battle');
-                                if (tempContract && tempContract.options && tempContract.options.address) {
-                                    battleAddress = tempContract.options.address;
-                                }
-                            } catch (e) { console.warn('Failed to get battle address via getContract:', e.message); }
-                        }
-                        if (battleAddress) {
-                            battleContract = new web3.eth.Contract(config.ABIS.battleABI, battleAddress);
-                            console.log('battleContract initialized:', battleAddress);
-                        }
-                    }
-                } catch (e) { console.warn('Failed to init battleContract via ABI:', e.message); }
-                
-                try {
-                    if (config.ABIS.battleSkillDataABI) {
-                        let battleSkillDataAddress = await window.ZODIAC_WEB3.getContractAddress('battleSkillData');
-                        if (!battleSkillDataAddress) {
-                            try {
-                                const tempContract = await window.ZODIAC_WEB3.getContract('battleSkillData');
-                                if (tempContract && tempContract.options && tempContract.options.address) {
-                                    battleSkillDataAddress = tempContract.options.address;
-                                }
-                            } catch (e) { console.warn('Failed to get battleSkillData address via getContract:', e.message); }
-                        }
-                        if (battleSkillDataAddress) {
-                            battleSkillDataContract = new web3.eth.Contract(config.ABIS.battleSkillDataABI, battleSkillDataAddress);
-                            console.log('battleSkillDataContract initialized:', battleSkillDataAddress);
-                        }
-                    }
-                } catch (e) { console.warn('Failed to init battleSkillDataContract via ABI:', e.message); }
                 
                 try {
                     nftContract = await window.ZODIAC_WEB3.getContract('nftMint');
@@ -1467,7 +1504,7 @@
                 try {
                     if (!battleContract && window.ZODIAC_WEB3) {
                         try {
-                            battleContract = await window.ZODIAC_WEB3.getContract('battle');
+                            battleContract = await window.ZODIAC_WEB3.getContract('battle', false);
                         } catch (e) {
                             console.warn('Failed to get battleContract on-demand:', e.message);
                         }
@@ -1530,7 +1567,7 @@
                             try {
                                 if (!battleSkillDataContract && window.ZODIAC_WEB3) {
                                     try {
-                                        battleSkillDataContract = await window.ZODIAC_WEB3.getContract('battleSkillData');
+                                        battleSkillDataContract = await window.ZODIAC_WEB3.getContract('battleSkillData', false);
                                     } catch (e) {
                                         console.warn('Failed to get battleSkillDataContract on-demand:', e.message);
                                     }
@@ -2156,6 +2193,13 @@
                                 skill = skillCache[tokenType];
                             } else {
                                 try {
+                                    if (!battleSkillDataContract && window.ZODIAC_WEB3) {
+                                        try {
+                                            battleSkillDataContract = await window.ZODIAC_WEB3.getContract('battleSkillData', false);
+                                        } catch (e) {
+                                            console.warn('Failed to get battleSkillDataContract on-demand:', e.message);
+                                        }
+                                    }
                                     if (!battleSkillDataContract) {
                                         console.warn('battleSkillDataContract not initialized, using local skill data');
                                         throw new Error('Contract not initialized');
@@ -2305,7 +2349,7 @@
                         );
                     } else if (window.ZODIAC_WEB3) {
                         const rankingContract = await withTimeout(
-                            window.ZODIAC_WEB3.getContract('arenaRankingQuery'),
+                            window.ZODIAC_WEB3.getContract('arenaRankingQuery', false),
                             5000,
                             null
                         );
@@ -2353,7 +2397,7 @@
                 } else if (window.ZODIAC_WEB3) {
                     try {
                         const battleContract = await withTimeout(
-                            window.ZODIAC_WEB3.getContract('arenaBattle'),
+                            window.ZODIAC_WEB3.getContract('arenaBattle', false),
                             5000,
                             null
                         );
@@ -2406,7 +2450,7 @@
                     } else if (window.ZODIAC_WEB3) {
                         try {
                             const rankingContract = await withTimeout(
-                                window.ZODIAC_WEB3.getContract('arenaRankingQuery'),
+                                window.ZODIAC_WEB3.getContract('arenaRankingQuery', false),
                                 5000,
                                 null
                             );
@@ -3140,7 +3184,7 @@
                 
                 try {
                     if (window.ZODIAC_WEB3 && web3) {
-                        const arenaRewardLPContract = await window.ZODIAC_WEB3.getContract('arenaRewardLP');
+                        const arenaRewardLPContract = await window.ZODIAC_WEB3.getContract('arenaRewardLP', false);
                         if (arenaRewardLPContract) {
                             const rewardType = await arenaRewardLPContract.methods.rewardType().call().catch(() => '2');
                             let rewardPoolBalance = '0';

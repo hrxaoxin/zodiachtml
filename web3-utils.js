@@ -896,8 +896,12 @@ window.ZODIAC_WEB3 = (function() {
     }
 
     async function listenToEvent(contractName, eventName, callback, options) {
-        if (!web3 || !account) {
-            console.warn('[ZODIAC_WEB3] Web3 not initialized or account not connected');
+        if (!web3) {
+            console.warn('[ZODIAC_WEB3] Web3 not initialized');
+            return;
+        }
+        if (!account) {
+            console.debug('[ZODIAC_WEB3] Account not connected, skipping event listener');
             return;
         }
         
@@ -2499,8 +2503,8 @@ window.ZODIAC_WEB3 = (function() {
     // --- NFT Info Methods ---
     async function getNFTFullInfo(tokenId) {
         try {
-            const nftDataContract = await getContract('nftData');
-            const nftMintContract = await getContract('nftMint');
+            const nftDataContract = await getContract('nftData', false);
+            const nftMintContract = await getContract('nftMint', false);
             const [tokenType, level, growth, attrType, skillType] = await Promise.all([
                 nftDataContract.methods.tokenType(tokenId).call(),
                 nftDataContract.methods.tokenLevel(tokenId).call(),
