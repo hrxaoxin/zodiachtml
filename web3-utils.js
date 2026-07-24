@@ -291,48 +291,52 @@ window.ZODIAC_WEB3 = (function() {
         'authorizer': ABIS.authorizerABI
     };
 
-    async function getAuthorizerContract(requireAccount = false) {
-        if (contracts.authorizer) return contracts.authorizer;
+    function ensureWeb3(requireAccount = false) {
+        if (web3) return web3;
         
         const RPC_URL = 'https://bsc-dataseed1.binance.org/';
         
-        if (!web3) {
-            if (typeof window.ethereum !== 'undefined') {
-                try {
-                    web3 = new window.Web3(window.ethereum);
-                    console.log('[ZODIAC_WEB3] Created web3 instance from MetaMask');
-                } catch (e) {
-                    console.warn('[ZODIAC_WEB3] Failed to create web3 from MetaMask:', e);
-                    if (!requireAccount) {
-                        try {
-                            web3 = new window.Web3(new window.Web3.providers.HttpProvider(RPC_URL));
-                            console.log('[ZODIAC_WEB3] Created web3 instance from public RPC for read-only access');
-                        } catch (e2) {
-                            console.warn('[ZODIAC_WEB3] Failed to create web3 from public RPC:', e2);
-                            return null;
-                        }
-                    } else {
-                        return null;
-                    }
-                }
-            } else if (!requireAccount) {
-                try {
-                    web3 = new window.Web3(new window.Web3.providers.HttpProvider(RPC_URL));
-                    console.log('[ZODIAC_WEB3] Created web3 instance from public RPC for read-only access');
-                } catch (e) {
-                    console.warn('[ZODIAC_WEB3] Failed to create web3 from public RPC:', e);
-                    return null;
-                }
-            } else {
-                console.warn('[ZODIAC_WEB3] web3 is not initialized, cannot create authorizer contract');
-                return null;
+        if (typeof window.ethereum !== 'undefined') {
+            try {
+                web3 = new window.Web3(window.ethereum);
+                console.log('[ZODIAC_WEB3] Created web3 instance from MetaMask');
+                return web3;
+            } catch (e) {
+                console.warn('[ZODIAC_WEB3] Failed to create web3 from MetaMask:', e);
             }
         }
         
+        if (!requireAccount) {
+            try {
+                web3 = new window.Web3(new window.Web3.providers.HttpProvider(RPC_URL));
+                console.log('[ZODIAC_WEB3] Created web3 instance from public RPC for read-only access');
+                return web3;
+            } catch (e) {
+                console.error('[ZODIAC_WEB3] Failed to create web3 from public RPC:', e);
+            }
+        }
+        
+        return null;
+    }
+
+    async function getAuthorizerContract(requireAccount = false) {
+        if (contracts.authorizer) return contracts.authorizer;
+        
+        const web3Instance = ensureWeb3(requireAccount);
+        if (!web3Instance) {
+            console.warn('[ZODIAC_WEB3] Cannot create authorizer contract - web3 not available');
+            return null;
+        }
+        
         const authorizerAddr = CONTRACT_ADDRESSES.authorizer;
-        if (!authorizerAddr || authorizerAddr === ZERO_ADDRESS || !ABIS.authorizerABI) return null;
+        if (!authorizerAddr || authorizerAddr === ZERO_ADDRESS || !ABIS.authorizerABI) {
+            console.warn('[ZODIAC_WEB3] Authorizer contract not configured');
+            return null;
+        }
+        
         try {
-            contracts.authorizer = new web3.eth.Contract(ABIS.authorizerABI, authorizerAddr);
+            contracts.authorizer = new web3Instance.eth.Contract(ABIS.authorizerABI, authorizerAddr);
+            console.log('[ZODIAC_WEB3] Authorizer contract initialized:', authorizerAddr);
             return contracts.authorizer;
         } catch (e) {
             console.warn('[ZODIAC_WEB3] Failed to init authorizer:', e);
@@ -347,42 +351,15 @@ window.ZODIAC_WEB3 = (function() {
             return addressCache[cacheKey];
         }
 
-        const RPC_URL = 'https://bsc-dataseed1.binance.org/';
+        const fallbackAddress = CONTRACT_ADDRESSES[name] || CONTRACT_ADDRESSES[addressNameMap[name]] || null;
+        if (fallbackAddress && fallbackAddress !== ZERO_ADDRESS) {
+            addressCache[cacheKey] = fallbackAddress;
+            return fallbackAddress;
+        }
 
-        if (!web3) {
-            const fallbackAddress = CONTRACT_ADDRESSES[name] || CONTRACT_ADDRESSES[addressNameMap[name]] || null;
-            if (fallbackAddress && fallbackAddress !== ZERO_ADDRESS) {
-                addressCache[cacheKey] = fallbackAddress;
-                return fallbackAddress;
-            }
-            
-            if (requireAccount) {
-                return null;
-            }
-            
-            if (typeof window.ethereum !== 'undefined') {
-                try {
-                    web3 = new window.Web3(window.ethereum);
-                    console.log('[ZODIAC_WEB3] Created web3 instance for read-only access');
-                } catch (e) {
-                    console.warn('[ZODIAC_WEB3] Failed to create web3 from MetaMask:', e);
-                    try {
-                        web3 = new window.Web3(new window.Web3.providers.HttpProvider(RPC_URL));
-                        console.log('[ZODIAC_WEB3] Created web3 instance from public RPC for read-only access');
-                    } catch (e2) {
-                        console.warn('[ZODIAC_WEB3] Failed to create web3 from public RPC:', e2);
-                        return null;
-                    }
-                }
-            } else {
-                try {
-                    web3 = new window.Web3(new window.Web3.providers.HttpProvider(RPC_URL));
-                    console.log('[ZODIAC_WEB3] Created web3 instance from public RPC for read-only access');
-                } catch (e) {
-                    console.warn('[ZODIAC_WEB3] Failed to create web3 from public RPC:', e);
-                    return null;
-                }
-            }
+        const web3Instance = ensureWeb3(requireAccount);
+        if (!web3Instance) {
+            return null;
         }
 
         try {
@@ -399,11 +376,6 @@ window.ZODIAC_WEB3 = (function() {
             console.warn(`[ZODIAC_WEB3] Failed to resolve contract address from authorizer for ${name}:`, e);
         }
 
-        const fallbackAddress = CONTRACT_ADDRESSES[name] || CONTRACT_ADDRESSES[addressNameMap[name]] || null;
-        if (fallbackAddress && fallbackAddress !== ZERO_ADDRESS) {
-            addressCache[cacheKey] = fallbackAddress;
-            return fallbackAddress;
-        }
         return null;
     }
 
@@ -447,42 +419,13 @@ window.ZODIAC_WEB3 = (function() {
     async function getContract(name, requireAccount = false) {
         if (contracts[name]) return contracts[name];
         
-        const RPC_URL = 'https://bsc-dataseed1.binance.org/';
-        
-        if (!web3) {
-            if (typeof window.ethereum !== 'undefined') {
-                try {
-                    web3 = new window.Web3(window.ethereum);
-                    console.log('[ZODIAC_WEB3] Created web3 instance from MetaMask');
-                } catch (e) {
-                    console.warn('[ZODIAC_WEB3] Failed to create web3 from MetaMask:', e);
-                    if (!requireAccount) {
-                        try {
-                            web3 = new window.Web3(new window.Web3.providers.HttpProvider(RPC_URL));
-                            console.log('[ZODIAC_WEB3] Created web3 instance from public RPC for read-only access');
-                        } catch (e2) {
-                            console.error('[ZODIAC_WEB3] Failed to create web3 from public RPC:', e2);
-                            if (requireAccount) {
-                                throw new Error('[ZODIAC_WEB3] Failed to create web3 instance');
-                            }
-                            return null;
-                        }
-                    } else {
-                        throw new Error('[ZODIAC_WEB3] MetaMask not detected');
-                    }
-                }
-            } else if (!requireAccount) {
-                try {
-                    web3 = new window.Web3(new window.Web3.providers.HttpProvider(RPC_URL));
-                    console.log('[ZODIAC_WEB3] Created web3 instance from public RPC for read-only access');
-                } catch (e) {
-                    console.error('[ZODIAC_WEB3] Failed to create web3 from public RPC:', e);
-                    return null;
-                }
-            } else {
-                console.error('[ZODIAC_WEB3] MetaMask not detected');
-                throw new Error('[ZODIAC_WEB3] MetaMask not detected');
+        const web3Instance = ensureWeb3(requireAccount);
+        if (!web3Instance) {
+            if (requireAccount) {
+                throw new Error('[ZODIAC_WEB3] Web3 not initialized, cannot get contract');
             }
+            console.warn(`[ZODIAC_WEB3] Cannot get contract ${name} - web3 not available`);
+            return null;
         }
         
         if (requireAccount && !account) {
@@ -553,7 +496,7 @@ window.ZODIAC_WEB3 = (function() {
                 console.warn(`[ZODIAC_WEB3] Token address not found in authorizer`);
                 return null;
             }
-            contracts[name] = new web3.eth.Contract(abi, tokenAddr);
+            contracts[name] = new web3Instance.eth.Contract(abi, tokenAddr);
             return contracts[name];
         }
         
@@ -573,7 +516,8 @@ window.ZODIAC_WEB3 = (function() {
         }
         
         try {
-            contracts[name] = new web3.eth.Contract(abi, addr);
+            contracts[name] = new web3Instance.eth.Contract(abi, addr);
+            console.log(`[ZODIAC_WEB3] Contract ${name} initialized:`, addr);
             return contracts[name];
         } catch (e) {
             console.error(`[ZODIAC_WEB3] Failed to create contract instance for ${name}:`, e);

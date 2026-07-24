@@ -2328,18 +2328,23 @@
                     if (myLossesEl) myLossesEl.textContent = '-';
                     if (myWinRateEl) myWinRateEl.textContent = '-';
                     if (myRankEl) myRankEl.textContent = '-';
-                    
-                    try {
-                        if (!arenaRankingQueryContract && window.ZODIAC_WEB3) {
-                            arenaRankingQueryContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery', false);
-                        }
-                        if (!arenaBattleContract && window.ZODIAC_WEB3) {
-                            arenaBattleContract = await window.ZODIAC_WEB3.getContract('arenaBattle', false);
-                        }
-                    } catch (e) {
-                        console.warn('初始化合约失败（loadMyStats）:', e.message);
-                    }
                     return;
+                }
+                
+                if (!web3) {
+                    web3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
+                }
+                
+                if (!arenaRankingQueryContract && window.ZODIAC_WEB3) {
+                    try {
+                        arenaRankingQueryContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery', false);
+                    } catch (e) { console.warn('Failed to get arenaRankingQuery:', e.message); }
+                }
+                
+                if (!arenaBattleContract && window.ZODIAC_WEB3) {
+                    try {
+                        arenaBattleContract = await window.ZODIAC_WEB3.getContract('arenaBattle', false);
+                    } catch (e) { console.warn('Failed to get arenaBattle:', e.message); }
                 }
                 
                 let currentSeasonId = 1;
@@ -2350,20 +2355,6 @@
                             5000,
                             1
                         );
-                    } else if (window.ZODIAC_WEB3) {
-                        const rankingContract = await withTimeout(
-                            window.ZODIAC_WEB3.getContract('arenaRankingQuery', false),
-                            5000,
-                            null
-                        );
-                        if (rankingContract) {
-                            arenaRankingQueryContract = rankingContract;
-                            currentSeasonId = await withTimeout(
-                                arenaRankingQueryContract.methods.currentSeasonId().call(),
-                                5000,
-                                1
-                            );
-                        }
                     }
                 } catch (e) {
                     console.warn('获取当前赛季ID失败，使用默认值:', e);
@@ -2397,27 +2388,6 @@
                             console.warn('从arenaBattleContract获取玩家数据失败:', e2);
                         }
                     }
-                } else if (window.ZODIAC_WEB3) {
-                    try {
-                        const battleContract = await withTimeout(
-                            window.ZODIAC_WEB3.getContract('arenaBattle', false),
-                            5000,
-                            null
-                        );
-                        if (battleContract) {
-                            arenaBattleContract = battleContract;
-                            const playerRecord = await withTimeout(
-                                arenaBattleContract.methods.players(currentSeasonId, accounts[0]).call(),
-                                5000,
-                                { score: '0', wins: '0', losses: '0' }
-                            );
-                            points = playerRecord.score || playerRecord[0] || '0';
-                            wins = playerRecord.wins || playerRecord[1] || '0';
-                            losses = playerRecord.losses || playerRecord[2] || '0';
-                        }
-                    } catch (e) {
-                        console.warn('从ZODIAC_WEB3获取玩家数据失败:', e);
-                    }
                 }
                 
                 if (myPointsEl) myPointsEl.textContent = points;
@@ -2431,74 +2401,24 @@
                 if (myWinRateEl) myWinRateEl.textContent = winRate;
 
                 let userRank = '0';
-                try {
-                    if (!arenaRankingQueryContract && window.ZODIAC_WEB3) {
-                        arenaRankingQueryContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery', false);
-                    }
-                    
-                    if (arenaRankingQueryContract) {
+                if (arenaRankingQueryContract) {
+                    try {
+                        userRank = await withTimeout(
+                            arenaRankingQueryContract.methods.getPlayerRank(currentSeasonId, accounts[0]).call(),
+                            5000,
+                            '0'
+                        );
+                    } catch (e1) {
                         try {
                             userRank = await withTimeout(
-                                arenaRankingQueryContract.methods.getPlayerRank(currentSeasonId, accounts[0]).call(),
+                                arenaRankingQueryContract.methods.getPlayerRank(accounts[0]).call(),
                                 5000,
                                 '0'
                             );
-                        } catch (e1) {
-                            try {
-                                userRank = await withTimeout(
-                                    arenaRankingQueryContract.methods.getPlayerRank(accounts[0]).call(),
-                                    5000,
-                                    '0'
-                                );
-                            } catch (e2) {
-                                console.warn('获取玩家排名失败:', e2.message);
-                            }
-                        }
-                        
-                        if (!userRank || userRank === '0' || userRank === '0x0') {
-                            try {
-                                userRank = await withTimeout(
-                                    arenaRankingQueryContract.methods.getPlayerRank(accounts[0]).call(),
-                                    5000,
-                                    '0'
-                                );
-                            } catch (e3) {
-                                console.warn('备用获取玩家排名失败:', e3.message);
-                            }
-                        }
-                    } else if (window.ZODIAC_WEB3) {
-                        try {
-                            const rankingContract = await withTimeout(
-                                window.ZODIAC_WEB3.getContract('arenaRankingQuery', false),
-                                5000,
-                                null
-                            );
-                            if (rankingContract) {
-                                arenaRankingQueryContract = rankingContract;
-                                try {
-                                    userRank = await withTimeout(
-                                        arenaRankingQueryContract.methods.getPlayerRank(currentSeasonId, accounts[0]).call(),
-                                        5000,
-                                        '0'
-                                    );
-                                } catch (e1) {
-                                    try {
-                                        userRank = await withTimeout(
-                                            arenaRankingQueryContract.methods.getPlayerRank(accounts[0]).call(),
-                                            5000,
-                                            '0'
-                                        );
-                                    } catch (e2) {
-                                        console.warn('获取玩家排名失败:', e2.message);
-                                    }
-                                }
-                            }
-                        } catch (e) {
-                            console.warn('获取arenaRankingQuery合约失败:', e.message);
+                        } catch (e2) {
+                            console.warn('获取玩家排名失败:', e2.message);
                         }
                     }
-                } catch (e) {
-                    console.warn('获取玩家排名失败:', e.message);
                 }
                 
                 const userRankNum = parseInt(userRank) || 0;
@@ -2557,14 +2477,7 @@
             
             try {
                 if (!web3) {
-                    try {
-                        web3 = window.ZODIAC_WEB3 ? window.ZODIAC_WEB3.getWeb3() : null;
-                        if (!web3) {
-                            web3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
-                        }
-                    } catch (e) {
-                        console.warn('Failed to create web3 instance for loadRewardPool:', e.message);
-                    }
+                    web3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
                 }
                 
                 if (!arenaRewardLPContract) {
@@ -2679,6 +2592,16 @@
                         console.warn('转换奖励池金额失败:', e);
                         displayAmount = '--';
                     }
+                } else if (rewardPoolWei && !web3) {
+                    try {
+                        const tempWeb3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
+                        const rewardPoolEth = tempWeb3.utils.fromWei(rewardPoolWei, 'ether');
+                        const amount = parseFloat(rewardPoolEth);
+                        displayAmount = amount > 0 ? amount.toFixed(4) : '--';
+                    } catch (e) {
+                        console.warn('转换奖励池金额失败:', e);
+                        displayAmount = '--';
+                    }
                 }
                 
                 const rewardUnit = getRewardUnit(rewardType);
@@ -2731,14 +2654,7 @@
             
             try {
                 if (!web3) {
-                    try {
-                        web3 = window.ZODIAC_WEB3 ? window.ZODIAC_WEB3.getWeb3() : null;
-                        if (!web3) {
-                            web3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
-                        }
-                    } catch (e) {
-                        console.warn('Failed to create web3 instance for loadRewards:', e.message);
-                    }
+                    web3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
                 }
 
                 if (!arenaRankingQueryContract && window.ZODIAC_WEB3) {
@@ -2759,26 +2675,21 @@
                 }
 
                 let currentSeasonId = 1;
-                try {
-                    if (!arenaRankingQueryContract) {
-                        try {
-                            arenaRankingQueryContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery', false);
-                        } catch (e) { console.warn('Failed to get arenaRankingQuery:', e.message); }
-                    }
-                    if (arenaRankingQueryContract) {
+                if (arenaRankingQueryContract) {
+                    try {
                         currentSeasonId = await withTimeout(
                             arenaRankingQueryContract.methods.currentSeasonId().call(),
                             5000,
                             1
                         );
+                    } catch (e) {
+                        console.warn('获取当前赛季ID失败:', e);
                     }
-                } catch (e) {
-                    console.warn('获取当前赛季ID失败:', e);
                 }
 
                 let seasonIsActive = true;
-                try {
-                    if (arenaRankingQueryContract) {
+                if (arenaRankingQueryContract) {
+                    try {
                         const seasonInfo = await withTimeout(
                             arenaRankingQueryContract.methods.getCurrentSeasonInfo().call(),
                             5000,
@@ -2788,28 +2699,23 @@
                         if (typeof seasonIsActive === 'string') {
                             seasonIsActive = seasonIsActive.toLowerCase() === 'true';
                         }
+                    } catch (e) {
+                        console.warn('获取赛季状态失败:', e);
                     }
-                } catch (e) {
-                    console.warn('获取赛季状态失败:', e);
                 }
 
                 let rewardType = 2;
-                try {
-                    if (!arenaRewardLPContract) {
-                        try {
-                            arenaRewardLPContract = await window.ZODIAC_WEB3.getContract('arenaRewardLP', false);
-                        } catch (e) { console.warn('Failed to get arenaRewardLP:', e.message); }
-                    }
-                    if (arenaRewardLPContract) {
+                if (arenaRewardLPContract) {
+                    try {
                         rewardType = parseInt(await withTimeout(
                             arenaRewardLPContract.methods.rewardType().call(),
                             5000,
                             '2'
                         ));
+                    } catch (e) {
+                        console.warn('获取奖励类型失败:', e);
+                        rewardType = 2;
                     }
-                } catch (e) {
-                    console.warn('获取奖励类型失败:', e);
-                    rewardType = 2;
                 }
 
                 const rewardUnit = getRewardUnit(rewardType);
@@ -2817,62 +2723,31 @@
 
                 if (seasonIsActive) {
                     let playerScore = '0';
-                    try {
-                        if (!arenaBattleContract) {
-                            try {
-                                arenaBattleContract = await window.ZODIAC_WEB3.getContract('arenaBattle', false);
-                            } catch (e) { console.warn('Failed to get arenaBattle:', e.message); }
+                    if (arenaBattleContract) {
+                        try {
+                            const playerRecord = await withTimeout(
+                                arenaBattleContract.methods.players(currentSeasonId, accounts[0]).call(),
+                                5000,
+                                { score: '0', wins: '0', losses: '0' }
+                            );
+                            playerScore = playerRecord.score || playerRecord[0] || '0';
+                        } catch (e) {
+                            console.warn('获取玩家记录失败:', e);
                         }
-                        if (arenaBattleContract) {
-                            try {
-                                const playerRecord = await withTimeout(
-                                    arenaBattleContract.methods.players(currentSeasonId, accounts[0]).call(),
-                                    5000,
-                                    { score: '0', wins: '0', losses: '0' }
-                                );
-                                playerScore = playerRecord.score || playerRecord[0] || '0';
-                            } catch (e) {
-                                try {
-                                    const playerRecord = await withTimeout(
-                                        arenaBattleContract.methods.players(accounts[0]).call(),
-                                        5000,
-                                        { score: '0', wins: '0', losses: '0' }
-                                    );
-                                    playerScore = playerRecord.score || playerRecord[0] || '0';
-                                } catch (e2) {
-                                    console.warn('获取玩家记录失败:', e2);
-                                }
-                            }
-                        }
-                    } catch (e) {
-                        console.warn('获取玩家分数失败:', e);
                     }
 
                     let estimatedReward = '0';
-                    try {
-                        if (arenaRewardLPContract && web3) {
-                            try {
-                                const rewardWei = await withTimeout(
-                                    arenaRewardLPContract.methods.getPendingLPReward(accounts[0], currentSeasonId).call(),
-                                    5000,
-                                    '0'
-                                );
-                                estimatedReward = web3.utils.fromWei(rewardWei, 'ether');
-                            } catch (e) {
-                                try {
-                                    const rewardWei = await withTimeout(
-                                        arenaRewardLPContract.methods.getPendingLPReward(accounts[0]).call(),
-                                        5000,
-                                        '0'
-                                    );
-                                    estimatedReward = web3.utils.fromWei(rewardWei, 'ether');
-                                } catch (e2) {
-                                    console.warn('获取预估奖励失败:', e2);
-                                }
-                            }
+                    if (arenaRewardLPContract && web3) {
+                        try {
+                            const rewardWei = await withTimeout(
+                                arenaRewardLPContract.methods.getPendingLPReward(accounts[0], currentSeasonId).call(),
+                                5000,
+                                '0'
+                            );
+                            estimatedReward = web3.utils.fromWei(rewardWei, 'ether');
+                        } catch (e) {
+                            console.warn('获取预估奖励失败:', e);
                         }
-                    } catch (e) {
-                        console.warn('获取预估奖励失败:', e);
                     }
 
                     unclaimedDiv.innerHTML = `
@@ -2888,28 +2763,24 @@
                     claimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">暂无已领取奖励</div>';
                 } else {
                     let claimed = false;
-                    try {
-                        if (arenaRankingQueryContract) {
+                    if (arenaRankingQueryContract) {
+                        try {
+                            claimed = await withTimeout(
+                                arenaRankingQueryContract.methods.seasonRewardsClaimed(currentSeasonId, accounts[0]).call(),
+                                5000,
+                                false
+                            );
+                        } catch (e) {
                             try {
                                 claimed = await withTimeout(
-                                    arenaRankingQueryContract.methods.seasonRewardsClaimed(currentSeasonId, accounts[0]).call(),
+                                    arenaRankingQueryContract.methods.seasonRewardsClaimed(accounts[0]).call(),
                                     5000,
                                     false
                                 );
-                            } catch (e) {
-                                try {
-                                    claimed = await withTimeout(
-                                        arenaRankingQueryContract.methods.seasonRewardsClaimed(accounts[0]).call(),
-                                        5000,
-                                        false
-                                    );
-                                } catch (e2) {
-                                    console.warn('检查奖励领取状态失败:', e2.message);
-                                }
+                            } catch (e2) {
+                                console.warn('检查奖励领取状态失败:', e2.message);
                             }
                         }
-                    } catch (e) {
-                        console.warn('检查奖励领取状态失败:', e.message);
                     }
 
                     if (typeof claimed === 'string') {
@@ -2926,30 +2797,17 @@
                         `;
                     } else {
                         let rewardAmount = '0';
-                        try {
-                            if (arenaRewardLPContract && web3) {
-                                try {
-                                    const rewardWei = await withTimeout(
-                                        arenaRewardLPContract.methods.getPendingLPReward(accounts[0], currentSeasonId).call(),
-                                        5000,
-                                        '0'
-                                    );
-                                    rewardAmount = web3.utils.fromWei(rewardWei, 'ether');
-                                } catch (e) {
-                                    try {
-                                        const rewardWei = await withTimeout(
-                                            arenaRewardLPContract.methods.getPendingLPReward(accounts[0]).call(),
-                                            5000,
-                                            '0'
-                                        );
-                                        rewardAmount = web3.utils.fromWei(rewardWei, 'ether');
-                                    } catch (e2) {
-                                        console.warn('获取待领取奖励失败:', e2);
-                                    }
-                                }
+                        if (arenaRewardLPContract && web3) {
+                            try {
+                                const rewardWei = await withTimeout(
+                                    arenaRewardLPContract.methods.getPendingLPReward(accounts[0], currentSeasonId).call(),
+                                    5000,
+                                    '0'
+                                );
+                                rewardAmount = web3.utils.fromWei(rewardWei, 'ether');
+                            } catch (e) {
+                                console.warn('获取待领取奖励失败:', e);
                             }
-                        } catch (e) {
-                            console.warn('获取待领取奖励失败:', e);
                         }
 
                         if (parseFloat(rewardAmount) > 0) {
@@ -3027,10 +2885,57 @@
         let totalPlayers = 0;
         let pageSize = 10;
 
+        function generateMockPlayers(startIndex, size, startRank) {
+            const players = [];
+            const totalPlayers = 100;
+            
+            const generateMockAddress = (index) => {
+                const base = '0x742d35Cc6634C0532925a3b844Bc9e7595f7';
+                const suffix = (0x0000 + index).toString(16).padStart(4, '0');
+                return base + suffix;
+            };
+            
+            const ZODIAC_NAMES = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
+            const ATTR_NAMES = ['水', '风', '火', '暗', '光'];
+            const ELEMENT_KEYS = ['water', 'wind', 'fire', 'dark', 'light'];
+            
+            for (let i = 0; i < size; i++) {
+                const index = startIndex + i;
+                if (index >= totalPlayers) break;
+                
+                const address = generateMockAddress(index);
+                const attrIndex = index % 5;
+                const zodiacIndex = index % 12;
+                const gender = index % 2 === 0 ? '雄' : '雌';
+                const attrName = ATTR_NAMES[attrIndex];
+                const zodiac = ZODIAC_NAMES[zodiacIndex];
+                const elementKey = ELEMENT_KEYS[attrIndex];
+                const imagePath = `images/fu-cards/${elementKey}${zodiac}_${index % 2}.jpg`;
+                
+                players.push({
+                    address: address,
+                    points: 10000 - index * 500,
+                    wins: 50 + Math.floor(Math.random() * 30),
+                    losses: 10 + Math.floor(Math.random() * 20),
+                    rank: startRank + i,
+                    team: [
+                        { tokenId: 1 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
+                        { tokenId: 2 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
+                        { tokenId: 3 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
+                        { tokenId: 4 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
+                        { tokenId: 5 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
+                        { tokenId: 6 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath }
+                    ]
+                });
+            }
+            return players;
+        }
+
         async function loadLeaderboard(page = 1, size = pageSize) {
             try {
                 const topPlayers = [];
                 const startRank = (page - 1) * size + 1;
+                const startIndex = (page - 1) * size;
                 
                 pageSize = size;
                 currentPage = page;
@@ -3083,49 +2988,9 @@
                 if (useMockData) {
                     totalPages = 10;
                     totalPlayers = 100;
-                    
-                    const generateMockAddress = (index) => {
-                        const base = '0x742d35Cc6634C0532925a3b844Bc9e7595f7';
-                        const suffix = (0x0000 + index).toString(16).padStart(4, '0');
-                        return base + suffix;
-                    };
-                    
-                    const ZODIAC_NAMES = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
-                    const ATTR_NAMES = ['水', '风', '火', '暗', '光'];
-                    const ELEMENT_KEYS = ['water', 'wind', 'fire', 'dark', 'light'];
-                    
-                    for (let i = 0; i < size; i++) {
-                        const index = (page - 1) * size + i;
-                        if (index >= totalPlayers) break;
-                        
-                        const address = generateMockAddress(index);
-                        const attrIndex = index % 5;
-                        const zodiacIndex = index % 12;
-                        const gender = index % 2 === 0 ? '雄' : '雌';
-                        const attrName = ATTR_NAMES[attrIndex];
-                        const zodiac = ZODIAC_NAMES[zodiacIndex];
-                        const elementKey = ELEMENT_KEYS[attrIndex];
-                        const imagePath = `images/fu-cards/${elementKey}${zodiac}_${index % 2}.jpg`;
-                        
-                        topPlayers.push({
-                            address: address,
-                            points: 10000 - index * 500,
-                            wins: 50 + Math.floor(Math.random() * 30),
-                            losses: 10 + Math.floor(Math.random() * 20),
-                            rank: startRank + i,
-                            team: [
-                                { tokenId: 1 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
-                                { tokenId: 2 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
-                                { tokenId: 3 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
-                                { tokenId: 4 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
-                                { tokenId: 5 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
-                                { tokenId: 6 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath }
-                            ]
-                        });
-                    }
-                }
-                
-                if (!useMockData && paginationResult) {
+                    const mockPlayers = generateMockPlayers(startIndex, size, startRank);
+                    topPlayers.push(...mockPlayers);
+                } else if (paginationResult) {
                     const entries = Array.isArray(paginationResult) 
                         ? (paginationResult[2] || []) 
                         : (paginationResult.entries || []);
@@ -3202,46 +3067,8 @@
                         useMockData = true;
                         totalPages = 10;
                         totalPlayers = 100;
-                        
-                        const generateMockAddress = (index) => {
-                            const base = '0x742d35Cc6634C0532925a3b844Bc9e7595f7';
-                            const suffix = (0x0000 + index).toString(16).padStart(4, '0');
-                            return base + suffix;
-                        };
-                        
-                        const ZODIAC_NAMES = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
-                        const ATTR_NAMES = ['水', '风', '火', '暗', '光'];
-                        const ELEMENT_KEYS = ['water', 'wind', 'fire', 'dark', 'light'];
-                        
-                        for (let i = 0; i < size; i++) {
-                            const index = (page - 1) * size + i;
-                            if (index >= totalPlayers) break;
-                            
-                            const address = generateMockAddress(index);
-                            const attrIndex = index % 5;
-                            const zodiacIndex = index % 12;
-                            const gender = index % 2 === 0 ? '雄' : '雌';
-                            const attrName = ATTR_NAMES[attrIndex];
-                            const zodiac = ZODIAC_NAMES[zodiacIndex];
-                            const elementKey = ELEMENT_KEYS[attrIndex];
-                            const imagePath = `images/fu-cards/${elementKey}${zodiac}_${index % 2}.jpg`;
-                            
-                            topPlayers.push({
-                                address: address,
-                                points: 10000 - index * 500,
-                                wins: 50 + Math.floor(Math.random() * 30),
-                                losses: 10 + Math.floor(Math.random() * 20),
-                                rank: startRank + i,
-                                team: [
-                                    { tokenId: 1 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
-                                    { tokenId: 2 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
-                                    { tokenId: 3 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
-                                    { tokenId: 4 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
-                                    { tokenId: 5 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
-                                    { tokenId: 6 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath }
-                                ]
-                            });
-                        }
+                        const mockPlayers = generateMockPlayers(startIndex, size, startRank);
+                        topPlayers.push(...mockPlayers);
                     }
                 }
                 
