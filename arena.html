@@ -1005,6 +1005,8 @@
         function calculateRankReward(rank, pool, totalRealPlayers) {
             if (!totalRealPlayers || !pool || rank > totalRealPlayers) return 0;
             
+            if (totalRealPlayers > 1000 && rank > 1000) return 0;
+            
             if (totalRealPlayers <= 3) {
                 if (totalRealPlayers === 1) {
                     return pool;
@@ -1041,12 +1043,10 @@
             const tier1Size = totalPlayers > 100 ? 100 : totalPlayers;
             const tier2Size = totalPlayers > 500 ? 400 : (totalPlayers > 100 ? totalPlayers - 100 : 0);
             const tier3Size = totalPlayers > 1000 ? 500 : (totalPlayers > 500 ? totalPlayers - 500 : 0);
-            const tier4Size = totalPlayers > 1000 ? totalPlayers - 1000 : 0;
             
-            const tier1Pool = pool * 5000 / 9000;
-            const tier2Pool = pool * 2500 / 9000;
-            const tier3Pool = pool * 1000 / 9000;
-            const tier4Pool = pool * 500 / 9000;
+            const tier1Pool = pool * 5500 / 10000;
+            const tier2Pool = pool * 2800 / 10000;
+            const tier3Pool = pool * 1700 / 10000;
             
             if (rank <= tier1Size) {
                 return calculateTier1Reward(rank, tier1Pool, tier1Size);
@@ -1055,7 +1055,7 @@
             } else if (rank <= tier1Size + tier2Size + tier3Size) {
                 return calculateTier3Reward(rank - tier1Size - tier2Size, tier3Pool, tier3Size);
             } else {
-                return calculateTier4Reward(rank - tier1Size - tier2Size - tier3Size, tier4Pool, tier4Size);
+                return 0;
             }
         }
         
@@ -1128,12 +1128,6 @@
             const sumWeight = total * (total + 1) / 2;
             
             return pool * weight / sumWeight;
-        }
-        
-        function calculateTier4Reward(rank, pool, total) {
-            if (total === 0) return 0;
-            
-            return pool / total;
         }
 
         function startLeaderboardRefresh() {
@@ -3177,52 +3171,6 @@
         let totalPlayers = 0;
         let pageSize = 10;
 
-        function generateMockPlayers(startIndex, size, startRank) {
-            const players = [];
-            const totalPlayers = 100;
-            
-            const generateMockAddress = (index) => {
-                const base = '0x742d35Cc6634C0532925a3b844Bc9e7595f7';
-                const suffix = (0x0000 + index).toString(16).padStart(4, '0');
-                return base + suffix;
-            };
-            
-            const ZODIAC_NAMES = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
-            const ATTR_NAMES = ['水', '风', '火', '暗', '光'];
-            const ELEMENT_KEYS = ['water', 'wind', 'fire', 'dark', 'light'];
-            
-            for (let i = 0; i < size; i++) {
-                const index = startIndex + i;
-                if (index >= totalPlayers) break;
-                
-                const address = generateMockAddress(index);
-                const attrIndex = index % 5;
-                const zodiacIndex = index % 12;
-                const gender = index % 2 === 0 ? '公' : '母';
-                const attrName = ATTR_NAMES[attrIndex];
-                const zodiac = ZODIAC_NAMES[zodiacIndex];
-                const elementKey = ELEMENT_KEYS[attrIndex];
-                const imagePath = `images/fu-cards/${elementKey}${zodiac}_${index % 2}.jpg`;
-                
-                players.push({
-                    address: address,
-                    points: 10000 - index * 500,
-                    wins: 50 + Math.floor(Math.random() * 30),
-                    losses: 10 + Math.floor(Math.random() * 20),
-                    rank: startRank + i,
-                    team: [
-                        { tokenId: 1 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
-                        { tokenId: 2 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
-                        { tokenId: 3 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
-                        { tokenId: 4 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
-                        { tokenId: 5 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath },
-                        { tokenId: 6 + index * 6, name: attrName + zodiac + '·' + gender, level: 5 + Math.floor(Math.random() * 5), element: elementKey, imagePath: imagePath }
-                    ]
-                });
-            }
-            return players;
-        }
-
         async function loadLeaderboard(page = 1, size = pageSize) {
             try {
                 const topPlayers = [];
@@ -3232,7 +3180,6 @@
                 pageSize = size;
                 currentPage = page;
                 
-                let useMockData = false;
                 let paginationResult = null;
                 
                 console.log(`[ARENA] loadLeaderboard called - page: ${page}, size: ${size}, arenaRankingQueryContract: ${!!arenaRankingQueryContract}`);
@@ -3249,8 +3196,7 @@
                 }
                 
                 if (!arenaRankingQueryContract) {
-                    console.log('[ARENA] arenaRankingQueryContract not available, using mock data');
-                    useMockData = true;
+                    console.log('[ARENA] arenaRankingQueryContract not available');
                 } else {
                     try {
                         const currentSeasonId = await withTimeout(
@@ -3274,32 +3220,18 @@
                             }
                         }
                         
-                        if (!paginationResult) {
-                            console.log('[ARENA] paginationResult is null, using mock data');
-                            useMockData = true;
-                        } else {
+                        if (paginationResult) {
                             totalPages = parseInt(paginationResult.totalPages) || parseInt(paginationResult[1]) || 1;
                             totalPlayers = parseInt(paginationResult.totalPlayers) || parseInt(paginationResult[2]) || 0;
                             
                             console.log('[ARENA] totalPages:', totalPages, 'totalPlayers:', totalPlayers);
-                            
-                            if (totalPlayers === 0) {
-                                console.log('[ARENA] totalPlayers is 0, using mock data');
-                                useMockData = true;
-                            }
                         }
                     } catch (e) {
-                        console.log('获取排行榜失败，使用模拟数据:', e);
-                        useMockData = true;
+                        console.log('获取排行榜失败:', e);
                     }
                 }
                 
-                if (useMockData) {
-                    totalPages = 10;
-                    totalPlayers = 100;
-                    const mockPlayers = generateMockPlayers(startIndex, size, startRank);
-                    topPlayers.push(...mockPlayers);
-                } else if (paginationResult) {
+                if (paginationResult) {
                     let entries = [];
                     
                     if (paginationResult.entries && Array.isArray(paginationResult.entries)) {
@@ -3385,12 +3317,6 @@
                         
                         const playersData = await Promise.all(playerPromises);
                         topPlayers.push(...playersData);
-                    } else {
-                        useMockData = true;
-                        totalPages = 10;
-                        totalPlayers = 100;
-                        const mockPlayers = generateMockPlayers(startIndex, size, startRank);
-                        topPlayers.push(...mockPlayers);
                     }
                 }
                 
@@ -3464,10 +3390,7 @@
                                     return String(calculateRankReward(player.rank, balanceNum, totalPlayers));
                                 });
                             } else {
-                                rewards = topPlayers.map(player => {
-                                    const baseRewards = [5000, 3000, 2000, 1500, 1200, 1000, 900, 800, 700, 600];
-                                    return player.rank <= 10 ? String(baseRewards[player.rank - 1]) : String(Math.max(50, 500 - (player.rank - 10) * 5));
-                                });
+                                rewards = topPlayers.map(() => '0');
                             }
                         }
                     }
@@ -3476,10 +3399,7 @@
                 }
                 
                 if (!rewards || rewards.length === 0) {
-                    rewards = topPlayers.map(player => {
-                        const baseRewards = [5000, 3000, 2000, 1500, 1200, 1000, 900, 800, 700, 600];
-                        return player.rank <= 10 ? String(baseRewards[player.rank - 1]) : String(Math.max(50, 500 - (player.rank - 10) * 5));
-                    });
+                    rewards = topPlayers.map(() => '0');
                 }
                 
                 if (leaderboardEl) {
@@ -3493,6 +3413,7 @@
                                                    'bg-gray-700';
                             const rankTextColor = player.rank <= 3 ? 'text-yellow-400' : 'text-gray-400';
                             const rewardAmount = parseFloat(rewards[index] || '0');
+                            const rewardDisplay = rewardAmount > 0 ? `${rewardAmount.toFixed(4)} <span class="text-xs text-yellow-600">${rewardTypeLabel}</span>` : '--';
                             return `
                             <div class="p-3 bg-white/5 hover:bg-white/10 rounded-xl cursor-pointer transition-all duration-200 flex items-center group border border-transparent hover:border-blue-500/30" 
                                  onclick="selectOpponent(${index})">
@@ -3511,7 +3432,7 @@
                                     </div>
                                 </div>
                                 <div class="text-right ml-3 flex-shrink-0">
-                                    <div class="text-yellow-400 text-sm font-bold">${rewardAmount.toFixed(4)} <span class="text-xs text-yellow-600">${rewardTypeLabel}</span></div>
+                                    <div class="text-yellow-400 text-sm font-bold">${rewardDisplay}</div>
                                 </div>
                             </div>
                         `}).join('');
