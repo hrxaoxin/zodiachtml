@@ -739,6 +739,31 @@
     </div>
 
     <script>
+        function showCustomModal(title, message) {
+            let modal = document.getElementById('customModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'customModal';
+                modal.className = 'fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm';
+                modal.innerHTML = `
+                    <div class="bg-gray-800 rounded-xl p-6 w-full max-w-sm mx-4 border border-gray-700 shadow-2xl transform transition-all">
+                        <div class="text-white text-lg font-bold mb-4 text-center">${title}</div>
+                        <div class="text-gray-300 text-center mb-6">${message}</div>
+                        <button id="modalCloseBtn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                            确定
+                        </button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                document.getElementById('modalCloseBtn').addEventListener('click', () => {
+                    modal.remove();
+                });
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) modal.remove();
+                });
+            }
+        }
+
         let selectedNft = null;
         let selectedOpponent = null;
         let myNfts = [];
@@ -756,7 +781,7 @@
         let arenaRankingQueryContract;
         let arenaRewardContract;
         let arenaRewardLPContract;
-        let tokenContract;
+        let tokenContract;  
         
         function withTimeout(promise, ms, fallbackValue) {
             return Promise.race([
@@ -1011,20 +1036,104 @@
         }
         
         function calculateTierBasedReward(rank, pool, totalPlayers) {
-            if (rank <= 5) {
-                const tierRatios = [3000, 2000, 1500, 1000, 800];
-                let sum = 0;
-                for (let i = 0; i < 5; i++) {
-                    sum += tierRatios[i];
-                }
-                return pool * tierRatios[rank - 1] / sum;
-            } else if (rank <= 20) {
-                return pool * 300 / 10000;
-            } else if (rank <= 50) {
-                return pool * 150 / 10000;
+            if (rank > totalPlayers || pool === 0) return 0;
+            
+            const tier1Size = totalPlayers > 100 ? 100 : totalPlayers;
+            const tier2Size = totalPlayers > 500 ? 400 : (totalPlayers > 100 ? totalPlayers - 100 : 0);
+            const tier3Size = totalPlayers > 1000 ? 500 : (totalPlayers > 500 ? totalPlayers - 500 : 0);
+            const tier4Size = totalPlayers > 1000 ? totalPlayers - 1000 : 0;
+            
+            const tier1Pool = pool * 5000 / 9000;
+            const tier2Pool = pool * 2500 / 9000;
+            const tier3Pool = pool * 1000 / 9000;
+            const tier4Pool = pool * 500 / 9000;
+            
+            if (rank <= tier1Size) {
+                return calculateTier1Reward(rank, tier1Pool, tier1Size);
+            } else if (rank <= tier1Size + tier2Size) {
+                return calculateTier2Reward(rank - tier1Size, tier2Pool, tier2Size);
+            } else if (rank <= tier1Size + tier2Size + tier3Size) {
+                return calculateTier3Reward(rank - tier1Size - tier2Size, tier3Pool, tier3Size);
             } else {
-                return pool * 50 / 10000;
+                return calculateTier4Reward(rank - tier1Size - tier2Size - tier3Size, tier4Pool, tier4Size);
             }
+        }
+        
+        function calculateTier1Reward(rank, pool, total) {
+            if (rank === 1) return pool * 2500 / 5000;
+            if (rank === 2) return pool * 1500 / 5000;
+            if (rank === 3) return pool * 600 / 5000;
+            
+            const remaining = pool * 400 / 5000;
+            const remainingPlayers = total > 3 ? total - 3 : 0;
+            
+            if (remainingPlayers === 0) return 0;
+            
+            const baseWeight = 100;
+            const minWeight = 10;
+            const decreasingCount = baseWeight - minWeight + 1;
+            
+            let sumWeight;
+            if (remainingPlayers <= decreasingCount) {
+                sumWeight = (baseWeight + (baseWeight - remainingPlayers + 1)) * remainingPlayers / 2;
+            } else {
+                sumWeight = (baseWeight + minWeight) * decreasingCount / 2;
+                sumWeight += (remainingPlayers - decreasingCount) * minWeight;
+            }
+            
+            const currentWeight = baseWeight > (rank - 4) ? baseWeight - (rank - 4) : 10;
+            
+            return remaining * currentWeight / sumWeight;
+        }
+        
+        function calculateTier2Reward(rank, pool, total) {
+            if (total === 0) return 0;
+            
+            const baseWeight = 50;
+            const minWeight = 10;
+            const decayPerTwo = 1;
+            
+            const decreasingSteps = (baseWeight - minWeight) / decayPerTwo;
+            const playersInDecreasing = decreasingSteps * 2;
+            
+            let sumWeight;
+            if (total <= playersInDecreasing) {
+                const fullPairs = Math.floor(total / 2);
+                const remainder = total % 2;
+                
+                let sumFullPairs = 0;
+                if (fullPairs > 0) {
+                    const firstPairWeight = baseWeight * 2;
+                    const lastPairWeight = (baseWeight - (fullPairs - 1) * decayPerTwo) * 2;
+                    sumFullPairs = (firstPairWeight + lastPairWeight) * fullPairs / 2;
+                }
+                
+                const sumRemainder = remainder > 0 ? (baseWeight - fullPairs * decayPerTwo) : 0;
+                sumWeight = sumFullPairs + sumRemainder;
+            } else {
+                const sumDecreasing = (baseWeight + minWeight) * decreasingSteps;
+                sumWeight = sumDecreasing + (total - playersInDecreasing) * minWeight;
+            }
+            
+            const currentDecay = Math.floor((rank - 1) / 2);
+            const currentWeight = baseWeight > currentDecay ? baseWeight - currentDecay : 10;
+            
+            return pool * currentWeight / sumWeight;
+        }
+        
+        function calculateTier3Reward(rank, pool, total) {
+            if (total === 0) return 0;
+            
+            const weight = total - rank + 1;
+            const sumWeight = total * (total + 1) / 2;
+            
+            return pool * weight / sumWeight;
+        }
+        
+        function calculateTier4Reward(rank, pool, total) {
+            if (total === 0) return 0;
+            
+            return pool / total;
         }
 
         function startLeaderboardRefresh() {
@@ -3412,11 +3521,7 @@
                                     </div>
                                 </div>
                                 <div class="text-right ml-3 flex-shrink-0">
-                                    <div class="text-yellow-400 text-sm font-bold">${rewardAmount.toFixed(2)} <span class="text-xs text-yellow-600">${rewardTypeLabel}</span></div>
-                                    <div class="text-white/80 text-xs mt-0.5 flex items-center justify-end">
-                                        <span class="${rankTextColor} font-semibold">${player.points}</span>
-                                        <span class="text-gray-500 ml-1">积分</span>
-                                    </div>
+                                    <div class="text-yellow-400 text-sm font-bold">${rewardAmount.toFixed(4)} <span class="text-xs text-yellow-600">${rewardTypeLabel}</span></div>
                                 </div>
                             </div>
                         `}).join('');
@@ -3665,6 +3770,7 @@
                         } else if (msgStr.indexOf('Cannot challenge self') >= 0) {
                             shouldStop = true;
                             toastMsg = '不能挑战自己';
+                            showCustomModal('提示', '不能挑战自己，请选择其他对手');
                         } else if (msgStr.indexOf('reverted') >= 0) {
                             shouldStop = true;
                             toastMsg = '交易预检查失败，请稍后重试';
