@@ -1927,10 +1927,23 @@
 	},
 	{
 		"inputs": [],
-		"name": "FOUR_MEME",
+		"name": "MAX_EPOCHS",
 		"outputs": [
 			{
-				"internalType": "address",
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "PANCAKE_SWAP_V2_FACTORY",
+		"outputs": [
+			{
+				"internalType": "contract IPancakeV2Factory",
 				"name": "",
 				"type": "address"
 			}
@@ -1940,12 +1953,12 @@
 	},
 	{
 		"inputs": [],
-		"name": "MAX_EPOCHS",
+		"name": "WBNB",
 		"outputs": [
 			{
-				"internalType": "uint256",
+				"internalType": "address",
 				"name": "",
-				"type": "uint256"
+				"type": "address"
 			}
 		],
 		"stateMutability": "view",
