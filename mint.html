@@ -251,6 +251,7 @@
         let NORMAL_TEN_COST = ZODIAC_CONFIG.MINT_COSTS.normalTen;
         let RARE_TEN_COST = ZODIAC_CONFIG.MINT_COSTS.rareTen;
         let TARGETED_COST = ZODIAC_CONFIG.MINT_COSTS.targeted;
+        let USE_BNB_MODE = false;
 
         document.addEventListener('DOMContentLoaded', async function() {
             particlesJS('particles-js', {
@@ -432,6 +433,7 @@
                 console.log('useBNBBeforeLaunch:', useBNBBeforeLaunch);
 
                 const useBNB = !isLaunched && useBNBBeforeLaunch;
+                USE_BNB_MODE = useBNB;
                 const costUnit = isLaunched || !useBNBBeforeLaunch ? '代币' : 'BNB';
 
                 if (launchCheckFailed && !useBNBBeforeLaunch) {
@@ -622,25 +624,57 @@
                     return;
                 }
 
-                const burnerAddress = await window.ZODIAC_WEB3.getContractAddress('tokenBurner');
-
+                const web3 = ZODIAC_WEB3.getWeb3();
                 const mintCostWei = MINT_PRICE.toString();
                 const lightDarkCostWei = LIGHT_DARK_COST.toString();
                 const normalTenCostWei = NORMAL_TEN_COST.toString();
                 const rareTenCostWei = RARE_TEN_COST.toString();
                 const targetedCostWei = TARGETED_COST.toString();
-                
-                const allowance = await tokenContract.methods.allowance(account, burnerAddress).call();
-                const balance = await tokenContract.methods.balanceOf(account).call();
-                
-                const hasEnoughBalance = BigInt(balance) >= BigInt(mintCostWei);
-                const hasEnoughBalanceForLightDark = BigInt(balance) >= BigInt(lightDarkCostWei);
-                const hasEnoughBalanceForNormalTen = BigInt(balance) >= BigInt(normalTenCostWei);
-                const hasEnoughBalanceForRareTen = BigInt(balance) >= BigInt(rareTenCostWei);
-                const hasEnoughBalanceForTargeted = BigInt(balance) >= BigInt(targetedCostWei);
-                
-                const maxCostWei = targetedCostWei;
-                const hasApproval = BigInt(allowance) >= BigInt(maxCostWei);
+
+                let hasEnoughBalance, hasEnoughBalanceForLightDark, hasEnoughBalanceForNormalTen, hasEnoughBalanceForRareTen, hasEnoughBalanceForTargeted;
+                let hasApproval = true;
+                let statusText = '';
+
+                if (USE_BNB_MODE) {
+                    const bnbBalance = await web3.eth.getBalance(account);
+                    hasEnoughBalance = BigInt(bnbBalance) >= BigInt(mintCostWei);
+                    hasEnoughBalanceForLightDark = BigInt(bnbBalance) >= BigInt(lightDarkCostWei);
+                    hasEnoughBalanceForNormalTen = BigInt(bnbBalance) >= BigInt(normalTenCostWei);
+                    hasEnoughBalanceForRareTen = BigInt(bnbBalance) >= BigInt(rareTenCostWei);
+                    hasEnoughBalanceForTargeted = BigInt(bnbBalance) >= BigInt(targetedCostWei);
+
+                    const maxCostEth = parseFloat(web3.utils.fromWei(targetedCostWei, 'ether')).toFixed(4);
+                    const bnbBalanceEth = parseFloat(web3.utils.fromWei(bnbBalance, 'ether')).toFixed(4);
+                    if (!hasEnoughBalance) {
+                        statusText = `<p class="text-red-700">BNB余额不足，当前余额 ${bnbBalanceEth} BNB，最大铸造费用需要 ${maxCostEth} BNB</p>`;
+                    } else {
+                        statusText = '<p class="text-green-700">✓ 可以使用BNB铸造NFT</p>';
+                    }
+                } else {
+                    const burnerAddress = await window.ZODIAC_WEB3.getContractAddress('tokenBurner');
+                    const allowance = await tokenContract.methods.allowance(account, burnerAddress).call();
+                    const balance = await tokenContract.methods.balanceOf(account).call();
+
+                    hasEnoughBalance = BigInt(balance) >= BigInt(mintCostWei);
+                    hasEnoughBalanceForLightDark = BigInt(balance) >= BigInt(lightDarkCostWei);
+                    hasEnoughBalanceForNormalTen = BigInt(balance) >= BigInt(normalTenCostWei);
+                    hasEnoughBalanceForRareTen = BigInt(balance) >= BigInt(rareTenCostWei);
+                    hasEnoughBalanceForTargeted = BigInt(balance) >= BigInt(targetedCostWei);
+
+                    const maxCostWei = targetedCostWei;
+                    hasApproval = BigInt(allowance) >= BigInt(maxCostWei);
+
+                    const maxCostEth = Math.floor(parseFloat(web3.utils.fromWei(maxCostWei, 'ether'))).toLocaleString();
+                    if (!hasEnoughBalance) {
+                        const balanceEth = Math.floor(parseFloat(web3.utils.fromWei(balance, 'ether'))).toLocaleString();
+                        statusText = `<p class="text-red-700">代币余额不足，当前余额 ${balanceEth} 枚代币，最大铸造费用需要 ${maxCostEth} 枚代币</p>`;
+                    } else if (!hasApproval) {
+                        const allowanceEth = Math.floor(parseFloat(web3.utils.fromWei(allowance, 'ether'))).toLocaleString();
+                        statusText = `<p class="text-yellow-700">授权额度不足，当前授权 ${allowanceEth} 枚代币，需要授权至少 ${maxCostEth} 枚代币，请重新授权</p>`;
+                    } else {
+                        statusText = '<p class="text-green-700">✓ 已授权，可以铸造NFT</p>';
+                    }
+                }
 
                 document.getElementById('mintBtn').disabled = !(hasApproval && hasEnoughBalance);
                 document.getElementById('mintLightDarkBtn').disabled = !(hasApproval && hasEnoughBalanceForLightDark);
@@ -650,19 +684,20 @@
                 const selectedZodiac = document.getElementById('targetedZodiacSelect').value;
                 document.getElementById('mintTargetedBtn').disabled = !(hasApproval && hasEnoughBalanceForTargeted && selectedZodiac);
 
-                let statusText = '';
-                const web3 = ZODIAC_WEB3.getWeb3();
-                const maxCostEth = Math.floor(parseFloat(web3.utils.fromWei(maxCostWei, 'ether'))).toLocaleString();
-                
-                if (!hasEnoughBalance) {
-                    const balanceEth = Math.floor(parseFloat(web3.utils.fromWei(balance, 'ether'))).toLocaleString();
-                    statusText = `<p class="text-red-700">代币余额不足，当前余额 ${balanceEth} 枚代币，最大铸造费用需要 ${maxCostEth} 枚代币</p>`;
-                } else if (!hasApproval) {
-                    const allowanceEth = Math.floor(parseFloat(web3.utils.fromWei(allowance, 'ether'))).toLocaleString();
-                    statusText = `<p class="text-yellow-700">授权额度不足，当前授权 ${allowanceEth} 枚代币，需要授权至少 ${maxCostEth} 枚代币，请重新授权</p>`;
+                const approveBtn = document.getElementById('approveToken');
+                const approvalStatusRow = approveBtn ? approveBtn.closest('.space-y-4') : null;
+                const approvalInfoRow = document.querySelector('#approvalStatus')?.closest('.flex');
+                const approvalTip = document.getElementById('approvalTip');
+                if (USE_BNB_MODE) {
+                    if (approvalStatusRow) approvalStatusRow.style.display = 'none';
+                    if (approvalInfoRow) approvalInfoRow.style.display = 'none';
+                    if (approvalTip) approvalTip.style.display = 'none';
                 } else {
-                    statusText = '<p class="text-green-700">✓ 已授权，可以铸造NFT</p>';
+                    if (approvalStatusRow) approvalStatusRow.style.display = '';
+                    if (approvalInfoRow) approvalInfoRow.style.display = '';
+                    if (approvalTip) approvalTip.style.display = '';
                 }
+
                 document.getElementById('mintStatus').innerHTML = statusText;
             } catch (error) {
                 console.error('updateMintStatus error:', error);
