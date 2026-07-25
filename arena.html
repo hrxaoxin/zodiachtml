@@ -2051,16 +2051,15 @@
                 
                 const tokenIds = battleTeam.map(nft => nft.tokenId);
                 
-                const stakingContract = await ZODIAC_WEB3.getContract('staking');
                 for (const tokenId of tokenIds) {
                     try {
-                        const stakedInfo = await stakingContract.methods.getStakingInfo(tokenId).call();
-                        if (stakedInfo && stakedInfo.owner !== '0x0000000000000000000000000000000000000000') {
-                            ZODIAC_UI.showToast(`NFT #${tokenId} 已被质押，无法加入战队`, 'error');
+                        const stakedOwner = await arenaPlayerContract.methods.nftStakedOwner(tokenId).call();
+                        if (stakedOwner !== '0x0000000000000000000000000000000000000000') {
+                            ZODIAC_UI.showToast(`NFT #${tokenId} 已在竞技场质押，无法加入战队`, 'error');
                             return;
                         }
                     } catch (e) {
-                        console.warn(`检查NFT #${tokenId} 质押状态失败，跳过:`, e);
+                        console.warn(`检查NFT #${tokenId} 竞技场质押状态失败，跳过:`, e);
                     }
                 }
                 
@@ -2126,18 +2125,9 @@
                     }
                 );
                 
-                let gas;
-                try {
-                    const gasResult = await ZODIAC_WEB3.estimateGas(arenaPlayerContract, 'setBattleTeam', [tokenIds], accounts[0]);
-                    gas = Math.floor(gasResult.gas * 1.2);
-                } catch (gasError) {
-                    console.error('估算Gas失败:', gasError);
-                    gas = 300000;
-                }
-                
                 const teamArray = [...tokenIds];
                 await ZODIAC_UI.handleTransaction(
-                    () => arenaPlayerContract.methods.setBattleTeam(teamArray).send({ from: accounts[0], gas: gas }),
+                    () => ZODIAC_WEB3.sendAndTrackTransaction(arenaPlayerContract, 'setBattleTeam', [teamArray], { from: accounts[0] }),
                     {
                         actionName: '设置战队',
                         loadingMessage: '正在设置战队...',
