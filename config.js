@@ -1972,6 +1972,19 @@
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "bnbReceiver",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "address",
@@ -2377,6 +2390,19 @@
 	{
 		"inputs": [
 			{
+				"internalType": "address",
+				"name": "receiver",
+				"type": "address"
+			}
+		],
+		"name": "setBNBReceiver",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "uint256",
 				"name": "cost",
 				"type": "uint256"
@@ -2422,6 +2448,19 @@
 			}
 		],
 		"name": "setRareMintCost",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bool",
+				"name": "enabled",
+				"type": "bool"
+			}
+		],
+		"name": "setUseBNBBeforeLaunch",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -2501,6 +2540,19 @@
 		"name": "upgradeToAndCall",
 		"outputs": [],
 		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "useBNBBeforeLaunch",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
