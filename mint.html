@@ -413,16 +413,16 @@
 
                 const web3 = ZODIAC_WEB3.getWeb3();
 
-                // 检查代币是否已发射到PancakeSwap
                 let isLaunched = false;
+                let launchCheckFailed = false;
                 try {
                     isLaunched = await tokenBurnerContract.methods.isTokenLaunched().call();
                 } catch (e) {
-                    console.warn('检查代币发射状态失败，默认按未发射处理:', e);
+                    console.error('检查代币发射状态失败:', e);
+                    launchCheckFailed = true;
                 }
-                console.log('Token launched on PancakeSwap:', isLaunched);
+                console.log('Token launched on PancakeSwap:', isLaunched, '(launchCheckFailed:', launchCheckFailed, ')');
                 
-                // 检查发射前使用BNB铸造的开关
                 let useBNBBeforeLaunch = false;
                 try {
                     useBNBBeforeLaunch = await tokenBurnerContract.methods.useBNBBeforeLaunch().call();
@@ -431,17 +431,17 @@
                 }
                 console.log('useBNBBeforeLaunch:', useBNBBeforeLaunch);
 
-                // 确定费用单位：
-                // - 代币已发射：始终使用代币
-                // - 代币未发射 + 开关打开：使用BNB
-                // - 代币未发射 + 开关关闭（默认）：使用代币（不使用BNB）
                 const useBNB = !isLaunched && useBNBBeforeLaunch;
                 const costUnit = isLaunched || !useBNBBeforeLaunch ? '代币' : 'BNB';
+
+                if (launchCheckFailed && !useBNBBeforeLaunch) {
+                    ZODIAC_UI.showToast('无法获取代币发射状态，请检查网络或稍后重试', 'error');
+                    return;
+                }
 
                 let mintPriceWei, lightDarkWei, normalTenWei, rareTenWei, targetedWei;
 
                 if (isLaunched || !useBNBBeforeLaunch) {
-                    // 代币已发射，或开关关闭（默认）：显示代币费用
                     MINT_PRICE = (await tokenBurnerContract.methods.normalMintCost().call()).toString();
                     LIGHT_DARK_COST = (await tokenBurnerContract.methods.rareMintCost().call()).toString();
                     try {
@@ -459,7 +459,6 @@
                     rareTenWei = RARE_TEN_COST;
                     targetedWei = TARGETED_COST;
                 } else {
-                    // 代币未发射 + 开关打开：显示BNB费用
                     MINT_PRICE = (await tokenBurnerContract.methods.normalMintBNBCost().call()).toString();
                     LIGHT_DARK_COST = (await tokenBurnerContract.methods.rareMintBNBCost().call()).toString();
                     try {
@@ -478,14 +477,12 @@
                     targetedWei = TARGETED_COST;
                 }
 
-                // 解析价格
                 const mintPriceNum = parseFloat(web3.utils.fromWei(mintPriceWei, 'ether'));
                 const lightDarkNum = parseFloat(web3.utils.fromWei(lightDarkWei, 'ether'));
                 const normalTenNum = parseFloat(web3.utils.fromWei(normalTenWei, 'ether'));
                 const rareTenNum = parseFloat(web3.utils.fromWei(rareTenWei, 'ether'));
                 const targetedNum = parseFloat(web3.utils.fromWei(targetedWei, 'ether'));
 
-                // 格式化显示（BNB保留4位小数，代币保留整数）
                 const formatCost = isLaunched
                     ? (n) => Math.floor(n).toString()
                     : (n) => n.toFixed(4);
@@ -503,7 +500,6 @@
                 document.getElementById('mintRareTenBtn').innerHTML = `<i class="fas fa-fire mr-2"></i> 光暗十连（消耗${rareTenDisplay}${costUnit}）`;
                 document.getElementById('mintTargetedBtn').innerHTML = `<i class="fas fa-bullseye mr-2"></i> 指定铸造（消耗${targetedDisplay}${costUnit}）`;
 
-                // 更新温馨提示部分的费用显示
                 const normalCost = isLaunched ? Math.floor(mintPriceNum).toLocaleString() : mintPriceDisplay;
                 const rareCost = isLaunched ? Math.floor(lightDarkNum).toLocaleString() : lightDarkDisplay;
                 const normalTenCost = isLaunched ? Math.floor(normalTenNum).toLocaleString() : normalTenDisplay;
@@ -515,23 +511,21 @@
                 document.getElementById('normalTenCostDisplay').textContent = normalTenCost;
                 document.getElementById('rareTenCostDisplay').textContent = rareTenCost;
 
-                // 显示指定铸造的费用计算说明
                 document.getElementById('targetedCostDisplay').textContent = targetedCost;
                 document.getElementById('targetedCostFormula').textContent = `(6×${normalCost} + 4×${rareCost}) × 10`;
 
-                // 更新温馨提示中的费用单位
                 const costUnitSpans = document.querySelectorAll('.cost-unit');
                 costUnitSpans.forEach(el => {
                     el.textContent = isLaunched ? (el.dataset.tokenText || '代币') : ' BNB';
                 });
 
-                // 更新授权提示（BNB支付不需要授权代币）
                 const approvalTip = document.getElementById('approvalTip');
                 if (approvalTip) {
                     approvalTip.style.display = isLaunched ? '' : 'none';
                 }
             } catch (error) {
-                console.log('获取铸造费用失败，使用默认值:', error);
+                console.error('获取铸造费用失败:', error);
+                ZODIAC_UI.showToast('获取铸造费用失败，请检查网络或稍后重试', 'error');
             }
         }
 
@@ -742,9 +736,18 @@
                     return;
                 }
 
+                let costUnit = '代币';
+                try {
+                    const isLaunched = await tokenBurnerContract.methods.isTokenLaunched().call();
+                    const useBNBBeforeLaunch = await tokenBurnerContract.methods.useBNBBeforeLaunch().call();
+                    costUnit = isLaunched || !useBNBBeforeLaunch ? '代币' : 'BNB';
+                } catch (e) {
+                    console.warn('获取费用单位失败，默认使用代币:', e);
+                }
+
                 const confirm = await ZODIAC_UI.showConfirmModal(
                     '确认铸造',
-                    `将消耗 ${costEth} 枚代币进行${displayName}，确定继续？`
+                    `将消耗 ${costEth} ${costUnit} 进行${displayName}，确定继续？`
                 );
 
                 if (!confirm) {
@@ -765,7 +768,51 @@
                     tx = await ZODIAC_WEB3.burnAndMint(isRare);
                 }
 
-                if (tx && tx.events && tx.events.Mint) {
+                if (!tx) {
+                    throw new Error('交易返回为空');
+                }
+
+                if (tx.status === false) {
+                    throw new Error('交易执行失败');
+                }
+
+                if (tx.events && tx.events.NFTMinted) {
+                    try {
+                        if (methodName.includes('Ten')) {
+                            const mintedTokenIds = [];
+                            const mintEvents = Array.isArray(tx.events.NFTMinted) ? tx.events.NFTMinted : [tx.events.NFTMinted];
+                            
+                            for (const event of mintEvents) {
+                                const tokenId = event.returnValues.tokenId?.toString() || event.returnValues[1]?.toString();
+                                const cardType = event.returnValues.zodiacType?.toString() || event.returnValues[2]?.toString();
+                                if (tokenId && cardType) {
+                                    mintedTokenIds.push({ cardId: tokenId, cardType: cardType });
+                                }
+                            }
+
+                            if (mintedTokenIds.length > 0) {
+                                displayMultiCardInfo(mintedTokenIds);
+                            } else {
+                                throw new Error('No NFTMinted events found in transaction');
+                            }
+                        } else {
+                            const mintEvent = tx.events.NFTMinted;
+                            const tokenId = mintEvent.returnValues.tokenId?.toString() || mintEvent.returnValues[1]?.toString();
+                            const cardType = mintEvent.returnValues.zodiacType?.toString() || mintEvent.returnValues[2]?.toString();
+                            
+                            if (tokenId && cardType) {
+                                const cardInfo = { cardId: tokenId, cardType: cardType };
+                                displayCardInfo(cardInfo);
+                            } else {
+                                throw new Error('Failed to extract tokenId from NFTMinted event');
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[MINT] Failed to fetch minted card info from NFTMinted event:', e.message);
+                        console.warn('[MINT] Falling back to nextCardId method');
+                        await fetchCardInfoAfterMint(methodName);
+                    }
+                } else if (tx.events && tx.events.Mint) {
                     try {
                         if (methodName.includes('Ten')) {
                             const mintedTokenIds = [];
@@ -782,7 +829,7 @@
                             if (mintedTokenIds.length > 0) {
                                 displayMultiCardInfo(mintedTokenIds);
                             } else {
-                                throw new Error('No mint events found in transaction');
+                                throw new Error('No Mint events found in transaction');
                             }
                         } else {
                             const mintEvent = tx.events.Mint;
@@ -793,11 +840,11 @@
                                 const cardInfo = { cardId: tokenId, cardType: cardType };
                                 displayCardInfo(cardInfo);
                             } else {
-                                throw new Error('Failed to extract tokenId from mint event');
+                                throw new Error('Failed to extract tokenId from Mint event');
                             }
                         }
                     } catch (e) {
-                        console.warn('[MINT] Failed to fetch minted card info from event:', e.message);
+                        console.warn('[MINT] Failed to fetch minted card info from Mint event:', e.message);
                         console.warn('[MINT] Falling back to nextCardId method');
                         await fetchCardInfoAfterMint(methodName);
                     }
@@ -805,7 +852,6 @@
                     await fetchCardInfoAfterMint(methodName);
                 }
 
-                // 获取交易哈希
                 let txHash = '';
                 if (tx && tx.transactionHash) {
                     txHash = tx.transactionHash;
@@ -825,7 +871,6 @@
                 await updateTokenBalance();
                 await updateMintStatus();
                 
-                // 通知其他页面铸造成功，刷新数据
                 broadcastMintSuccess();
                 
                 ZODIAC_UI.showToast('铸造成功！', 'success');

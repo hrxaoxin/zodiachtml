@@ -1634,17 +1634,20 @@ window.ZODIAC_WEB3 = (function() {
         }
 
         const burnerContract = await getContract('tokenBurner');
+        if (!burnerContract) {
+            throw new Error('[ZODIAC_WEB3] TokenBurner contract not initialized');
+        }
 
-        // 检查代币是否已发射到PancakeSwap
         let isLaunched = false;
+        let launchCheckFailed = false;
         try {
             isLaunched = await burnerContract.methods.isTokenLaunched().call();
         } catch (e) {
-            console.warn('[ZODIAC_WEB3] Failed to check token launch status:', e);
+            console.error('[ZODIAC_WEB3] Failed to check token launch status:', e);
+            launchCheckFailed = true;
         }
-        console.log('[ZODIAC_WEB3] Token launched:', isLaunched);
+        console.log('[ZODIAC_WEB3] Token launched:', isLaunched, '(launchCheckFailed:', launchCheckFailed, ')');
         
-        // 检查发射前使用BNB铸造的开关
         let useBNBBeforeLaunch = false;
         try {
             useBNBBeforeLaunch = await burnerContract.methods.useBNBBeforeLaunch().call();
@@ -1655,14 +1658,13 @@ window.ZODIAC_WEB3 = (function() {
 
         let txOptions = { from: userAccount };
 
-        // 确定支付方式
-        // - 代币已发射：始终使用代币
-        // - 代币未发射 + 开关打开：使用BNB
-        // - 代币未发射 + 开关关闭（默认）：使用代币
         const useBNB = !isLaunched && useBNBBeforeLaunch;
 
         if (isLaunched || !useBNBBeforeLaunch) {
-            // 代币已发射，或开关关闭：消耗代币
+            if (launchCheckFailed) {
+                throw new Error('[ZODIAC_WEB3] Failed to determine token launch status. Cannot proceed with token payment.');
+            }
+
             let mintCost;
             if (methodName === 'burnAndMint') {
                 mintCost = isRare
@@ -1680,7 +1682,6 @@ window.ZODIAC_WEB3 = (function() {
 
             await checkTokenBalanceAndAllowance(mintCost);
         } else {
-            // 代币未发射 + 开关打开：消耗BNB
             let bnbCost;
             if (methodName === 'burnAndMint') {
                 bnbCost = isRare
