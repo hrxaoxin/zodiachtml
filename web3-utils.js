@@ -1305,6 +1305,9 @@ window.ZODIAC_WEB3 = (function() {
         }
         
         if (lowerMessage.includes('reverted')) {
+            if (lowerMessage.includes('arithmetic underflow') || lowerMessage.includes('arithmetic overflow')) {
+                return '合约算术错误（下溢/溢出），请检查NFT数据状态或联系管理员重置数据';
+            }
             const match = message.match(/reason:\s*['"]?([^'"]+)['"]?/i);
             if (match && match[1]) {
                 const reason = match[1].trim();
@@ -1312,7 +1315,7 @@ window.ZODIAC_WEB3 = (function() {
                     try {
                         return web3.utils.hexToUtf8(reason);
                     } catch (e) {
-                        return '交易失败：合约执行异常';
+                        return '交易失败：合约执行异常（Panic）';
                     }
                 }
                 return reason;

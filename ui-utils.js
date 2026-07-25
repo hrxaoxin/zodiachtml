@@ -9,6 +9,9 @@ window.ZODIAC_UI = (function() {
         if (typeof error === 'string') return error;
         
         if (error.message) {
+            if (error.message.includes('arithmetic underflow') || error.message.includes('arithmetic overflow')) {
+                return '合约算术错误（下溢/溢出），NFT数据状态异常，请联系管理员重置数据';
+            }
             const revertMatch = error.message.match(/revert(ed)?:\s*(.*)/i);
             if (revertMatch && revertMatch[2]) return revertMatch[2].trim();
             
@@ -336,10 +339,11 @@ window.ZODIAC_UI = (function() {
         } else if (error.message || error.reason) {
             const extracted = extractErrorMessage(error);
             const msg = extracted.toLowerCase();
-            if (msg.includes('insufficient funds')) {
+            if (msg.includes('arithmetic underflow') || msg.includes('arithmetic overflow')) {
+                errorMsg = '合约算术错误（下溢/溢出），请检查NFT数据状态或联系管理员重置数据';
+            } else if (msg.includes('insufficient funds')) {
                 errorMsg = '余额不足';
             } else if (msg.includes('reverted')) {
-                // 从reverted错误中抽取更精确的原因
                 const detail = extractErrorMessage(error);
                 errorMsg = detail !== error.message ? detail : '合约执行失败';
             } else if (msg.includes('gas')) {
