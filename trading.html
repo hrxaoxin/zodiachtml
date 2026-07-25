@@ -571,21 +571,21 @@
             try {
                 if (typeof window.ZODIAC_WEB3 !== 'undefined') {
                     try {
-                        await window.ZODIAC_WEB3.listenToEvent('nftTrading', 'MarketListingCreated', async () => {
-                            console.log('[TRADING] Listing created, refreshing marketplace...');
+                        await window.ZODIAC_WEB3.listenToEvent('nftTrading', 'NFTListed', async () => {
+                            console.log('[TRADING] NFT listed, refreshing marketplace...');
                             await loadMarketplace();
                         });
                     } catch (e) {
-                        console.warn('[TRADING] Event MarketListingCreated not found on nftTrading contract');
+                        console.warn('[TRADING] Event NFTListed not found on nftTrading contract');
                     }
                     
                     try {
-                        await window.ZODIAC_WEB3.listenToEvent('nftTrading', 'MarketListingRemoved', async () => {
-                            console.log('[TRADING] Listing removed, refreshing marketplace...');
+                        await window.ZODIAC_WEB3.listenToEvent('nftTrading', 'NFTDelisted', async () => {
+                            console.log('[TRADING] NFT delisted, refreshing marketplace...');
                             await loadMarketplace();
                         });
                     } catch (e) {
-                        console.warn('[TRADING] Event MarketListingRemoved not found on nftTrading contract');
+                        console.warn('[TRADING] Event NFTDelisted not found on nftTrading contract');
                     }
                     
                     try {

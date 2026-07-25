@@ -1163,10 +1163,10 @@
                     try {
                         let contract = null;
                         const contractMap = {
-                            'arena': arenaContract || arenaRankingManagerContract,
-                            'battle': battleContract,
+                            'arenaRankingManager': arenaRankingManagerContract,
+                            'arenaPlayer': arenaPlayerContract,
                             'arenaBattle': arenaBattleContract,
-                            'arenaPlayer': arenaPlayerContract
+                            'battle': battleContract
                         };
                         
                         if (contractMap[contractName]) {
@@ -1195,52 +1195,52 @@
                     }
                 };
 
-                await listenToEventSafe('arena', 'ScoreUpdated', async (event) => {
+                await listenToEventSafe('arenaRankingManager', 'ScoreUpdated', async (event) => {
                     console.log('Score updated:', event.returnValues);
                     await loadMyStats();
                     await loadLeaderboard();
                 });
 
-                await listenToEventSafe('arena', 'ChallengeResult', async (event) => {
+                await listenToEventSafe('arenaRankingManager', 'ChallengeResult', async (event) => {
                     console.log('Challenge result:', event.returnValues);
                     await loadRemainingAttempts();
                     await loadMyStats();
                 });
 
-                await listenToEventSafe('arena', 'RewardClaimed', async (event) => {
+                await listenToEventSafe('arenaRankingManager', 'RewardClaimed', async (event) => {
                     console.log('Reward claimed:', event.returnValues);
                     await loadRewards();
                 });
 
-                await listenToEventSafe('arena', 'SeasonStarted', async (event) => {
+                await listenToEventSafe('arenaRankingManager', 'SeasonStarted', async (event) => {
                     console.log('New season started:', event.returnValues);
                     await loadLeaderboard();
                     await loadMyStats();
                 });
 
-                await listenToEventSafe('arena', 'NFTsStaked', async (event) => {
+                await listenToEventSafe('arenaPlayer', 'NFTsStaked', async (event) => {
                     console.log('NFTs staked:', event.returnValues);
                     await loadMyNfts();
                     await loadMyTeam();
                 });
 
-                await listenToEventSafe('arena', 'NFTsUnstaked', async (event) => {
+                await listenToEventSafe('arenaPlayer', 'NFTsUnstaked', async (event) => {
                     console.log('NFTs unstaked:', event.returnValues);
                     await loadMyNfts();
                     await loadMyTeam();
                 });
 
-                await listenToEventSafe('arena', 'BattleTeamSet', async (event) => {
+                await listenToEventSafe('arenaPlayer', 'BattleTeamSet', async (event) => {
                     console.log('Battle team set:', event.returnValues);
                     await loadMyTeam();
                 });
 
-                await listenToEventSafe('arena', 'BattleTeamCleared', async (event) => {
+                await listenToEventSafe('arenaPlayer', 'BattleTeamCleared', async (event) => {
                     console.log('Battle team cleared:', event.returnValues);
                     await loadMyTeam();
                 });
 
-                await listenToEventSafe('battle', 'BattleEnded', async (event) => {
+                await listenToEventSafe('arenaBattle', 'BattleEnded', async (event) => {
                     console.log('Battle ended:', event.returnValues);
                     await loadLeaderboard();
                     await loadMyStats();
@@ -1333,14 +1333,19 @@
                     await setupEventListeners();
                     await updateTokenBalance();
                     await updateApprovalStatus();
-                    await loadMyNfts();
-                    await loadLeaderboard();
-                    await loadMyStats();
-                    await loadRewards();
+                    
+                    const nftsLoaded = loadMyNfts();
+                    const leaderboardLoaded = loadLeaderboard();
+                    const statsLoaded = loadMyStats();
+                    const rewardsLoaded = loadRewards();
+                    const attemptsLoaded = loadRemainingAttempts();
+                    const rewardPoolLoaded = loadRewardPool();
+                    const arenaModeLoaded = loadArenaMode();
+                    
+                    await nftsLoaded;
+                    await Promise.all([leaderboardLoaded, statsLoaded, rewardsLoaded, attemptsLoaded, rewardPoolLoaded, arenaModeLoaded]);
+                    
                     await loadMyTeam();
-                    await loadRemainingAttempts();
-                    await loadRewardPool();
-                    await loadArenaMode();
                 } catch (error) {
                     console.error('连接钱包失败:', error);
                     ZODIAC_UI.showToast('连接钱包失败: ' + (error.message || '未知错误'), 'error');
@@ -1428,12 +1433,10 @@
             
             const contractNames = [
                 'battle', 'battleSkillData', 'arenaRankingQuery', 'arenaRewardLP', 
-                'arenaBattle', 'arenaPlayer', 'arenaModeManager'
+                'arenaBattle', 'arenaPlayer', 'arenaModeManager', 'arenaReward'
             ];
             
-            const contractAddresses = {};
-            
-            for (const name of contractNames) {
+            const addressPromises = contractNames.map(async (name) => {
                 let addr = null;
                 try {
                     addr = await withTimeout(
@@ -1461,6 +1464,12 @@
                     }
                 }
                 
+                return { name, addr };
+            });
+            
+            const addressResults = await Promise.all(addressPromises);
+            const contractAddresses = {};
+            for (const { name, addr } of addressResults) {
                 contractAddresses[name] = addr;
             }
             
@@ -1717,8 +1726,10 @@
                                     console.warn('battleSkillDataContract not initialized, using local skill data');
                                     throw new Error('Contract not initialized');
                                 }
-                                const isInitialized = await battleSkillDataContract.methods.skillsInitialized().call();
-                                if (!isInitialized) {
+                                if (skillsInitializedCache === null) {
+                                    skillsInitializedCache = await battleSkillDataContract.methods.skillsInitialized().call();
+                                }
+                                if (!skillsInitializedCache) {
                                     console.warn('技能数据尚未初始化，使用本地数据');
                                     const localSkill = ZODIAC_UTILS.getLocalSkill(tokenType);
                                     skill = {
@@ -2280,6 +2291,7 @@
         }
 
         const skillCache = {};
+        let skillsInitializedCache = null;
 
         async function loadMyTeam() {
             try {
@@ -2332,8 +2344,10 @@
                                         console.warn('battleSkillDataContract not initialized, using local skill data');
                                         throw new Error('Contract not initialized');
                                     }
-                                    const isInitialized = await battleSkillDataContract.methods.skillsInitialized().call();
-                                    if (!isInitialized) {
+                                    if (skillsInitializedCache === null) {
+                                        skillsInitializedCache = await battleSkillDataContract.methods.skillsInitialized().call();
+                                    }
+                                    if (!skillsInitializedCache) {
                                         console.warn('技能数据尚未初始化，使用本地数据');
                                         const localSkill = ZODIAC_UTILS.getLocalSkill(tokenType);
                                         skill = {
