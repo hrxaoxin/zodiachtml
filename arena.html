@@ -2447,12 +2447,13 @@
                 if (arenaRankingQueryContract && accounts[0]) {
                     try {
                         console.log('[ARENA] Trying getPlayerRank with account:', accounts[0]);
-                        userRank = await withTimeout(
+                        const rankIndex = await withTimeout(
                             arenaRankingQueryContract.methods.getPlayerRank(accounts[0]).call(),
                             5000,
                             '0'
                         );
-                        console.log('[ARENA] getPlayerRank result:', userRank);
+                        userRank = parseInt(rankIndex) + 1;
+                        console.log('[ARENA] getPlayerRank result (index):', rankIndex, '-> rank:', userRank);
                     } catch (e1) {
                         console.warn('[ARENA] getPlayerRank failed:', e1.message);
                         try {
@@ -2577,12 +2578,12 @@
                 if (arenaRankingQueryContract) {
                     try {
                         claimed = await withTimeout(
-                            arenaRankingQueryContract.methods.seasonRewardsClaimed(seasonId, account).call(),
+                            arenaRankingQueryContract.methods.isSeasonRewardClaimed(account, seasonId).call(),
                             5000,
                             false
                         );
                     } catch (e) {
-                        console.warn(`[ARENA] seasonRewardsClaimed(${seasonId}) failed:`, e.message);
+                        console.warn(`[ARENA] isSeasonRewardClaimed(${account}, ${seasonId}) failed:`, e.message);
                         return null;
                     }
                 } else {
@@ -2593,23 +2594,33 @@
                     let rewardAmount = '0';
                     try {
                         if (arenaRewardLPContract && arenaRewardLPContract.getPastEvents) {
-                            const events = await withTimeout(
-                                arenaRewardLPContract.getPastEvents('RewardClaimed', {
-                                    filter: { player: account },
-                                    fromBlock: 0,
-                                    toBlock: 'latest'
-                                }),
-                                5000,
-                                []
-                            );
+                            const eventNames = ['BNBRewardClaimed', 'LPRewardClaimed', 'TokenRewardClaimed'];
+                            const allEvents = [];
                             
-                            const seasonEvent = events.find(evt => {
-                                const eventSeasonId = evt.returnValues.seasonId || evt.returnValues[0];
+                            for (const eventName of eventNames) {
+                                try {
+                                    const events = await withTimeout(
+                                        arenaRewardLPContract.getPastEvents(eventName, {
+                                            filter: { user: account },
+                                            fromBlock: 0,
+                                            toBlock: 'latest'
+                                        }),
+                                        5000,
+                                        []
+                                    );
+                                    allEvents.push(...events);
+                                } catch (e) {
+                                    console.warn(`获取事件${eventName}失败:`, e.message);
+                                }
+                            }
+                            
+                            const seasonEvent = allEvents.find(evt => {
+                                const eventSeasonId = evt.returnValues.seasonId || evt.returnValues[1];
                                 return parseInt(eventSeasonId) === seasonId;
                             });
                             
                             if (seasonEvent) {
-                                const amountWei = seasonEvent.returnValues.amount || seasonEvent.returnValues[1] || '0';
+                                const amountWei = seasonEvent.returnValues.amount || evt.returnValues[2] || '0';
                                 rewardAmount = web3.utils.fromWei(String(amountWei), 'ether');
                             }
                         }
@@ -2939,20 +2950,12 @@
                     if (arenaRankingQueryContract) {
                         try {
                             claimed = await withTimeout(
-                                arenaRankingQueryContract.methods.seasonRewardsClaimed(currentSeasonId, accounts[0]).call(),
+                                arenaRankingQueryContract.methods.isSeasonRewardClaimed(accounts[0], currentSeasonId).call(),
                                 5000,
                                 false
                             );
                         } catch (e) {
-                            try {
-                                claimed = await withTimeout(
-                                    arenaRankingQueryContract.methods.seasonRewardsClaimed(accounts[0]).call(),
-                                    5000,
-                                    false
-                                );
-                            } catch (e2) {
-                                console.warn('检查奖励领取状态失败:', e2.message);
-                            }
+                            console.warn('检查奖励领取状态失败:', e.message);
                         }
                     }
 
@@ -3159,7 +3162,7 @@
                         console.log('[ARENA] Current season ID:', currentSeasonId);
                         
                         paginationResult = await withTimeout(
-                            arenaRankingQueryContract.methods.getLeaderboardByPage(currentSeasonId, page, size).call(),
+                            arenaRankingQueryContract.methods.getLeaderboardByPage(currentSeasonId, page - 1, size).call(),
                             5000,
                             null
                         );
