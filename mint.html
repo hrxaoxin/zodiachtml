@@ -201,14 +201,34 @@
             </div>
         </div>
 
+        <div id="preLaunchBanner" class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4 hidden">
+            <div class="flex items-start">
+                <i class="fas fa-info-circle text-blue-500 mt-1 mr-3 text-xl"></i>
+                <div>
+                    <p class="text-blue-800 font-medium">当前代币尚未发射到PancakeSwap</p>
+                    <p class="text-blue-600 text-sm mt-1">发射前铸造费用使用 <strong>BNB</strong> 支付；发射后将使用 <strong>代币</strong> 支付。</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="postLaunchBanner" class="bg-green-50 border-l-4 border-green-400 p-4 mb-4 hidden">
+            <div class="flex items-start">
+                <i class="fas fa-check-circle text-green-500 mt-1 mr-3 text-xl"></i>
+                <div>
+                    <p class="text-green-800 font-medium">代币已发射到PancakeSwap</p>
+                    <p class="text-green-600 text-sm mt-1">铸造费用已切换为 <strong>代币</strong> 支付。</p>
+                </div>
+            </div>
+        </div>
+
         <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8">
             <h3 class="text-lg font-bold text-yellow-800 mb-2">温馨提示</h3>
             <ul class="space-y-2 text-yellow-700">
-                <li>• <strong>普通铸造</strong>：消耗<span id="normalMintCostDisplay">8888</span><span class="cost-unit" data-token-text="枚代币">枚代币</span>，随机获得生肖NFT</li>
-                <li>• <strong>光暗铸造</strong>：消耗<span id="rareMintCostDisplay">88888</span><span class="cost-unit" data-token-text="枚代币">枚代币</span>，必定获得光/暗属性NFT</li>
-                <li>• <strong>普通十连</strong>：消耗<span id="normalTenCostDisplay">88880</span><span class="cost-unit" data-token-text="枚代币">枚代币</span>，随机获得10张生肖NFT（普通铸造概率）</li>
-                <li>• <strong>光暗十连</strong>：消耗<span id="rareTenCostDisplay">888880</span><span class="cost-unit" data-token-text="枚代币">枚代币</span>，随机获得10张光/暗属性NFT</li>
-                <li>• <strong>指定铸造</strong>：消耗<span id="targetedCostDisplay">(6x普通+4x光暗)×10</span><span class="cost-unit" data-token-text="代币">代币</span>（<span id="targetedCostFormula" class="text-blue-500">(6×普通铸造代币+4×光暗铸造代币)×10</span>），获得指定生肖所有属性NFT（10张）</li>
+                <li>• <strong>普通铸造</strong>：消耗<span id="normalMintCostDisplay">8888</span><span class="cost-unit" data-token-text="枚代币">枚代币</span>（发射前 <span id="normalMintBNBCostDisplay" class="text-blue-600">-</span> BNB），随机获得生肖NFT</li>
+                <li>• <strong>光暗铸造</strong>：消耗<span id="rareMintCostDisplay">88888</span><span class="cost-unit" data-token-text="枚代币">枚代币</span>（发射前 <span id="rareMintBNBCostDisplay" class="text-blue-600">-</span> BNB），必定获得光/暗属性NFT</li>
+                <li>• <strong>普通十连</strong>：消耗<span id="normalTenCostDisplay">88880</span><span class="cost-unit" data-token-text="枚代币">枚代币</span>（发射前 <span id="normalTenBNBCostDisplay" class="text-blue-600">-</span> BNB），随机获得10张生肖NFT（普通铸造概率）</li>
+                <li>• <strong>光暗十连</strong>：消耗<span id="rareTenCostDisplay">888880</span><span class="cost-unit" data-token-text="枚代币">枚代币</span>（发射前 <span id="rareTenBNBCostDisplay" class="text-blue-600">-</span> BNB），随机获得10张光/暗属性NFT</li>
+                <li>• <strong>指定铸造</strong>：消耗<span id="targetedCostDisplay">(6x普通+4x光暗)×10</span><span class="cost-unit" data-token-text="代币">代币</span>（发射前 <span id="targetedBNBCostDisplay" class="text-blue-600">-</span> BNB），获得指定生肖所有属性NFT（10张）</li>
                 <li>• 普通铸造概率：水/风/火属性各约32%，暗/光属性各2%</li>
                 <li>• 持有生肖NFT即可享受对应的税收分红</li>
                 <li id="approvalTip">• 首次铸造需要授权代币，之后无需重复授权</li>
@@ -441,43 +461,54 @@
                     return;
                 }
 
-                let mintPriceWei, lightDarkWei, normalTenWei, rareTenWei, targetedWei;
-
-                if (isLaunched || !useBNBBeforeLaunch) {
-                    MINT_PRICE = (await tokenBurnerContract.methods.normalMintCost().call()).toString();
-                    LIGHT_DARK_COST = (await tokenBurnerContract.methods.rareMintCost().call()).toString();
-                    try {
-                        NORMAL_TEN_COST = (await tokenBurnerContract.methods.normalMintTenCost().call()).toString();
-                        RARE_TEN_COST = (await tokenBurnerContract.methods.rareMintTenCost().call()).toString();
-                        TARGETED_COST = (await tokenBurnerContract.methods.targetedMintCost().call()).toString();
-                    } catch (e) {
-                        NORMAL_TEN_COST = (BigInt(MINT_PRICE) * BigInt(10)).toString();
-                        RARE_TEN_COST = (BigInt(LIGHT_DARK_COST) * BigInt(10)).toString();
-                        TARGETED_COST = ((BigInt(MINT_PRICE) * BigInt(6) + BigInt(LIGHT_DARK_COST) * BigInt(4)) * BigInt(10)).toString();
-                    }
-                    mintPriceWei = MINT_PRICE;
-                    lightDarkWei = LIGHT_DARK_COST;
-                    normalTenWei = NORMAL_TEN_COST;
-                    rareTenWei = RARE_TEN_COST;
-                    targetedWei = TARGETED_COST;
-                } else {
-                    MINT_PRICE = (await tokenBurnerContract.methods.normalMintBNBCost().call()).toString();
-                    LIGHT_DARK_COST = (await tokenBurnerContract.methods.rareMintBNBCost().call()).toString();
-                    try {
-                        NORMAL_TEN_COST = (await tokenBurnerContract.methods.normalMintTenBNBCost().call()).toString();
-                        RARE_TEN_COST = (await tokenBurnerContract.methods.rareMintTenBNBCost().call()).toString();
-                        TARGETED_COST = (await tokenBurnerContract.methods.targetedMintBNBCost().call()).toString();
-                    } catch (e) {
-                        NORMAL_TEN_COST = (BigInt(MINT_PRICE) * BigInt(10)).toString();
-                        RARE_TEN_COST = (BigInt(LIGHT_DARK_COST) * BigInt(10)).toString();
-                        TARGETED_COST = ((BigInt(MINT_PRICE) * BigInt(6) + BigInt(LIGHT_DARK_COST) * BigInt(4)) * BigInt(10)).toString();
-                    }
-                    mintPriceWei = MINT_PRICE;
-                    lightDarkWei = LIGHT_DARK_COST;
-                    normalTenWei = NORMAL_TEN_COST;
-                    rareTenWei = RARE_TEN_COST;
-                    targetedWei = TARGETED_COST;
+                // 始终获取代币费用
+                const normalCostToken = (await tokenBurnerContract.methods.normalMintCost().call()).toString();
+                const rareCostToken = (await tokenBurnerContract.methods.rareMintCost().call()).toString();
+                let normalTenCostToken, rareTenCostToken, targetedCostToken;
+                try {
+                    normalTenCostToken = (await tokenBurnerContract.methods.normalMintTenCost().call()).toString();
+                    rareTenCostToken = (await tokenBurnerContract.methods.rareMintTenCost().call()).toString();
+                    targetedCostToken = (await tokenBurnerContract.methods.targetedMintCost().call()).toString();
+                } catch (e) {
+                    normalTenCostToken = (BigInt(normalCostToken) * BigInt(10)).toString();
+                    rareTenCostToken = (BigInt(rareCostToken) * BigInt(10)).toString();
+                    targetedCostToken = ((BigInt(normalCostToken) * BigInt(6) + BigInt(rareCostToken) * BigInt(4)) * BigInt(10)).toString();
                 }
+
+                // 如果未发射，额外获取BNB费用
+                let normalCostBNB, rareCostBNB, normalTenCostBNB, rareTenCostBNB, targetedCostBNB;
+                if (useBNB) {
+                    normalCostBNB = (await tokenBurnerContract.methods.normalMintBNBCost().call()).toString();
+                    rareCostBNB = (await tokenBurnerContract.methods.rareMintBNBCost().call()).toString();
+                    try {
+                        normalTenCostBNB = (await tokenBurnerContract.methods.normalMintTenBNBCost().call()).toString();
+                        rareTenCostBNB = (await tokenBurnerContract.methods.rareMintTenBNBCost().call()).toString();
+                        targetedCostBNB = (await tokenBurnerContract.methods.targetedMintBNBCost().call()).toString();
+                    } catch (e) {
+                        normalTenCostBNB = (BigInt(normalCostBNB) * BigInt(10)).toString();
+                        rareTenCostBNB = (BigInt(rareCostBNB) * BigInt(10)).toString();
+                        targetedCostBNB = ((BigInt(normalCostBNB) * BigInt(6) + BigInt(rareCostBNB) * BigInt(4)) * BigInt(10)).toString();
+                    }
+                }
+
+                // 当前使用的费用
+                const activeNormalCost = useBNB ? normalCostBNB : normalCostToken;
+                const activeRareCost = useBNB ? rareCostBNB : rareCostToken;
+                const activeNormalTenCost = useBNB ? normalTenCostBNB : normalTenCostToken;
+                const activeRareTenCost = useBNB ? rareTenCostBNB : rareTenCostToken;
+                const activeTargetedCost = useBNB ? targetedCostBNB : targetedCostToken;
+
+                MINT_PRICE = activeNormalCost;
+                LIGHT_DARK_COST = activeRareCost;
+                NORMAL_TEN_COST = activeNormalTenCost;
+                RARE_TEN_COST = activeRareTenCost;
+                TARGETED_COST = activeTargetedCost;
+
+                const mintPriceWei = activeNormalCost;
+                const lightDarkWei = activeRareCost;
+                const normalTenWei = activeNormalTenCost;
+                const rareTenWei = activeRareTenCost;
+                const targetedWei = activeTargetedCost;
 
                 const mintPriceNum = parseFloat(web3.utils.fromWei(mintPriceWei, 'ether'));
                 const lightDarkNum = parseFloat(web3.utils.fromWei(lightDarkWei, 'ether'));
@@ -495,6 +526,7 @@
                 const rareTenDisplay = formatCost(rareTenNum);
                 const targetedDisplay = formatCost(targetedNum);
 
+                // 按钮显示
                 document.getElementById('mintPriceDisplay').textContent = `${mintPriceDisplay} ${costUnit}`;
                 document.getElementById('mintBtn').innerHTML = `<i class="fas fa-magic mr-2"></i> 普通铸造（消耗${mintPriceDisplay}${costUnit}）`;
                 document.getElementById('mintLightDarkBtn').innerHTML = `<i class="fas fa-star mr-2"></i> 光暗铸造（消耗${lightDarkDisplay}${costUnit}）`;
@@ -502,24 +534,39 @@
                 document.getElementById('mintRareTenBtn').innerHTML = `<i class="fas fa-fire mr-2"></i> 光暗十连（消耗${rareTenDisplay}${costUnit}）`;
                 document.getElementById('mintTargetedBtn').innerHTML = `<i class="fas fa-bullseye mr-2"></i> 指定铸造（消耗${targetedDisplay}${costUnit}）`;
 
-                const normalCost = isLaunched ? Math.floor(mintPriceNum).toLocaleString() : mintPriceDisplay;
-                const rareCost = isLaunched ? Math.floor(lightDarkNum).toLocaleString() : lightDarkDisplay;
-                const normalTenCost = isLaunched ? Math.floor(normalTenNum).toLocaleString() : normalTenDisplay;
-                const rareTenCost = isLaunched ? Math.floor(rareTenNum).toLocaleString() : rareTenDisplay;
-                const targetedCost = isLaunched ? Math.floor(targetedNum).toLocaleString() : targetedDisplay;
+                // 温馨提示 - 代币费用
+                const normalCostTokenDisplay = Math.floor(parseFloat(web3.utils.fromWei(normalCostToken, 'ether'))).toLocaleString();
+                const rareCostTokenDisplay = Math.floor(parseFloat(web3.utils.fromWei(rareCostToken, 'ether'))).toLocaleString();
+                const normalTenCostTokenDisplay = Math.floor(parseFloat(web3.utils.fromWei(normalTenCostToken, 'ether'))).toLocaleString();
+                const rareTenCostTokenDisplay = Math.floor(parseFloat(web3.utils.fromWei(rareTenCostToken, 'ether'))).toLocaleString();
+                const targetedCostTokenDisplay = Math.floor(parseFloat(web3.utils.fromWei(targetedCostToken, 'ether'))).toLocaleString();
+                const targetedCostFormula = `(6×${normalCostTokenDisplay} + 4×${rareCostTokenDisplay}) × 10`;
 
-                document.getElementById('normalMintCostDisplay').textContent = normalCost;
-                document.getElementById('rareMintCostDisplay').textContent = rareCost;
-                document.getElementById('normalTenCostDisplay').textContent = normalTenCost;
-                document.getElementById('rareTenCostDisplay').textContent = rareTenCost;
+                document.getElementById('normalMintCostDisplay').textContent = normalCostTokenDisplay;
+                document.getElementById('rareMintCostDisplay').textContent = rareCostTokenDisplay;
+                document.getElementById('normalTenCostDisplay').textContent = normalTenCostTokenDisplay;
+                document.getElementById('rareTenCostDisplay').textContent = rareTenCostTokenDisplay;
+                document.getElementById('targetedCostDisplay').textContent = targetedCostTokenDisplay;
+                document.getElementById('targetedCostFormula').textContent = targetedCostFormula;
 
-                document.getElementById('targetedCostDisplay').textContent = targetedCost;
-                document.getElementById('targetedCostFormula').textContent = `(6×${normalCost} + 4×${rareCost}) × 10`;
+                // 温馨提示 - BNB费用（未发射时显示）
+                if (useBNB && normalCostBNB) {
+                    const bnbFormat = (wei) => parseFloat(web3.utils.fromWei(wei, 'ether')).toFixed(4);
+                    document.getElementById('normalMintBNBCostDisplay').textContent = bnbFormat(normalCostBNB);
+                    document.getElementById('rareMintBNBCostDisplay').textContent = bnbFormat(rareCostBNB);
+                    document.getElementById('normalTenBNBCostDisplay').textContent = bnbFormat(normalTenCostBNB);
+                    document.getElementById('rareTenBNBCostDisplay').textContent = bnbFormat(rareTenCostBNB);
+                    document.getElementById('targetedBNBCostDisplay').textContent = bnbFormat(targetedCostBNB);
+                }
 
                 const costUnitSpans = document.querySelectorAll('.cost-unit');
                 costUnitSpans.forEach(el => {
                     el.textContent = isLaunched ? (el.dataset.tokenText || '代币') : ' BNB';
                 });
+
+                // Banner 显示
+                document.getElementById('preLaunchBanner').style.display = useBNB ? '' : 'none';
+                document.getElementById('postLaunchBanner').style.display = isLaunched ? '' : 'none';
 
                 const approvalTip = document.getElementById('approvalTip');
                 if (approvalTip) {

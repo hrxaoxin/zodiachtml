@@ -171,6 +171,16 @@
             <h1 class="text-2xl font-bold text-gray-800">孕育系统</h1>
         </div>
 
+        <div id="breedingPreLaunchWarning" class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4 hidden">
+            <div class="flex items-start">
+                <i class="fas fa-info-circle text-blue-500 mt-1 mr-3 text-xl"></i>
+                <div>
+                    <p class="text-blue-800 font-medium">代币尚未发射到PancakeSwap</p>
+                    <p class="text-blue-600 text-sm mt-1">孕育功能将在代币发射后开放使用。</p>
+                </div>
+            </div>
+        </div>
+
         <p class="text-lg text-gray-600 mb-8">相同生肖、不同性别、5阶或以上的NFT可以一起孕育新生命</p>
 
         <div class="flex justify-center mb-8">
@@ -767,6 +777,29 @@
                 console.log('tokenContract initialized:', !!tokenContract);
             } catch (e) {
                 console.warn('tokenContract initialization failed:', e.message);
+            }
+
+            await checkBreedingLaunchState();
+        }
+
+        async function checkBreedingLaunchState() {
+            try {
+                const state = await checkLaunchState();
+                const warning = document.getElementById('breedingPreLaunchWarning');
+                const selfTab = document.getElementById('tabSelf');
+                const marketTab = document.getElementById('tabMarket');
+
+                if (state.useBNB) {
+                    warning.classList.remove('hidden');
+                    if (selfTab) { selfTab.classList.add('opacity-50', 'cursor-not-allowed'); selfTab.title = '代币发射后开放'; }
+                    if (marketTab) { marketTab.classList.add('opacity-50', 'cursor-not-allowed'); marketTab.title = '代币发射后开放'; }
+                } else {
+                    warning.classList.add('hidden');
+                    if (selfTab) { selfTab.classList.remove('opacity-50', 'cursor-not-allowed'); selfTab.title = ''; }
+                    if (marketTab) { marketTab.classList.remove('opacity-50', 'cursor-not-allowed'); marketTab.title = ''; }
+                }
+            } catch (e) {
+                console.warn('检查发射状态失败:', e);
             }
         }
 

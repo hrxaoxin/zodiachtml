@@ -2742,6 +2742,40 @@ window.ZODIAC_WEB3 = (function() {
         // NFT Info
         getNFTFullInfo,
         getNFTAttributes,
-        getNFTSkillInfo
+        getNFTSkillInfo,
+
+        // Launch State
+        checkLaunchState
     };
 })();
+
+/**
+ * @dev 检查代币是否已发射到PancakeSwap以及是否使用BNB模式
+ * @returns {{ isLaunched: boolean, useBNBBeforeLaunch: boolean, useBNB: boolean, contract: object|null }}
+ */
+async function checkLaunchState() {
+    try {
+        const burnerContract = await ZODIAC_WEB3.getContract('tokenBurner');
+        if (!burnerContract) return { isLaunched: true, useBNBBeforeLaunch: false, useBNB: false, contract: null };
+
+        let isLaunched = true;
+        try {
+            isLaunched = await burnerContract.methods.isTokenLaunched().call();
+        } catch (e) {
+            console.warn('[checkLaunchState] 检查代币发射状态失败:', e);
+        }
+
+        let useBNBBeforeLaunch = false;
+        try {
+            useBNBBeforeLaunch = await burnerContract.methods.useBNBBeforeLaunch().call();
+        } catch (e) {
+            console.warn('[checkLaunchState] 检查useBNBBeforeLaunch失败:', e);
+        }
+
+        const useBNB = !isLaunched && useBNBBeforeLaunch;
+        return { isLaunched, useBNBBeforeLaunch, useBNB, contract: burnerContract };
+    } catch (e) {
+        console.error('[checkLaunchState] 获取合约失败:', e);
+        return { isLaunched: true, useBNBBeforeLaunch: false, useBNB: false, contract: null };
+    }
+}

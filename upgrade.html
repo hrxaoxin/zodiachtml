@@ -242,6 +242,16 @@
                 </div>
             </div>
 
+            <div id="upgradePreLaunchWarning" class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4 hidden">
+                <div class="flex items-start">
+                    <i class="fas fa-info-circle text-blue-500 mt-1 mr-3 text-xl"></i>
+                    <div>
+                        <p class="text-blue-800 font-medium">代币尚未发射到PancakeSwap</p>
+                        <p class="text-blue-600 text-sm mt-1">方式二（消耗代币升阶）将在代币发射后开放使用。</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="bg-white rounded-xl p-6 shadow-md mb-8">
                 <h2 class="text-2xl font-bold mb-4">为你的生肖NFT升阶，提升等级获得更多权益</h2>
                 <p class="text-gray-600 mb-6">选择一种升阶方式，提升你的生肖NFT等级，获得更高的分红权重</p>
@@ -747,8 +757,42 @@
             
             await Promise.all([
                 checkUSDUpgradeHidden(),
-                loadUpgradeCosts()
+                loadUpgradeCosts(),
+                checkLaunchStateAndUpdateUI()
             ]);
+        }
+
+        async function checkLaunchStateAndUpdateUI() {
+            try {
+                const state = await checkLaunchState();
+                const warning = document.getElementById('upgradePreLaunchWarning');
+                const tokenUpgradeBtn = document.getElementById('upgradeWithTokenBtn');
+                const usdUpgradeBtn = document.getElementById('upgradeWithUSDValueBtn');
+
+                if (state.useBNB) {
+                    warning.classList.remove('hidden');
+                    tokenUpgradeBtn.disabled = true;
+                    tokenUpgradeBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    tokenUpgradeBtn.title = '代币发射后开放';
+                    if (usdUpgradeBtn) {
+                        usdUpgradeBtn.disabled = true;
+                        usdUpgradeBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                        usdUpgradeBtn.title = '代币发射后开放';
+                    }
+                } else {
+                    warning.classList.add('hidden');
+                    tokenUpgradeBtn.disabled = false;
+                    tokenUpgradeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    tokenUpgradeBtn.title = '';
+                    if (usdUpgradeBtn) {
+                        usdUpgradeBtn.disabled = false;
+                        usdUpgradeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        usdUpgradeBtn.title = '';
+                    }
+                }
+            } catch (e) {
+                console.warn('检查发射状态失败:', e);
+            }
         }
 
         async function loadUpgradeCosts() {

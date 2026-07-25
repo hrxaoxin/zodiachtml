@@ -162,6 +162,26 @@
             <h1 class="text-2xl font-bold text-gray-800">质押挖矿</h1>
         </div>
 
+        <div id="stakingPreLaunchWarning" class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4 hidden">
+            <div class="flex items-start">
+                <i class="fas fa-info-circle text-blue-500 mt-1 mr-3 text-xl"></i>
+                <div>
+                    <p class="text-blue-800 font-medium">代币尚未发射到PancakeSwap</p>
+                    <p class="text-blue-600 text-sm mt-1">代币质押功能将在代币发射后开放使用。NFT质押不受影响。</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="stakingPostLaunchBanner" class="bg-green-50 border-l-4 border-green-400 p-4 mb-4 hidden">
+            <div class="flex items-start">
+                <i class="fas fa-check-circle text-green-500 mt-1 mr-3 text-xl"></i>
+                <div>
+                    <p class="text-green-800 font-medium">代币已发射到PancakeSwap</p>
+                    <p class="text-green-600 text-sm mt-1">奖励将自动转换为LP，开启双重收益：项目分红 + DEX交易手续费。</p>
+                </div>
+            </div>
+        </div>
+
         <div class="flex space-x-4 mb-8">
             <button id="nftStakeTab" class="tab-btn active px-6 py-3 bg-blue-500 text-white rounded-lg font-medium transition-colors">
                 🎴 NFT质押
@@ -650,9 +670,43 @@
                         }
                     }
                 }
+
+                await checkStakingLaunchState();
             } catch (error) {
                 console.warn('合约初始化失败:', error.message);
                 ZODIAC_UI.showToast('合约初始化失败: ' + error.message, 'warning');
+            }
+        }
+
+        async function checkStakingLaunchState() {
+            try {
+                const state = await checkLaunchState();
+                const preWarning = document.getElementById('stakingPreLaunchWarning');
+                const postBanner = document.getElementById('stakingPostLaunchBanner');
+                const tokenPanel = document.getElementById('tokenStakePanel');
+                const tokenTab = document.getElementById('tokenStakeTab');
+
+                if (state.useBNB) {
+                    preWarning.classList.remove('hidden');
+                    postBanner.classList.add('hidden');
+                    if (tokenTab) {
+                        tokenTab.classList.add('opacity-50', 'cursor-not-allowed');
+                        tokenTab.title = '代币发射后开放';
+                    }
+                } else {
+                    preWarning.classList.add('hidden');
+                    if (tokenTab) {
+                        tokenTab.classList.remove('opacity-50', 'cursor-not-allowed');
+                        tokenTab.title = '';
+                    }
+                    if (state.isLaunched) {
+                        postBanner.classList.remove('hidden');
+                    } else {
+                        postBanner.classList.add('hidden');
+                    }
+                }
+            } catch (e) {
+                console.warn('检查发射状态失败:', e);
             }
         }
 

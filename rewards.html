@@ -189,6 +189,16 @@
             </div>
         </div>
 
+        <div id="rewardsPostLaunchBanner" class="bg-green-50 border-l-4 border-green-400 p-4 mb-4 hidden">
+            <div class="flex items-start">
+                <i class="fas fa-check-circle text-green-500 mt-1 mr-3 text-xl"></i>
+                <div>
+                    <p class="text-green-800 font-medium">代币已发射到PancakeSwap</p>
+                    <p class="text-green-600 text-sm mt-1">奖励将自动转换为LP，开启双重收益：项目分红 + DEX交易手续费。</p>
+                </div>
+            </div>
+        </div>
+
         <div class="bg-white rounded-xl p-6 shadow-md mb-8">
             <div class="flex items-center justify-between mb-6">
                 <div class="flex items-center">
@@ -305,9 +315,24 @@
                 dividendManagerContract = await window.ZODIAC_WEB3.getContract('dividendManager');
                 dividendManagerLPContract = await window.ZODIAC_WEB3.getContract('dividendManagerLP');
                 await loadRewardConfig();
+                await checkRewardsLaunchState();
             } catch (error) {
                 console.warn('合约初始化失败:', error.message);
                 ZODIAC_UI.showToast('合约初始化失败: ' + error.message, 'warning');
+            }
+        }
+
+        async function checkRewardsLaunchState() {
+            try {
+                const state = await checkLaunchState();
+                const banner = document.getElementById('rewardsPostLaunchBanner');
+                if (state.isLaunched) {
+                    banner.classList.remove('hidden');
+                } else {
+                    banner.classList.add('hidden');
+                }
+            } catch (e) {
+                console.warn('检查发射状态失败:', e);
             }
         }
 

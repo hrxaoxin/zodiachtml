@@ -73,6 +73,16 @@
             <h1 class="text-2xl font-bold text-gray-800">NFT交易市场</h1>
         </div>
 
+        <div id="tradingPreLaunchWarning" class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4 hidden">
+            <div class="flex items-start">
+                <i class="fas fa-info-circle text-blue-500 mt-1 mr-3 text-xl"></i>
+                <div>
+                    <p class="text-blue-800 font-medium">代币尚未发射到PancakeSwap</p>
+                    <p class="text-blue-600 text-sm mt-1">交易功能将在代币发射后开放使用。</p>
+                </div>
+            </div>
+        </div>
+
         <p class="text-lg text-gray-600 mb-8">买卖十二生肖NFT，支持所有属性类型</p>
 
         <div class="bg-white rounded-xl p-6 shadow-md mb-8">
@@ -639,10 +649,40 @@
                 
                 console.log('[TRADING] calling updateApprovalStatus...');
                 await updateApprovalStatus();
+                await checkTradingLaunchState();
                 console.log('[TRADING] initContracts completed');
             } catch (error) {
                 console.warn('[TRADING] 合约初始化失败:', error.message);
                 ZODIAC_UI.showToast('合约初始化失败: ' + error.message, 'warning');
+            }
+        }
+
+        async function checkTradingLaunchState() {
+            try {
+                const state = await checkLaunchState();
+                const warning = document.getElementById('tradingPreLaunchWarning');
+                const mainContent = warning ? warning.nextElementSibling : null;
+
+                if (state.useBNB) {
+                    warning.classList.remove('hidden');
+                    // 禁用交易相关操作按钮
+                    document.querySelectorAll('.btn-primary, .btn-secondary').forEach(btn => {
+                        if (btn.id !== 'connectWalletBtn' && btn.id !== 'refreshWallet') {
+                            btn.disabled = true;
+                            btn.classList.add('opacity-50', 'cursor-not-allowed');
+                        }
+                    });
+                } else {
+                    warning.classList.add('hidden');
+                    document.querySelectorAll('.btn-primary, .btn-secondary').forEach(btn => {
+                        if (btn.id !== 'connectWalletBtn' && btn.id !== 'refreshWallet') {
+                            btn.disabled = false;
+                            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn('检查发射状态失败:', e);
             }
         }
 
