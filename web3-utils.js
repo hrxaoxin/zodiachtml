@@ -485,7 +485,7 @@ window.ZODIAC_WEB3 = (function() {
             'nftSkillData': currentABIS.nftSkillDataABI,
             'arenaRankingQuery': currentABIS.arenaRankingQueryABI,
             'tokenStaking': currentABIS.tokenStakingABI,
-            'tokenStakingLPRateManager': [{"inputs":[],"name":"rewardRate","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"maxRewardRate","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"calculateDailyReward","outputs":[],"stateMutability":"nonpayable","type":"function"}]
+            'tokenStakingLPRateManager': currentABIS.tokenStakingLPRateManagerABI
         };
         
         const abi = dynamicABI_MAP[name];

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿window.ZODIAC_CONFIG = (function() {
+﻿﻿﻿﻿window.ZODIAC_CONFIG = (function() {
     const NETWORK_ID = 56;
     const NETWORK_NAME = 'Binance Mainnet';
     const NETWORK_LABEL = 'BNB主网';
@@ -27832,6 +27832,212 @@
 		"outputs": [],
 		"stateMutability": "payable",
 		"type": "function"
+	}
+],
+		tokenStakingLPRateManagerABI: [
+	{
+		"inputs": [{"internalType": "address", "name": "_authorizer", "type": "address"}],
+		"name": "initialize",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "rewardRate",
+		"outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "maxRewardRate",
+		"outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "maxDailyRewardPercent",
+		"outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "rateStep",
+		"outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "todayStart",
+		"outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "todayRewardAmount",
+		"outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "todayIncomingTokens",
+		"outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "epoch",
+		"outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "calculateDailyReward",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [{"internalType": "uint256", "name": "_rewardRate", "type": "uint256"}],
+		"name": "setRewardRate",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [{"internalType": "uint256", "name": "_maxRewardRate", "type": "uint256"}],
+		"name": "setMaxRewardRate",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [{"internalType": "uint256", "name": "_maxDailyRewardPercent", "type": "uint256"}],
+		"name": "setMaxDailyRewardPercent",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [{"internalType": "uint256", "name": "_rateStep", "type": "uint256"}],
+		"name": "setRateStep",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [{"internalType": "uint256", "name": "_maxRewardRate", "type": "uint256"}, {"internalType": "uint256", "name": "_maxDailyRewardPercent", "type": "uint256"}, {"internalType": "uint256", "name": "_rateStep", "type": "uint256"}],
+		"name": "setRateParams",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "authorizer",
+		"outputs": [{"internalType": "address", "name": "", "type": "address"}],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "owner",
+		"outputs": [{"internalType": "address", "name": "", "type": "address"}],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [{"internalType": "address", "name": "newOwner", "type": "address"}],
+		"name": "transferOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [{"internalType": "address", "name": "account", "type": "address"}],
+		"name": "ownerOf",
+		"outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+		"name": "pendingOwnerOf",
+		"outputs": [{"internalType": "address", "name": "", "type": "address"}],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "renounceOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "acceptOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [{"internalType": "address", "name": "newImplementation", "type": "address"}],
+		"name": "upgradeTo",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [{"internalType": "address", "name": "newImplementation", "type": "address"}, {"internalType": "bytes", "name": "data", "type": "bytes"}],
+		"name": "upgradeToAndCall",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [{"indexed": true, "internalType": "uint256", "name": "dailyReward", "type": "uint256"}, {"indexed": false, "internalType": "uint256", "name": "increment", "type": "uint256"}],
+		"name": "DailyRewardCalculated",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [{"indexed": false, "internalType": "uint256", "name": "rewardRate", "type": "uint256"}],
+		"name": "RewardRateUpdated",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [{"indexed": true, "internalType": "address", "name": "operator", "type": "address"}, {"indexed": false, "internalType": "uint256", "name": "timestamp", "type": "uint256"}, {"indexed": false, "internalType": "uint256", "name": "oldEpoch", "type": "uint256"}, {"indexed": false, "internalType": "uint256", "name": "newEpoch", "type": "uint256"}],
+		"name": "ContractDataReset",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [{"indexed": true, "internalType": "address", "name": "previousOwner", "type": "address"}, {"indexed": true, "internalType": "address", "name": "newOwner", "type": "address"}],
+		"name": "OwnershipTransferStarted",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [{"indexed": true, "internalType": "address", "name": "previousOwner", "type": "address"}, {"indexed": true, "internalType": "address", "name": "newOwner", "type": "address"}],
+		"name": "OwnershipTransferred",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [{"indexed": true, "internalType": "address", "name": "implementation", "type": "address"}],
+		"name": "Upgraded",
+		"type": "event"
 	}
 ],
 		arenaRewardLPABI: [
