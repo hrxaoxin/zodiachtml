@@ -418,16 +418,30 @@
                 try {
                     isLaunched = await tokenBurnerContract.methods.isTokenLaunched().call();
                 } catch (e) {
-                    console.warn('检查代币发射状态失败，默认按未发射处理(使用BNB支付):', e);
+                    console.warn('检查代币发射状态失败，默认按未发射处理:', e);
                 }
                 console.log('Token launched on PancakeSwap:', isLaunched);
+                
+                // 检查发射前使用BNB铸造的开关
+                let useBNBBeforeLaunch = false;
+                try {
+                    useBNBBeforeLaunch = await tokenBurnerContract.methods.useBNBBeforeLaunch().call();
+                } catch (e) {
+                    console.warn('检查useBNBBeforeLaunch开关失败，默认关闭:', e);
+                }
+                console.log('useBNBBeforeLaunch:', useBNBBeforeLaunch);
 
-                const costUnit = isLaunched ? '代币' : 'BNB';
+                // 确定费用单位：
+                // - 代币已发射：始终使用代币
+                // - 代币未发射 + 开关打开：使用BNB
+                // - 代币未发射 + 开关关闭（默认）：使用代币（不使用BNB）
+                const useBNB = !isLaunched && useBNBBeforeLaunch;
+                const costUnit = isLaunched || !useBNBBeforeLaunch ? '代币' : 'BNB';
 
                 let mintPriceWei, lightDarkWei, normalTenWei, rareTenWei, targetedWei;
 
-                if (isLaunched) {
-                    // 代币已发射：显示代币费用
+                if (isLaunched || !useBNBBeforeLaunch) {
+                    // 代币已发射，或开关关闭（默认）：显示代币费用
                     MINT_PRICE = (await tokenBurnerContract.methods.normalMintCost().call()).toString();
                     LIGHT_DARK_COST = (await tokenBurnerContract.methods.rareMintCost().call()).toString();
                     try {
@@ -445,7 +459,7 @@
                     rareTenWei = RARE_TEN_COST;
                     targetedWei = TARGETED_COST;
                 } else {
-                    // 代币未发射：显示BNB费用
+                    // 代币未发射 + 开关打开：显示BNB费用
                     MINT_PRICE = (await tokenBurnerContract.methods.normalMintBNBCost().call()).toString();
                     LIGHT_DARK_COST = (await tokenBurnerContract.methods.rareMintBNBCost().call()).toString();
                     try {
