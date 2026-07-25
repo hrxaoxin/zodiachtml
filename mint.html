@@ -685,15 +685,14 @@
                 document.getElementById('mintTargetedBtn').disabled = !(hasApproval && hasEnoughBalanceForTargeted && selectedZodiac);
 
                 const approveBtn = document.getElementById('approveToken');
-                const approvalStatusRow = approveBtn ? approveBtn.closest('.space-y-4') : null;
                 const approvalInfoRow = document.querySelector('#approvalStatus')?.closest('.flex');
                 const approvalTip = document.getElementById('approvalTip');
                 if (USE_BNB_MODE) {
-                    if (approvalStatusRow) approvalStatusRow.style.display = 'none';
+                    if (approveBtn) approveBtn.style.display = 'none';
                     if (approvalInfoRow) approvalInfoRow.style.display = 'none';
                     if (approvalTip) approvalTip.style.display = 'none';
                 } else {
-                    if (approvalStatusRow) approvalStatusRow.style.display = '';
+                    if (approveBtn) approveBtn.style.display = '';
                     if (approvalInfoRow) approvalInfoRow.style.display = '';
                     if (approvalTip) approvalTip.style.display = '';
                 }
