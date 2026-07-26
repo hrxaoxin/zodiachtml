@@ -278,6 +278,30 @@
                 </div>
             </div>
 
+            <div id="arenaLPBanner" class="mb-6 hidden">
+                <div class="bg-green-800/80 backdrop-blur-lg border border-green-500/30 rounded-xl p-4">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-green-600 flex items-center justify-center mr-3">
+                            <i class="fas fa-check-circle text-green-200 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-green-200 mb-1">代币已发射到PancakeSwap</h3>
+                            <p class="text-green-300 text-sm mb-2">竞技场排名奖励将自动转换为LP，开启<strong class="text-green-100">双重收益</strong>：项目分红 + DEX交易手续费。</p>
+                            <div class="bg-black/20 rounded-lg p-2.5 border border-green-500/20 text-xs text-green-300">
+                                <p class="font-medium text-green-200 mb-1">📈 LP自动转换覆盖以下奖励：</p>
+                                <ul class="list-disc list-inside space-y-0.5">
+                                    <li>生肖NFT分红（Dividend LP）</li>
+                                    <li>NFT质押挖矿奖励（Staking LP Reward）</li>
+                                    <li>代币质押挖矿奖励（Token Staking LP）</li>
+                                    <li>竞技场排名奖励（Arena Reward LP）</li>
+                                </ul>
+                                <p class="mt-1 text-green-400/70">领取时LP会自动兑换为代币和WBNB发放。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-2 space-y-6">
                     <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-6">
@@ -856,7 +880,6 @@
                 document.getElementById('challengeBtn')?.addEventListener('click', executeRealChallenge);
                 document.getElementById('mobileChallengeBtn')?.addEventListener('click', executeRealChallenge);
                 document.getElementById('closeBattleModal')?.addEventListener('click', () => {
-                    calculateBattleResult();
                     document.getElementById('battleModal')?.classList.add('hidden');
                     matchRound = 1;
                     attackerMatchWins = 0;
@@ -893,7 +916,6 @@
                 document.getElementById('fightBtn')?.addEventListener('click', startBattle);
                 document.getElementById('mobileFightBtn')?.addEventListener('click', startBattle);
                 document.getElementById('closeBattleBtn')?.addEventListener('click', function() {
-                    calculateBattleResult();
                     document.getElementById('battleModal')?.classList.add('hidden');
                     matchRound = 1;
                     attackerMatchWins = 0;
@@ -909,7 +931,6 @@
                 document.getElementById('saveBattleTeamBtn')?.addEventListener('click', saveBattleTeam);
                 document.getElementById('rechargeBtn')?.addEventListener('click', rechargeAttempts);
                 document.getElementById('mobileCloseBattleBtn')?.addEventListener('click', function() {
-                    calculateBattleResult();
                     document.getElementById('battleModal')?.classList.add('hidden');
                     matchRound = 1;
                     attackerMatchWins = 0;
@@ -963,6 +984,7 @@
                 }
                 
                 await initContracts(true);
+                await checkArenaLaunchState();
                 
                 const contractsReady = checkContractsReady();
                 console.log('[ARENA] Contracts ready status:', contractsReady);
@@ -1284,6 +1306,20 @@
                 case 1: return '随机模式';
                 case 2: return '轮换模式';
                 default: return '未知模式';
+            }
+        }
+
+        async function checkArenaLaunchState() {
+            try {
+                const state = await checkLaunchState();
+                const banner = document.getElementById('arenaLPBanner');
+                if (state.isLaunched) {
+                    banner.classList.remove('hidden');
+                } else {
+                    banner.classList.add('hidden');
+                }
+            } catch (e) {
+                console.warn('检查发射状态失败:', e);
             }
         }
 
@@ -2191,6 +2227,7 @@
                 }
                 
                 const tokenContract = new web3.eth.Contract(ZODIAC_CONFIG.ABIS.tokenABI, tokenAddress);
+                const arenaPlayerAddress = await window.ZODIAC_WEB3.getContractAddress('arenaPlayer');
                 
                 // 预检查：代币余额
                 try {
@@ -3555,8 +3592,11 @@
             function getNFTImageUrl(imagePath) {
                 if (!imagePath) return 'https://via.placeholder.com/40';
                 if (imagePath.indexOf('http') === 0) return imagePath;
-                const defaultGateway = 'https://gold-fascinating-ermine-925.mypinata.cloud/ipfs/';
-                return `${defaultGateway}${imagePath}`;
+                if (/^[A-Za-z0-9]{46}$/.test(imagePath) || imagePath.startsWith('Qm')) {
+                    const defaultGateway = 'https://gold-fascinating-ermine-925.mypinata.cloud/ipfs/';
+                    return `${defaultGateway}${imagePath}`;
+                }
+                return imagePath;
             }
             
             attackerTeam.forEach((nft, index) => {
@@ -3898,14 +3938,15 @@
                     if (!attackerAlive[i] || isBattleSkipped) continue;
                     
                     const attackerIndex = i;
-                    const defenderIndex = findAliveIndex(defenderAlive, attackerIndex < FRONT_ROW_SIZE);
+                    const attacker = attackerTeam[attackerIndex];
+                    const defenderElements = defenderTeam.map(d => d.element);
+                    const defenderIndex = findAliveIndex(defenderAlive, attackerIndex < FRONT_ROW_SIZE, attacker.attr, defenderElements, defenderHp, defenderTeam.map(() => MAX_HP));
                     
                     if (defenderIndex === -1) {
                         addBattleLog('⚠️ 防守方已无可用单位！');
                         break;
                     }
                     
-                    const attacker = attackerTeam[attackerIndex];
                     const defender = defenderTeam[defenderIndex];
                     
                     addBattleLog(`\n🎯 ${attacker.name} → ${defender.name}`);
@@ -3956,14 +3997,15 @@
                     if (!defenderAlive[i] || isBattleSkipped) continue;
                     
                     const defenderIndex = i;
-                    const attackerIndex = findAliveIndex(attackerAlive, defenderIndex < FRONT_ROW_SIZE);
+                    const defender = defenderTeam[defenderIndex];
+                    const attackerElements = attackerTeam.map(a => a.attr);
+                    const attackerIndex = findAliveIndex(attackerAlive, defenderIndex < FRONT_ROW_SIZE, defender.element, attackerElements, attackerHp, attackerTeam.map(() => MAX_HP));
                     
                     if (attackerIndex === -1) {
                         addBattleLog('⚠️ 进攻方已无可用单位！');
                         break;
                     }
                     
-                    const defender = defenderTeam[defenderIndex];
                     const attacker = attackerTeam[attackerIndex];
                     
                     addBattleLog(`\n🛡️ ${defender.name} → ${attacker.name}`);
@@ -4101,21 +4143,57 @@
             isBattleSkipped = false;
         }
 
-        function findAliveIndex(aliveArray, preferFrontRow) {
-            if (preferFrontRow) {
-                for (let i = 0; i < FRONT_ROW_SIZE; i++) {
-                    if (aliveArray[i]) return i;
+        function findAliveIndex(aliveArray, preferFrontRow, attackerElement, targetElements, hpArray, maxHpArray) {
+            if (!attackerElement && attackerElement !== 0 && attackerElement !== '0') {
+                if (preferFrontRow) {
+                    for (let i = 0; i < FRONT_ROW_SIZE; i++) { if (aliveArray[i]) return i; }
                 }
-            }
-            for (let i = FRONT_ROW_SIZE; i < TEAM_SIZE; i++) {
-                if (aliveArray[i]) return i;
-            }
-            if (!preferFrontRow) {
-                for (let i = 0; i < FRONT_ROW_SIZE; i++) {
-                    if (aliveArray[i]) return i;
+                for (let i = FRONT_ROW_SIZE; i < TEAM_SIZE; i++) { if (aliveArray[i]) return i; }
+                if (!preferFrontRow) {
+                    for (let i = 0; i < FRONT_ROW_SIZE; i++) { if (aliveArray[i]) return i; }
                 }
+                return -1;
             }
+            const atkElem = typeof attackerElement === 'string' ? elementStrToNum(attackerElement) : attackerElement;
+            const tgtElems = targetElements.map(e => typeof e === 'string' ? elementStrToNum(e) : e);
+            const frontIdx = findBestInRow(aliveArray, atkElem, tgtElems, hpArray, maxHpArray, 0, FRONT_ROW_SIZE);
+            if (frontIdx !== -1) return frontIdx;
+            const backIdx = findBestInRow(aliveArray, atkElem, tgtElems, hpArray, maxHpArray, FRONT_ROW_SIZE, TEAM_SIZE);
+            if (backIdx !== -1) return backIdx;
             return -1;
+        }
+
+        function elementStrToNum(str) {
+            const map = { water: 0, wind: 1, fire: 2, dark: 3, light: 4 };
+            return map[str.toLowerCase()] ?? 0;
+        }
+
+        function findBestInRow(aliveArray, attackerElement, targetElements, hpArray, maxHpArray, rowStart, rowEnd) {
+            let bestIdx = -1;
+            let bestHpPercent = Infinity;
+            let bestHasAdvantage = false;
+            for (let i = rowStart; i < rowEnd; i++) {
+                if (!aliveArray[i]) continue;
+                const hasAdv = checkElementAdvantage(attackerElement, targetElements[i]);
+                const hpPercent = maxHpArray[i] === 0 ? 0 : (hpArray[i] * 100) / maxHpArray[i];
+                if (bestIdx === -1) {
+                    bestIdx = i; bestHpPercent = hpPercent; bestHasAdvantage = hasAdv;
+                } else if (hasAdv && !bestHasAdvantage) {
+                    bestIdx = i; bestHpPercent = hpPercent; bestHasAdvantage = hasAdv;
+                } else if (hasAdv === bestHasAdvantage && hpPercent < bestHpPercent) {
+                    bestIdx = i; bestHpPercent = hpPercent;
+                }
+            }
+            return bestIdx;
+        }
+
+        function checkElementAdvantage(attackerElement, defenderElement) {
+            if (attackerElement === 2 && defenderElement === 1) return true;
+            if (attackerElement === 1 && defenderElement === 0) return true;
+            if (attackerElement === 0 && defenderElement === 2) return true;
+            if (attackerElement === 4 && defenderElement === 3) return true;
+            if (attackerElement === 3 && defenderElement === 4) return true;
+            return false;
         }
 
         function addBattleLog(message) {
@@ -4254,11 +4332,12 @@
                     if (!attackerAlive[i] || isBattleSkipped) continue;
                     
                     const attackerIndex = i;
-                    const defenderIndex = findAliveIndex(defenderAlive, attackerIndex < FRONT_ROW_SIZE);
+                    const attacker = attackerTeam[attackerIndex];
+                    const defenderElements = defenderTeam.map(d => d.element);
+                    const defenderIndex = findAliveIndex(defenderAlive, attackerIndex < FRONT_ROW_SIZE, attacker.attr, defenderElements, defenderHp, defenderTeam.map(() => MAX_HP));
                     
                     if (defenderIndex === -1) break;
                     
-                    const attacker = attackerTeam[attackerIndex];
                     const defender = defenderTeam[defenderIndex];
                     
                     addBattleLog(`\n🎯 ${attacker.name} → ${defender.name}`);
@@ -4310,11 +4389,12 @@
                     if (!defenderAlive[i] || isBattleSkipped) continue;
                     
                     const defenderIndex = i;
-                    const attackerIndex = findAliveIndex(attackerAlive, defenderIndex < FRONT_ROW_SIZE);
+                    const defender = defenderTeam[defenderIndex];
+                    const attackerElements = attackerTeam.map(a => a.attr);
+                    const attackerIndex = findAliveIndex(attackerAlive, defenderIndex < FRONT_ROW_SIZE, defender.element, attackerElements, attackerHp, attackerTeam.map(() => MAX_HP));
                     
                     if (attackerIndex === -1) break;
                     
-                    const defender = defenderTeam[defenderIndex];
                     const attacker = attackerTeam[attackerIndex];
                     
                     addBattleLog(`\n🛡️ ${defender.name} → ${attacker.name}`);
@@ -4466,7 +4546,8 @@
                         if (!defenderAlive.some(d => d)) break;
                         
                         const attacker = attackerAttrs[attackerIndex];
-                        const defenderIndex = findAliveIndex(defenderAlive, attackerIndex < FRONT_ROW_SIZE);
+                        const defenderElements = defenderAttrs.map(d => d.element);
+                        const defenderIndex = findAliveIndex(defenderAlive, attackerIndex < FRONT_ROW_SIZE, attacker.element, defenderElements, defenderHp, defenderAttrs.map(d => d.health));
                         
                         if (defenderIndex === -1) break;
                         
@@ -4528,7 +4609,8 @@
                         if (!attackerAlive.some(a => a)) break;
                         
                         const defender = defenderAttrs[defenderIndex];
-                        const attackerIndex = findAliveIndex(attackerAlive, defenderIndex < FRONT_ROW_SIZE);
+                        const attackerElements = attackerAttrs.map(a => a.element);
+                        const attackerIndex = findAliveIndex(attackerAlive, defenderIndex < FRONT_ROW_SIZE, defender.element, attackerElements, attackerHp, attackerAttrs.map(a => a.health));
                         
                         if (attackerIndex === -1) break;
                         
