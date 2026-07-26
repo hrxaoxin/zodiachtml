@@ -368,6 +368,9 @@
                 return;
             }
 
+            const countMap = {};
+            userTokens.forEach(ut => countMap[ut.typeId] = ut.count);
+
             let html = '';
 
             for (const token of filteredTokens) {
@@ -375,12 +378,14 @@
                 const level = token.level || 1;
                 const growth = token.growth || 0;
                 const isRare = token.isRare;
+                const count = countMap[typeId] || 0;
                 const nftInfo = window.ZODIAC_UTILS.getNFTInfo(typeId, token.tokenId, growth);
                 const genderText = nftInfo.gender === 1 ? '<span class="text-blue-500 text-sm">公</span>' : '<span class="text-pink-500 text-sm">母</span>';
 
                 html += `
                     <div class="zodiac-card nft-card-hover cursor-pointer"
                          data-nft-typeid="${typeId}" data-nft-tokenid="${token.tokenId}" data-nft-level="${level}" data-nft-growth="${growth}">
+                        ${count > 1 ? '<span class="collection-badge">x' + count + '</span>' : ''}
                         ${isRare ? '<span class="collection-badge" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);">稀有</span>' : ''}
                         <img src="${nftInfo.imagePath}" alt="${nftInfo.name}" onerror="this.src='images/fu-cards/shuishu_1.jpg'" style="width:60px;height:60px;object-fit:contain;margin:0 auto 8px;border-radius:8px;">
                         <h4>${nftInfo.name} ${genderText}</h4>
