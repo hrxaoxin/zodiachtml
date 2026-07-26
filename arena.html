@@ -766,6 +766,7 @@
 
         let selectedNft = null;
         let selectedOpponent = null;
+        let currentUserRank = 0;
         let myNfts = [];
         let battleTeam = [];
         let currentChallengeMode = 0;
@@ -2580,6 +2581,7 @@
                 }
                 
                 const userRankNum = parseInt(userRank) || 0;
+                currentUserRank = userRankNum;
                 console.log('[ARENA] Final user rank:', userRankNum);
                 if (myRankEl) myRankEl.textContent = userRankNum > 0 ? '#' + userRankNum : '-';
                 
@@ -3428,9 +3430,14 @@
                             const rankTextColor = player.rank <= 3 ? 'text-yellow-400' : 'text-gray-400';
                             const rewardAmount = parseFloat(rewards[index] || '0');
                             const rewardDisplay = rewardAmount > 0 ? `${rewardAmount.toFixed(4)} <span class="text-xs text-yellow-600">${rewardTypeLabel}</span>` : '--';
+                            const canChallenge = currentUserRank <= 0 || player.rank < currentUserRank;
+                            const rowStyle = canChallenge 
+                                ? 'cursor-pointer hover:bg-white/10 border border-transparent hover:border-blue-500/30'
+                                : 'opacity-40 cursor-not-allowed border border-transparent';
+                            const clickAttr = canChallenge ? `onclick="selectOpponent(${index})"` : '';
                             return `
-                            <div class="p-3 bg-white/5 hover:bg-white/10 rounded-xl cursor-pointer transition-all duration-200 flex items-center group border border-transparent hover:border-blue-500/30" 
-                                 onclick="selectOpponent(${index})">
+                            <div class="p-3 bg-white/5 rounded-xl transition-all duration-200 flex items-center group ${rowStyle}" 
+                                 ${clickAttr}>
                                 <div class="${rankBadgeColor} w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3 shadow-lg flex-shrink-0">
                                     ${player.rank}
                                 </div>
@@ -3447,6 +3454,7 @@
                                 </div>
                                 <div class="text-right ml-3 flex-shrink-0">
                                     <div class="text-yellow-400 text-sm font-bold">${rewardDisplay}</div>
+                                    ${!canChallenge ? '<div class="text-gray-500 text-xs mt-1">排名不低于你</div>' : ''}
                                 </div>
                             </div>
                         `}).join('');
@@ -3476,7 +3484,17 @@
             }
             
             const opponents = JSON.parse(leaderboardData);
-            selectedOpponent = opponents[index % opponents.length];
+            const opponent = opponents[index % opponents.length];
+            
+            // 只能挑战比自己排名靠前的玩家
+            if (currentUserRank > 0 && opponent.rank >= currentUserRank) {
+                ZODIAC_UI.showToast('只能挑战排名比你靠前的玩家', 'warning');
+                selectedOpponent = null;
+                updateChallengeBtn();
+                return;
+            }
+            
+            selectedOpponent = opponent;
             updateChallengeBtn();
             showOpponentTeam(selectedOpponent);
         }
