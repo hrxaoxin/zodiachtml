@@ -338,7 +338,7 @@
                     <div class="zodiac-card nft-card-hover ${isOwned ? 'has-item cursor-pointer' : 'locked'}" 
                          data-nft-typeid="${typeId}" data-nft-tokenid="${firstToken ? firstToken.tokenId : ''}" data-nft-level="${level}" data-nft-growth="${growth}">
                         ${count > 1 ? '<span class="collection-badge">x' + count + '</span>' : ''}
-                        <img class="lazy-image" data-src="${nftInfo.imagePath}" alt="${nftInfo.name}" onerror="this.src='images/fu-cards/shuishu_1.jpg'">
+                        <img src="${nftInfo.imagePath}" alt="${nftInfo.name}" onerror="this.src='images/fu-cards/shuishu_1.jpg'" style="width:60px;height:60px;object-fit:contain;margin:0 auto 8px;border-radius:8px;">
                         <h4>${nftInfo.name} ${genderText}</h4>
                         ${isOwned ? '<p>等级: ' + getStars(level) + '</p><p class="text-xs text-green-600">成长: ' + growth + '</p>' : '<p class="text-gray-400">未拥有</p>'}
                     </div>
@@ -346,7 +346,6 @@
             }
             
             grid.innerHTML = html;
-            lazyLoadImages();
         };
 
         window.renderMyCollectionView = function(grid) {
@@ -383,7 +382,7 @@
                     <div class="zodiac-card nft-card-hover cursor-pointer"
                          data-nft-typeid="${typeId}" data-nft-tokenid="${token.tokenId}" data-nft-level="${level}" data-nft-growth="${growth}">
                         ${isRare ? '<span class="collection-badge" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);">稀有</span>' : ''}
-                        <img class="lazy-image" data-src="${nftInfo.imagePath}" alt="${nftInfo.name}" onerror="this.src='images/fu-cards/shuishu_1.jpg'">
+                        <img src="${nftInfo.imagePath}" alt="${nftInfo.name}" onerror="this.src='images/fu-cards/shuishu_1.jpg'" style="width:60px;height:60px;object-fit:contain;margin:0 auto 8px;border-radius:8px;">
                         <h4>${nftInfo.name} ${genderText}</h4>
                         <p>等级: ${getStars(level)}</p>
                         <p class="text-xs text-green-600">成长: ${growth}</p>
@@ -391,9 +390,8 @@
                     </div>
                 `;
             }
-
+            
             grid.innerHTML = html;
-            lazyLoadImages();
         };
 
         // 安全获取 web3 实例（支持事件回调中的延迟调用）
