@@ -1491,7 +1491,7 @@ window.ZODIAC_WEB3 = (function() {
             throw new Error('[ZODIAC_WEB3] Invalid token ID');
         }
         const contract = await getContract('nftTrading');
-        const listing = await contract.methods.listings(tokenId).call();
+        const listing = await contract.methods.getListingInfo(tokenId).call();
         
         const seller = listing.seller || listing['0'];
         const price = listing.priceWei || listing['1'];
