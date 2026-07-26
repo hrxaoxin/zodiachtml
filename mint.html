@@ -201,34 +201,102 @@
             </div>
         </div>
 
-        <div id="preLaunchBanner" class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4 hidden">
-            <div class="flex items-start">
-                <i class="fas fa-info-circle text-blue-500 mt-1 mr-3 text-xl"></i>
-                <div>
-                    <p class="text-blue-800 font-medium">当前代币尚未发射到PancakeSwap</p>
-                    <p class="text-blue-600 text-sm mt-1">发射前铸造费用使用 <strong>BNB</strong> 支付；发射后将使用 <strong>代币</strong> 支付。</p>
+        <!-- 发射前警告（红色醒目） -->
+        <div id="preLaunchBanner" class="mb-6 hidden">
+            <div class="bg-red-50 border-2 border-red-300 rounded-xl p-5">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mr-4">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-bold text-red-800 mb-1">代币尚未发射到PancakeSwap</h3>
+                        <p class="text-red-700 mb-2">当前代币在FourMeme平台创建，发射前<strong>不支持代币转移</strong>。</p>
+                        <div class="bg-white rounded-lg p-3 mt-2 border border-red-200">
+                            <p class="text-sm text-gray-700">铸造费用 <strong class="text-red-600">发射前使用 BNB</strong> 支付，<strong class="text-green-600">发射后切换为代币</strong> 支付。</p>
+                            <p class="text-sm text-gray-500 mt-1">代币发射到PancakeSwap后，铸造、升阶、孕育、交易、质押等功能将全部开放。</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div id="postLaunchBanner" class="bg-green-50 border-l-4 border-green-400 p-4 mb-4 hidden">
-            <div class="flex items-start">
-                <i class="fas fa-check-circle text-green-500 mt-1 mr-3 text-xl"></i>
-                <div>
-                    <p class="text-green-800 font-medium">代币已发射到PancakeSwap</p>
-                    <p class="text-green-600 text-sm mt-1">铸造费用已切换为 <strong>代币</strong> 支付。</p>
+        <!-- 发射后提示（绿色） -->
+        <div id="postLaunchBanner" class="mb-6 hidden">
+            <div class="bg-green-50 border-2 border-green-300 rounded-xl p-5">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mr-4">
+                        <i class="fas fa-check-circle text-green-500 text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-green-800">代币已发射到PancakeSwap</h3>
+                        <p class="text-green-700">铸造费用已切换为 <strong>代币</strong> 支付。所有功能已开放。</p>
+                    </div>
                 </div>
             </div>
         </div>
 
+        <!-- 温馨提示 - 发射前 -->
+        <div id="preLaunchTips" class="bg-orange-50 border-2 border-orange-300 rounded-xl p-5 mb-4 hidden">
+            <h3 class="text-lg font-bold text-orange-800 mb-3 flex items-center">
+                <i class="fas fa-gas-pump mr-2"></i> 铸造费用（发射前 · 使用BNB）
+            </h3>
+            <ul class="space-y-2 text-orange-700">
+                <li class="flex items-center">
+                    <span class="inline-block w-20 font-bold text-orange-600">普通铸造</span>
+                    <span>消耗 <strong id="normalMintBNBCostDisplay">-</strong> BNB</span>
+                </li>
+                <li class="flex items-center">
+                    <span class="inline-block w-20 font-bold text-orange-600">光暗铸造</span>
+                    <span>消耗 <strong id="rareMintBNBCostDisplay">-</strong> BNB</span>
+                </li>
+                <li class="flex items-center">
+                    <span class="inline-block w-20 font-bold text-orange-600">普通十连</span>
+                    <span>消耗 <strong id="normalTenBNBCostDisplay">-</strong> BNB</span>
+                </li>
+                <li class="flex items-center">
+                    <span class="inline-block w-20 font-bold text-orange-600">光暗十连</span>
+                    <span>消耗 <strong id="rareTenBNBCostDisplay">-</strong> BNB</span>
+                </li>
+                <li class="flex items-center">
+                    <span class="inline-block w-20 font-bold text-orange-600">指定铸造</span>
+                    <span>消耗 <strong id="targetedBNBCostDisplay">-</strong> BNB</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- 温馨提示 - 发射后 -->
+        <div id="postLaunchTips" class="bg-blue-50 border-2 border-blue-300 rounded-xl p-5 mb-4 hidden">
+            <h3 class="text-lg font-bold text-blue-800 mb-3 flex items-center">
+                <i class="fas fa-coins mr-2"></i> 铸造费用（发射后 · 使用代币）
+            </h3>
+            <ul class="space-y-2 text-blue-700">
+                <li class="flex items-center">
+                    <span class="inline-block w-20 font-bold text-blue-600">普通铸造</span>
+                    <span>消耗 <strong id="normalMintCostDisplay">-</strong> 枚代币</span>
+                </li>
+                <li class="flex items-center">
+                    <span class="inline-block w-20 font-bold text-blue-600">光暗铸造</span>
+                    <span>消耗 <strong id="rareMintCostDisplay">-</strong> 枚代币</span>
+                </li>
+                <li class="flex items-center">
+                    <span class="inline-block w-20 font-bold text-blue-600">普通十连</span>
+                    <span>消耗 <strong id="normalTenCostDisplay">-</strong> 枚代币</span>
+                </li>
+                <li class="flex items-center">
+                    <span class="inline-block w-20 font-bold text-blue-600">光暗十连</span>
+                    <span>消耗 <strong id="rareTenCostDisplay">-</strong> 枚代币</span>
+                </li>
+                <li class="flex items-center">
+                    <span class="inline-block w-20 font-bold text-blue-600">指定铸造</span>
+                    <span>消耗 <strong id="targetedCostDisplay">-</strong> 枚代币</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- 通用说明 -->
         <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8">
             <h3 class="text-lg font-bold text-yellow-800 mb-2">温馨提示</h3>
             <ul class="space-y-2 text-yellow-700">
-                <li>• <strong>普通铸造</strong>：消耗<span id="normalMintCostDisplay">8888</span><span class="cost-unit" data-token-text="枚代币">枚代币</span>（发射前 <span id="normalMintBNBCostDisplay" class="text-blue-600">-</span> BNB），随机获得生肖NFT</li>
-                <li>• <strong>光暗铸造</strong>：消耗<span id="rareMintCostDisplay">88888</span><span class="cost-unit" data-token-text="枚代币">枚代币</span>（发射前 <span id="rareMintBNBCostDisplay" class="text-blue-600">-</span> BNB），必定获得光/暗属性NFT</li>
-                <li>• <strong>普通十连</strong>：消耗<span id="normalTenCostDisplay">88880</span><span class="cost-unit" data-token-text="枚代币">枚代币</span>（发射前 <span id="normalTenBNBCostDisplay" class="text-blue-600">-</span> BNB），随机获得10张生肖NFT（普通铸造概率）</li>
-                <li>• <strong>光暗十连</strong>：消耗<span id="rareTenCostDisplay">888880</span><span class="cost-unit" data-token-text="枚代币">枚代币</span>（发射前 <span id="rareTenBNBCostDisplay" class="text-blue-600">-</span> BNB），随机获得10张光/暗属性NFT</li>
-                <li>• <strong>指定铸造</strong>：消耗<span id="targetedCostDisplay">(6x普通+4x光暗)×10</span><span class="cost-unit" data-token-text="代币">代币</span>（发射前 <span id="targetedBNBCostDisplay" class="text-blue-600">-</span> BNB），获得指定生肖所有属性NFT（10张）</li>
                 <li>• 普通铸造概率：水/风/火属性各约32%，暗/光属性各2%</li>
                 <li>• 持有生肖NFT即可享受对应的税收分红</li>
                 <li id="approvalTip">• 首次铸造需要授权代币，之后无需重复授权</li>
@@ -535,38 +603,35 @@
                 document.getElementById('mintTargetedBtn').innerHTML = `<i class="fas fa-bullseye mr-2"></i> 指定铸造（消耗${targetedDisplay}${costUnit}）`;
 
                 // 温馨提示 - 代币费用
-                const normalCostTokenDisplay = Math.floor(parseFloat(web3.utils.fromWei(normalCostToken, 'ether'))).toLocaleString();
-                const rareCostTokenDisplay = Math.floor(parseFloat(web3.utils.fromWei(rareCostToken, 'ether'))).toLocaleString();
-                const normalTenCostTokenDisplay = Math.floor(parseFloat(web3.utils.fromWei(normalTenCostToken, 'ether'))).toLocaleString();
-                const rareTenCostTokenDisplay = Math.floor(parseFloat(web3.utils.fromWei(rareTenCostToken, 'ether'))).toLocaleString();
-                const targetedCostTokenDisplay = Math.floor(parseFloat(web3.utils.fromWei(targetedCostToken, 'ether'))).toLocaleString();
-                const targetedCostFormula = `(6×${normalCostTokenDisplay} + 4×${rareCostTokenDisplay}) × 10`;
+                document.getElementById('normalMintCostDisplay').textContent = Math.floor(parseFloat(web3.utils.fromWei(normalCostToken, 'ether'))).toLocaleString();
+                document.getElementById('rareMintCostDisplay').textContent = Math.floor(parseFloat(web3.utils.fromWei(rareCostToken, 'ether'))).toLocaleString();
+                document.getElementById('normalTenCostDisplay').textContent = Math.floor(parseFloat(web3.utils.fromWei(normalTenCostToken, 'ether'))).toLocaleString();
+                document.getElementById('rareTenCostDisplay').textContent = Math.floor(parseFloat(web3.utils.fromWei(rareTenCostToken, 'ether'))).toLocaleString();
+                document.getElementById('targetedCostDisplay').textContent = Math.floor(parseFloat(web3.utils.fromWei(targetedCostToken, 'ether'))).toLocaleString();
 
-                document.getElementById('normalMintCostDisplay').textContent = normalCostTokenDisplay;
-                document.getElementById('rareMintCostDisplay').textContent = rareCostTokenDisplay;
-                document.getElementById('normalTenCostDisplay').textContent = normalTenCostTokenDisplay;
-                document.getElementById('rareTenCostDisplay').textContent = rareTenCostTokenDisplay;
-                document.getElementById('targetedCostDisplay').textContent = targetedCostTokenDisplay;
-                document.getElementById('targetedCostFormula').textContent = targetedCostFormula;
-
-                // 温馨提示 - BNB费用（未发射时显示）
-                if (useBNB && normalCostBNB) {
-                    const bnbFormat = (wei) => parseFloat(web3.utils.fromWei(wei, 'ether')).toFixed(4);
+                // 温馨提示 - BNB费用（始终填充）
+                const bnbFormat = (wei) => parseFloat(web3.utils.fromWei(wei, 'ether')).toFixed(4);
+                if (normalCostBNB) {
                     document.getElementById('normalMintBNBCostDisplay').textContent = bnbFormat(normalCostBNB);
+                }
+                if (rareCostBNB) {
                     document.getElementById('rareMintBNBCostDisplay').textContent = bnbFormat(rareCostBNB);
+                }
+                if (normalTenCostBNB) {
                     document.getElementById('normalTenBNBCostDisplay').textContent = bnbFormat(normalTenCostBNB);
+                }
+                if (rareTenCostBNB) {
                     document.getElementById('rareTenBNBCostDisplay').textContent = bnbFormat(rareTenCostBNB);
+                }
+                if (targetedCostBNB) {
                     document.getElementById('targetedBNBCostDisplay').textContent = bnbFormat(targetedCostBNB);
                 }
 
-                const costUnitSpans = document.querySelectorAll('.cost-unit');
-                costUnitSpans.forEach(el => {
-                    el.textContent = isLaunched ? (el.dataset.tokenText || '代币') : ' BNB';
-                });
-
-                // Banner 显示
+                // 控制提示区域显示
                 document.getElementById('preLaunchBanner').style.display = useBNB ? '' : 'none';
                 document.getElementById('postLaunchBanner').style.display = isLaunched ? '' : 'none';
+                document.getElementById('preLaunchTips').style.display = useBNB ? '' : 'none';
+                document.getElementById('postLaunchTips').style.display = (useBNB || isLaunched) ? '' : 'none';
 
                 const approvalTip = document.getElementById('approvalTip');
                 if (approvalTip) {

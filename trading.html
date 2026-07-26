@@ -73,12 +73,16 @@
             <h1 class="text-2xl font-bold text-gray-800">NFT交易市场</h1>
         </div>
 
-        <div id="tradingPreLaunchWarning" class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4 hidden">
-            <div class="flex items-start">
-                <i class="fas fa-info-circle text-blue-500 mt-1 mr-3 text-xl"></i>
-                <div>
-                    <p class="text-blue-800 font-medium">代币尚未发射到PancakeSwap</p>
-                    <p class="text-blue-600 text-sm mt-1">交易功能将在代币发射后开放使用。</p>
+        <div id="tradingPreLaunchWarning" class="mb-6 hidden">
+            <div class="bg-red-50 border-2 border-red-300 rounded-xl p-5">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mr-4">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-red-800 mb-1">代币尚未发射到PancakeSwap</h3>
+                        <p class="text-red-700">交易功能将在代币发射到PancakeSwap后开放使用。当前代币不支持转移。</p>
+                    </div>
                 </div>
             </div>
         </div>
