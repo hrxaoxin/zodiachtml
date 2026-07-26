@@ -17,21 +17,12 @@ window.ZODIAC_UTILS = (function() {
      * typeId 编码: elementIndex * 24 + zodiacIndex * 2 + gender
      */
     function getNFTInfo(typeId, tokenId, growth) {
-        const typedId = parseInt(typeId, 10);
-        if (isNaN(typedId) || typedId < 0 || typedId > 119) {
-            return {
-                typeId: typedId,
-                elementIndex: 0,
-                zodiac: 0,
-                gender: 0,
-                elementKey: 'water',
-                attrName: '水',
-                animalName: '鼠',
-                genderName: '母',
-                imagePath: '',
-                name: '未知NFT',
-                isRare: false
-            };
+        let typedId = parseInt(typeId, 10);
+        if (isNaN(typedId)) {
+            typedId = 0;
+        }
+        if (typedId < 0 || typedId > 119) {
+            typedId = ((typedId % 120) + 120) % 120;
         }
 
         const elementIndex = Math.floor(typedId / 24);
