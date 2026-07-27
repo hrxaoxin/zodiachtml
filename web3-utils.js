@@ -790,8 +790,8 @@ window.ZODIAC_WEB3 = (function() {
                 'cancelBreeding': 400000,
                 'listForMarketBreeding': 300000,
                 'delistFromMarketBreeding': 250000,
-                'claimReward': 300000,
-                'claimDividend': 300000,
+                'claimReward': 500000,
+                'claimDividend': 500000,
                 'setBattleTeam': 250000,
                 'stakeNFTs': 600000,
                 'unstakeNFTs': 600000,
@@ -821,11 +821,11 @@ window.ZODIAC_WEB3 = (function() {
             'cancelBreeding': 800000,
             'listForMarketBreeding': 500000,
             'delistFromMarketBreeding': 500000,
-            'claimReward': 200000,
-            'claimDividend': 200000,
+            'claimReward': 500000,
+            'claimDividend': 500000,
             'stakeTokens': 300000,
             'unstakeTokens': 300000,
-            'claimRewards': 200000,
+            'claimRewards': 500000,
             'approve': 100000,
             'burnAndMint': 2000000,
             'burnAndMintTen': 5000000,
@@ -833,7 +833,7 @@ window.ZODIAC_WEB3 = (function() {
             'stakeNFTs': 2000000,
             'unstakeNFTs': 1500000,
             'clearBattleTeam': 500000,
-            'claimSeasonReward': 200000
+            'claimSeasonReward': 500000
         };
         return { gas: gasLimits[methodName] || 800000, estimated: false };
     }
