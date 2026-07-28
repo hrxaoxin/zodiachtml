@@ -413,7 +413,7 @@
 
         async function loadLPReward() {
             try {
-                if (!dividendManagerContract || !account) {
+                if (!dividendManagerLPContract || !account) {
                     document.getElementById('bnbReward').textContent = '0.0000 LP';
                     return;
                 }
@@ -499,7 +499,7 @@
         document.getElementById('refreshRewardBtn').addEventListener('click', loadLPReward);
 
         document.getElementById('claimAllBtn').addEventListener('click', async function() {
-            if (!dividendManagerContract || !account) {
+            if (!dividendManagerLPContract || !account) {
                 ZODIAC_UI.showToast('请先连接钱包', 'warning');
                 return;
             }

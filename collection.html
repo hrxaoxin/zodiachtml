@@ -627,33 +627,26 @@
 
         async function updateDividends() {
             try {
-                if (!account || !dividendManagerContract) {
+                const dividendManagerLP = await window.ZODIAC_WEB3.getContract('dividendManagerLP');
+                if (!account || !dividendManagerLP) {
                     document.getElementById('totalDividends').textContent = '0';
                     document.getElementById('claimLPDividendBtn').disabled = true;
                     document.getElementById('lpPoolBalance').textContent = '0';
                     document.getElementById('lpFeesEarned').textContent = '0';
                     return;
                 }
-                const dividendManagerLP = await window.ZODIAC_WEB3.getContract('dividendManagerLP');
-                if (!dividendManagerLP) {
-                    document.getElementById('totalDividends').textContent = '0';
-                    document.getElementById('claimLPDividendBtn').disabled = true;
-                    return;
-                }
                 const lpDividend = await dividendManagerLP.methods.getClaimableLPDividend(account).call();
                 const unclaimedLP = safeGetWeb3().utils.fromWei(lpDividend.toString(), 'ether');
                 document.getElementById('totalDividends').textContent = parseFloat(unclaimedLP).toFixed(4);
                 
-                // 更新LP池余额
                 try {
-                    const lpPoolBalance = await dividendManagerContract.methods.lpDividendPoolBalance().call();
-                    const poolBalanceFormatted = safeGetWeb3().utils.fromWei(lpPoolBalance.toString(), 'ether');
-                    document.getElementById('lpPoolBalance').textContent = parseFloat(poolBalanceFormatted).toFixed(4);
+                    const balances = await dividendManagerLP.methods.getPoolBalances().call();
+                    const lpBalance = safeGetWeb3().utils.fromWei(balances.lp.toString(), 'ether');
+                    document.getElementById('lpPoolBalance').textContent = parseFloat(lpBalance).toFixed(4);
                 } catch (e) {
                     document.getElementById('lpPoolBalance').textContent = '-';
                 }
                 
-                // LP手续费收益暂时显示为0（需要从LP合约获取）
                 document.getElementById('lpFeesEarned').textContent = '-';
                 
                 const claimBtn = document.getElementById('claimLPDividendBtn');
@@ -667,7 +660,8 @@
         }
 
         async function claimLPDividend() {
-            if (!account || !dividendManagerContract) {
+            const dividendManagerLP = await window.ZODIAC_WEB3.getContract('dividendManagerLP');
+            if (!account || !dividendManagerLP) {
                 ZODIAC_UI.showToast('请先连接钱包', 'error');
                 return;
             }
@@ -677,13 +671,6 @@
             claimBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>领取中...';
 
             try {
-                const dividendManagerLP = await window.ZODIAC_WEB3.getContract('dividendManagerLP');
-                if (!dividendManagerLP) {
-                    ZODIAC_UI.showToast('LP分红合约未初始化', 'error');
-                    claimBtn.disabled = false;
-                    claimBtn.innerHTML = '<i class="fas fa-gift mr-2"></i>领取LP分红';
-                    return;
-                }
                 const tx = await dividendManagerLP.methods.claimLPDividend().send({ from: account });
                 console.log('LP分红领取成功:', tx);
                 ZODIAC_UI.showToast('LP分红领取成功！已兑换为代币和WBNB', 'success');
