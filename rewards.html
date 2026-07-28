@@ -267,7 +267,6 @@
 
         let web3;
         let account;
-        let dividendManagerContract;
         let dividendManagerLPContract;
 
         document.addEventListener('DOMContentLoaded', async function() {
@@ -289,7 +288,7 @@
                 await loadLPReward();
             });
             ZODIAC_WEB3.on('disconnect', () => {
-                document.getElementById('bnbReward').textContent = '0.0000 LP';
+                document.getElementById('bnbReward').textContent = '0.0000';
             });
         }
 
@@ -326,7 +325,6 @@
 
         async function initContracts() {
             try {
-                dividendManagerContract = await window.ZODIAC_WEB3.getContract('dividendManager');
                 dividendManagerLPContract = await window.ZODIAC_WEB3.getContract('dividendManagerLP');
                 await loadRewardConfig();
                 await checkRewardsLaunchState();
@@ -353,10 +351,9 @@
         async function loadRewardConfig() {
             try {
                 const rewardManager = await window.ZODIAC_WEB3.getContract('rewardManager');
-                const dividendManager = await window.ZODIAC_WEB3.getContract('dividendManager');
                 
-                if (!rewardManager || !dividendManager) {
-                    console.warn('RewardManager or DividendManager contract not available');
+                if (!rewardManager) {
+                    console.warn('RewardManager contract not available');
                     return;
                 }
                 

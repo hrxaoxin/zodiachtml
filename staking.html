@@ -1088,7 +1088,7 @@
                 document.getElementById('rewardsAmount').textContent = parseFloat(rewardsFormatted).toFixed(4) + ' ' + unit;
                 document.getElementById('claimBtn').disabled = lpRewards === '0';
                 
-                updateRewardDescription(rewardType);
+                updateNFTRewardDescription(rewardType);
             } catch (error) {
                 console.error('加载LP奖励失败:', error);
                 ZODIAC_UI.showToast('加载LP奖励失败: ' + error.message, 'error');
@@ -1115,7 +1115,7 @@
             }
         }
 
-        function updateRewardDescription(rewardType) {
+        function updateNFTRewardDescription(rewardType) {
             const type = typeof rewardType === 'object' && rewardType.toString ? parseInt(rewardType.toString(), 10) : parseInt(rewardType, 10);
             const displayText = getRewardDisplayText(type);
             const icon = type === 2 ? '💰' : (type === 1 ? '🪙' : '🎁');
@@ -1146,12 +1146,18 @@
             
             const claimBtnText = document.getElementById('claimBtnText');
             if (claimBtnText) claimBtnText.textContent = '领取' + displayText;
+        }
+
+        function updateTokenRewardDescription(rewardType) {
+            const type = typeof rewardType === 'object' && rewardType.toString ? parseInt(rewardType.toString(), 10) : parseInt(rewardType, 10);
+            const displayText = getRewardDisplayText(type);
+            const icon = type === 2 ? '💰' : (type === 1 ? '🪙' : '🎁');
             
             const tokenRewardLabel = document.getElementById('tokenRewardLabel');
             if (tokenRewardLabel) tokenRewardLabel.textContent = '可领取' + displayText;
             
             const tokenRewardTitle = document.getElementById('tokenRewardTitle');
-            if (tokenRewardTitle) tokenRewardTitle.textContent = '🎯 领取' + displayText;
+            if (tokenRewardTitle) tokenRewardTitle.textContent = icon + ' 领取' + displayText;
             
             const tokenRewardDescTitle = document.getElementById('tokenRewardDescTitle');
             if (tokenRewardDescTitle) tokenRewardDescTitle.textContent = '💡 ' + displayText + '说明';
@@ -1460,7 +1466,7 @@
                 }
                 
                 document.getElementById('tokenRewardsAmount').textContent = claimableLP + ' ' + rewardUnit;
-                updateRewardDescription(rewardType);
+                updateTokenRewardDescription(rewardType);
 
                 if (stakedAt > 0) {
                     const date = new Date(stakedAt * 1000);
@@ -1473,15 +1479,21 @@
                     let lpBalance = '0';
                     let rewardUnit = 'LP';
                     if (tokenStakingLPContract) {
-                        const lpBalanceWei = await tokenStakingLPContract.methods.lpRewardPoolBalance().call();
-                        lpBalance = web3.utils.fromWei(lpBalanceWei, 'ether').substring(0, 10);
+                        const poolBalances = await tokenStakingLPContract.methods.getPoolBalances().call();
                         const rawRewardType = await tokenStakingLPContract.methods.getRewardType().call();
                         const rewardType = typeof rawRewardType === 'object' && rawRewardType.toString ? parseInt(rawRewardType.toString(), 10) : parseInt(rawRewardType, 10);
                         rewardUnit = getRewardUnit(rewardType);
+                        if (rewardType === 0) {
+                            lpBalance = web3.utils.fromWei(poolBalances.lp || '0', 'ether').substring(0, 10);
+                        } else if (rewardType === 1) {
+                            lpBalance = web3.utils.fromWei(poolBalances.token || '0', 'ether').substring(0, 10);
+                        } else {
+                            lpBalance = web3.utils.fromWei(poolBalances.bnb || '0', 'ether').substring(0, 10);
+                        }
                     }
                     document.getElementById('tokenStakingBNBBalance').textContent = lpBalance + ' ' + rewardUnit;
                 } catch (e) {
-                    document.getElementById('tokenStakingBNBBalance').textContent = '0 BNB';
+                    document.getElementById('tokenStakingBNBBalance').textContent = '0';
                 }
 
                 try {

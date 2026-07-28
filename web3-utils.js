@@ -1950,8 +1950,8 @@ window.ZODIAC_WEB3 = (function() {
         if (rewardType === undefined || rewardType === null) {
             throw new Error('[ZODIAC_WEB3] setArenaRewardType requires a reward type');
         }
-        if (rewardType !== 0 && rewardType !== 1) {
-            throw new Error(`[ZODIAC_WEB3] Invalid reward type ${rewardType}, must be 0 (BNB) or 1 (Token)`);
+        if (rewardType !== 0 && rewardType !== 1 && rewardType !== 2) {
+            throw new Error(`[ZODIAC_WEB3] Invalid reward type ${rewardType}, must be 0 (LP), 1 (Token) or 2 (BNB)`);
         }
         try {
             const addr = await getContractAddress('arenaModeManager');
