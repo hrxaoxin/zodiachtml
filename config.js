@@ -1,4 +1,4 @@
-﻿﻿﻿﻿window.ZODIAC_CONFIG = (function() {
+﻿﻿window.ZODIAC_CONFIG = (function() {
     const NETWORK_ID = 56;
     const NETWORK_NAME = 'Binance Mainnet';
     const NETWORK_LABEL = 'BNB主网';
@@ -25847,11 +25847,6 @@
 		"type": "error"
 	},
 	{
-		"inputs": [],
-		"name": "SharedSwap_BNBTransferFailed",
-		"type": "error"
-	},
-	{
 		"anonymous": false,
 		"inputs": [
 			{
@@ -25881,6 +25876,37 @@
 			}
 		],
 		"name": "BeaconUpgraded",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "operator",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "oldEpoch",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "newEpoch",
+				"type": "uint256"
+			}
+		],
+		"name": "ContractDataReset",
 		"type": "event"
 	},
 	{
@@ -26032,6 +26058,19 @@
 			}
 		],
 		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "epoch",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -26316,67 +26355,17 @@
 	},
 	{
 		"inputs": [],
-		"name": "DML_ArraysLengthMismatch",
+		"name": "DML_ConvertFailed",
 		"type": "error"
 	},
 	{
 		"inputs": [],
-		"name": "DML_BNBOverflow",
+		"name": "DML_InsufficientBalance",
 		"type": "error"
 	},
 	{
 		"inputs": [],
-		"name": "DML_BNBTransferFailed",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "DML_BNBTransferFailed",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "DML_CumulativeOverflow",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "DML_InsufficientLP",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "DML_InsufficientToken",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "DML_InvalidAmount",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "DML_InvalidAuthorizer",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "DML_InvalidRecipient",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "DML_InvalidToken",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "DML_InvalidTokenAddress",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "DML_LPOverflow",
+		"name": "DML_InvalidParams",
 		"type": "error"
 	},
 	{
@@ -26387,21 +26376,6 @@
 	{
 		"inputs": [],
 		"name": "DML_NotAuthorized",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "DML_RedeemLPFailed",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "DML_TokenOverflow",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "SharedSwap_BNBTransferFailed",
 		"type": "error"
 	},
 	{
@@ -26421,38 +26395,6 @@
 			}
 		],
 		"name": "AdminChanged",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			}
-		],
-		"name": "BNBAddedToDividendPool",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			}
-		],
-		"name": "BNBDividendClaimed",
 		"type": "event"
 	},
 	{
@@ -26503,32 +26445,6 @@
 		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": false,
-				"internalType": "uint8",
-				"name": "version",
-				"type": "uint8"
-			}
-		],
-		"name": "Initialized",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			}
-		],
-		"name": "LPAddedToDividendPool",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
 				"indexed": true,
 				"internalType": "address",
 				"name": "user",
@@ -26539,9 +26455,47 @@
 				"internalType": "uint256",
 				"name": "amount",
 				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "enum RewardType",
+				"name": "rewardType",
+				"type": "uint8"
 			}
 		],
-		"name": "LPDividendClaimed",
+		"name": "DividendClaimed",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "enum RewardType",
+				"name": "rewardType",
+				"type": "uint8"
+			}
+		],
+		"name": "DividendPoolAdded",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint8",
+				"name": "version",
+				"type": "uint8"
+			}
+		],
+		"name": "Initialized",
 		"type": "event"
 	},
 	{
@@ -26619,38 +26573,6 @@
 		"inputs": [
 			{
 				"indexed": false,
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			}
-		],
-		"name": "TokenAddedToDividendPool",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			}
-		],
-		"name": "TokenDividendClaimed",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
 				"internalType": "address",
 				"name": "account",
 				"type": "address"
@@ -26714,20 +26636,20 @@
 	},
 	{
 		"inputs": [],
-		"name": "bnbDividendPoolBalance",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
+		"name": "claimLPDividend",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "canConvertToLP",
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "claimedTypeChangeBonus",
 		"outputs": [
 			{
 				"internalType": "bool",
@@ -26736,13 +26658,6 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "claimLPDividend",
-		"outputs": [],
-		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -26798,37 +26713,22 @@
 		"type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			}
-		],
-		"name": "getPendingTokenDividends",
+		"inputs": [],
+		"name": "getPoolBalances",
 		"outputs": [
 			{
 				"internalType": "uint256",
-				"name": "",
+				"name": "lp",
 				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			}
-		],
-		"name": "getUserRewardSnapshots",
-		"outputs": [
+			},
 			{
 				"internalType": "uint256",
-				"name": "",
+				"name": "token",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "bnb",
 				"type": "uint256"
 			}
 		],
@@ -26846,19 +26746,6 @@
 		"name": "initialize",
 		"outputs": [],
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "lpDividendPoolBalance",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -26910,17 +26797,12 @@
 	{
 		"inputs": [
 			{
-				"internalType": "uint256",
+				"internalType": "enum RewardType",
 				"name": "",
-				"type": "uint256"
-			},
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
+				"type": "uint8"
 			}
 		],
-		"name": "pendingTokenDividends",
+		"name": "poolBalances",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -27047,8 +26929,21 @@
 		"type": "function"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "transferOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"inputs": [],
-		"name": "tokenDividendPoolBalance",
+		"name": "typeChangeCumulative",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -27060,16 +26955,29 @@
 		"type": "function"
 	},
 	{
-		"inputs": [
+		"inputs": [],
+		"name": "typeChangePoolBalance",
+		"outputs": [
 			{
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
 			}
 		],
-		"name": "transferOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "typeChangeTotalWeight",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -27137,22 +27045,9 @@
 	{
 		"inputs": [
 			{
-				"internalType": "address",
-				"name": "to",
-				"type": "address"
-			}
-		],
-		"name": "withdrawBNB",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "token",
-				"type": "address"
+				"internalType": "enum RewardType",
+				"name": "_type",
+				"type": "uint8"
 			},
 			{
 				"internalType": "address",
@@ -27160,7 +27055,7 @@
 				"type": "address"
 			}
 		],
-		"name": "withdrawToken",
+		"name": "withdraw",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
