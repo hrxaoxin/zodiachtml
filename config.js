@@ -25823,11 +25823,6 @@
 	},
 	{
 		"inputs": [],
-		"name": "DMC_BNBFailed",
-		"type": "error"
-	},
-	{
-		"inputs": [],
 		"name": "DMC_ConverterNotSet",
 		"type": "error"
 	},
@@ -25996,44 +25991,6 @@
 	{
 		"inputs": [
 			{
-				"internalType": "uint256",
-				"name": "bnbAmount",
-				"type": "uint256"
-			}
-		],
-		"name": "convertBNBToLP",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "tokenAmount",
-				"type": "uint256"
-			}
-		],
-		"name": "convertTokenToLP",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
 				"internalType": "enum RewardType",
 				"name": "fromType",
 				"type": "uint8"
@@ -26158,25 +26115,6 @@
 		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "lpAmount",
-				"type": "uint256"
-			}
-		],
-		"name": "redeemLPToToken",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
 				"name": "amount",
 				"type": "uint256"
 			},
@@ -26188,25 +26126,6 @@
 		],
 		"name": "redeemLPToUser",
 		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "lpAmount",
-				"type": "uint256"
-			}
-		],
-		"name": "redeemLPToWBNB",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
 		"stateMutability": "nonpayable",
 		"type": "function"
 	},
@@ -26233,67 +26152,6 @@
 			}
 		],
 		"name": "setAuthorizer",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "bnbAmount",
-				"type": "uint256"
-			}
-		],
-		"name": "swapBNBToToken",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "tokenAmount",
-				"type": "uint256"
-			}
-		],
-		"name": "swapTokenToBNB",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "lpBalance",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "tokenBalance",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "bnbBalance",
-				"type": "uint256"
-			}
-		],
-		"name": "syncDividendPoolBalance",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
