@@ -412,28 +412,32 @@
         }
 
         async function loadLPReward() {
+            let rewardType = 0;
+            let unit = 'LP';
+
             try {
-                if (!dividendManagerLPContract || !account) {
-                    document.getElementById('bnbReward').textContent = '0.0000 LP';
-                    return;
+                if (dividendManagerLPContract) {
+                    rewardType = await dividendManagerLPContract.methods.rewardType().call();
+                    unit = getRewardUnit(rewardType);
                 }
-                
+            } catch (e) {
+                console.warn('读取rewardType失败:', e);
+            }
+
+            updateRewardInfo(rewardType);
+
+            if (!dividendManagerLPContract || !account) {
+                document.getElementById('bnbReward').textContent = '0.0000 ' + unit;
+                return;
+            }
+
+            try {
                 const lpDividend = await dividendManagerLPContract.methods.getClaimableLPDividend(account).call();
-                const rewardType = await dividendManagerLPContract.methods.rewardType().call();
-                
                 const lpAmount = web3.utils.fromWei(lpDividend, 'ether');
-                const unit = getRewardUnit(rewardType);
-                
                 document.getElementById('bnbReward').textContent = parseFloat(lpAmount).toFixed(4) + ' ' + unit;
-                
-                if (parseInt(lpDividend) === 0) {
-                    document.getElementById('bnbReward').textContent = '0.0000 ' + unit;
-                }
-                
-                updateRewardInfo(rewardType);
             } catch (error) {
                 console.error('获取LP分红失败:', error);
-                document.getElementById('bnbReward').textContent = '0.0000 LP';
+                document.getElementById('bnbReward').textContent = '0.0000 ' + unit;
             }
         }
 
