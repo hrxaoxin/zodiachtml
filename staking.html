@@ -408,7 +408,6 @@
         let stakingLPRewardContract;
         let tokenStakingContract;
         let tokenStakingLPContract;
-        let tokenStakingLPRateManagerContract;
         let selectedNFTs = [];
 
         function getSkillTypeName(skillType) {
@@ -667,22 +666,6 @@
                 stakingLPRewardContract = await window.ZODIAC_WEB3.getContract('stakingLPReward');
                 tokenStakingContract = await window.ZODIAC_WEB3.getContract('tokenStaking');
                 tokenStakingLPContract = await window.ZODIAC_WEB3.getContract('tokenStakingLP');
-                
-                try {
-                    tokenStakingLPRateManagerContract = await window.ZODIAC_WEB3.getContract('tokenStakingLPRateManager');
-                } catch (e) {
-                    const rateManagerAddress = await window.ZODIAC_WEB3.getContractAddress('tokenStakingLPRateManager');
-                    if (rateManagerAddress) {
-                        const web3Inst = window.ZODIAC_WEB3.getWeb3();
-                        if (web3Inst) {
-                            const minABI = [
-                                {"inputs":[],"name":"rewardRate","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-                                {"inputs":[],"name":"maxRewardRate","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
-                            ];
-                            tokenStakingLPRateManagerContract = new web3Inst.eth.Contract(minABI, rateManagerAddress);
-                        }
-                    }
-                }
 
                 await checkStakingLaunchState();
             } catch (error) {
@@ -1488,8 +1471,8 @@
                 document.getElementById('dailyReleaseRatioDisplay').textContent = '--';
                 
                 try {
-                    if (tokenStakingLPRateManagerContract) {
-                        const rewardRate = await tokenStakingLPRateManagerContract.methods.rewardRate().call();
+                    if (tokenStakingLPContract) {
+                        const rewardRate = await tokenStakingLPContract.methods.rewardRate().call();
                         const rewardRatePercent = (parseInt(rewardRate, 10) / 100).toFixed(2);
                         document.getElementById('dailyReleaseRatioDisplay').textContent = rewardRatePercent;
                         document.getElementById('currentReleaseRatio').textContent = rewardRatePercent + '%';

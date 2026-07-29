@@ -1,4 +1,4 @@
-﻿﻿window.ZODIAC_CONFIG = (function() {
+﻿window.ZODIAC_CONFIG = (function() {
     const NETWORK_ID = 56;
     const NETWORK_NAME = 'Binance Mainnet';
     const NETWORK_LABEL = 'BNB主网';
@@ -14826,6 +14826,128 @@
 		"outputs": [],
 		"stateMutability": "payable",
 		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "arenaMode",
+		"outputs": [
+			{
+				"internalType": "uint8",
+				"name": "",
+				"type": "uint8"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "modeControlType",
+		"outputs": [
+			{
+				"internalType": "uint8",
+				"name": "",
+				"type": "uint8"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getArenaMode",
+		"outputs": [
+			{
+				"internalType": "uint8",
+				"name": "",
+				"type": "uint8"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint8",
+				"name": "mode",
+				"type": "uint8"
+			}
+		],
+		"name": "setArenaMode",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint8",
+				"name": "controlType",
+				"type": "uint8"
+			}
+		],
+		"name": "setModeControlType",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint8",
+				"name": "controlType",
+				"type": "uint8"
+			},
+			{
+				"internalType": "uint8",
+				"name": "preferredMode",
+				"type": "uint8"
+			}
+		],
+		"name": "configureArenaMode",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint8",
+				"name": "_rewardType",
+				"type": "uint8"
+			}
+		],
+		"name": "setRewardType",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_reward",
+				"type": "uint256"
+			}
+		],
+		"name": "setBaseRewardPerWin",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "rate",
+				"type": "uint256"
+			}
+		],
+		"name": "setSeasonRewardRate",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
 	}
 ],
 		arenaLeaderboardABI: [
@@ -17763,20 +17885,10 @@
 		"type": "function"
 	}
 ],
-		stakingLPAssetABI: [
+		stakingLPRewardABI: [
 	{
 		"inputs": [],
-		"stateMutability": "nonpayable",
-		"type": "constructor"
-	},
-	{
-		"inputs": [],
-		"name": "InvalidParam",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "MIG_CreateFailed",
+		"name": "UnknownError",
 		"type": "error"
 	},
 	{
@@ -27797,12 +27909,7 @@
 		"type": "function"
 	}
 ],
-		tokenStakingLPRateManagerABI: [
-	{
-		"inputs": [],
-		"stateMutability": "nonpayable",
-		"type": "constructor"
-	},
+		arenaRewardLPABI: [
 	{
 		"inputs": [],
 		"name": "TSLPR_AmountZero",

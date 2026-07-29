@@ -800,7 +800,6 @@
         let battleSkillDataContract;
         let arenaContract;
         let arenaRankingManagerContract;
-        let arenaModeManagerContract;
         let arenaPlayerContract;
         let arenaBattleContract;
         let arenaRankingQueryContract;
@@ -1017,7 +1016,7 @@
                 arenaRewardLPContract: !!arenaRewardLPContract,
                 arenaBattleContract: !!arenaBattleContract,
                 arenaPlayerContract: !!arenaPlayerContract,
-                arenaModeManagerContract: !!arenaModeManagerContract,
+                arenaRankingManagerContract: !!arenaRankingManagerContract,
                 web3: !!web3
             };
         }
@@ -1358,7 +1357,6 @@
                     console.log('battleSkillDataContract:', battleSkillDataContract ? battleSkillDataContract.options.address : null);
                     console.log('arenaContract:', arenaContract ? arenaContract.options.address : null);
                     console.log('arenaRankingManagerContract:', arenaRankingManagerContract ? arenaRankingManagerContract.options.address : null);
-                    console.log('arenaModeManagerContract:', arenaModeManagerContract ? arenaModeManagerContract.options.address : null);
                     console.log('arenaPlayerContract:', arenaPlayerContract ? arenaPlayerContract.options.address : null);
                     console.log('arenaBattleContract:', arenaBattleContract ? arenaBattleContract.options.address : null);
                     console.log('arenaRankingQueryContract:', arenaRankingQueryContract ? arenaRankingQueryContract.options.address : null);
@@ -1470,7 +1468,7 @@
             
             const contractNames = [
                 'battle', 'battleSkillData', 'arenaRankingQuery', 'arenaRewardLP', 
-                'arenaBattle', 'arenaPlayer', 'arenaModeManager', 'arenaReward'
+                'arenaBattle', 'arenaPlayer', 'arenaReward', 'arenaRankingManager'
             ];
             
             const addressPromises = contractNames.map(async (name) => {
@@ -1537,16 +1535,12 @@
                 }
             }
             
-            if (contractAddresses.arenaModeManager) {
+            if (config.ABIS.arenaRankingManagerABI && contractAddresses.arenaRankingManager) {
                 try {
-                    const minABI = [
-                        {"inputs":[],"name":"arenaMode","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},
-                        {"inputs":[],"name":"modeControlType","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"}
-                    ];
-                    arenaModeManagerContract = new web3.eth.Contract(minABI, contractAddresses.arenaModeManager);
-                    console.log('arenaModeManagerContract initialized:', contractAddresses.arenaModeManager);
+                    arenaRankingManagerContract = new web3.eth.Contract(config.ABIS.arenaRankingManagerABI, contractAddresses.arenaRankingManager);
+                    console.log('arenaRankingManagerContract initialized:', contractAddresses.arenaRankingManager);
                 } catch (e) {
-                    console.warn('Failed to init arenaModeManagerContract:', e.message);
+                    console.warn('Failed to init arenaRankingManagerContract:', e.message);
                 }
             }
             
@@ -1667,7 +1661,7 @@
             console.log('arenaRewardLPContract:', arenaRewardLPContract ? arenaRewardLPContract.options.address : null);
             console.log('arenaBattleContract:', arenaBattleContract ? arenaBattleContract.options.address : null);
             console.log('arenaPlayerContract:', arenaPlayerContract ? arenaPlayerContract.options.address : null);
-            console.log('arenaModeManagerContract:', arenaModeManagerContract ? arenaModeManagerContract.options.address : null);
+            console.log('arenaRankingManagerContract:', arenaRankingManagerContract ? arenaRankingManagerContract.options.address : null);
             console.log('============================================');
         }
 
@@ -2482,9 +2476,9 @@
 
         async function loadArenaMode() {
             try {
-                if (!arenaModeManagerContract) return;
-                const mode = await arenaModeManagerContract.methods.arenaMode().call();
-                const controlType = await arenaModeManagerContract.methods.modeControlType().call();
+                if (!arenaRankingManagerContract) return;
+                const mode = await arenaRankingManagerContract.methods.arenaMode().call();
+                const controlType = await arenaRankingManagerContract.methods.modeControlType().call();
                 updateCurrentModeDisplay(parseInt(mode, 10), parseInt(controlType, 10));
             } catch (error) {
                 console.error('加载竞技场模式失败:', error);

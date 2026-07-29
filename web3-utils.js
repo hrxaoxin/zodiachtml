@@ -22,7 +22,6 @@ window.ZODIAC_WEB3 = (function() {
         nftTrading: 'nftTrading',
         staking: 'staking',
         stakingLPReward: 'stakingLPReward',
-        stakingLPAsset: 'stakingLPAsset',
         tokenStaking: 'tokenStaking',
         tokenStakingLP: 'tokenStakingLP',
         breeding: 'selfBreedingCore',
@@ -43,7 +42,6 @@ window.ZODIAC_WEB3 = (function() {
         battle: 'battle',
         battleSkillData: 'battleSkillData',
         arena: 'arenaRankingQuery',
-        arenaModeManager: 'arenaModeManager',
         arenaRankingManager: 'arenaRankingManager',
         arenaRankingQuery: 'arenaRankingQuery',
         arenaReward: 'arenaReward',
@@ -261,7 +259,6 @@ window.ZODIAC_WEB3 = (function() {
         'nftTrading': ABIS.nftTradingABI,
         'staking': ABIS.stakingABI,
         'stakingLPReward': ABIS.stakingLPRewardABI,
-        'stakingLPAsset': ABIS.stakingLPAssetABI,
         'tokenStaking': ABIS.tokenStakingABI,
         'tokenStakingLP': ABIS.tokenStakingLPABI,
         'breeding': ABIS.selfBreedingCoreABI,
@@ -479,13 +476,12 @@ window.ZODIAC_WEB3 = (function() {
             'tokenContract': currentABIS.tokenABI,
             'staking': currentABIS.stakingABI,
             'stakingLPReward': currentABIS.stakingLPRewardABI,
-            'stakingLPAsset': currentABIS.stakingLPAssetABI,
             'tokenStakingLP': currentABIS.tokenStakingLPABI,
             'nftAttributeData': currentABIS.nftAttributeDataABI,
             'nftSkillData': currentABIS.nftSkillDataABI,
             'arenaRankingQuery': currentABIS.arenaRankingQueryABI,
-            'tokenStaking': currentABIS.tokenStakingABI,
-            'tokenStakingLPRateManager': currentABIS.tokenStakingLPRateManagerABI
+            'arenaRankingManager': currentABIS.arenaRankingManagerABI,
+            'tokenStaking': currentABIS.tokenStakingABI
         };
         
         const abi = dynamicABI_MAP[name];
@@ -1954,12 +1950,10 @@ window.ZODIAC_WEB3 = (function() {
             throw new Error(`[ZODIAC_WEB3] Invalid reward type ${rewardType}, must be 0 (LP), 1 (Token) or 2 (BNB)`);
         }
         try {
-            const addr = await getContractAddress('arenaModeManager');
-            if (!addr || addr === ZERO_ADDRESS) {
-                throw new Error('[ZODIAC_WEB3] ArenaModeManager address not found');
+            const contract = await getContract('arenaRankingManager');
+            if (!contract) {
+                throw new Error('[ZODIAC_WEB3] ArenaRankingManager contract not found');
             }
-            const minABI = [{"inputs":[{"internalType":"enum RewardType","name":"_rewardType","type":"uint8"}],"name":"setRewardType","outputs":[],"stateMutability":"nonpayable","type":"function"}];
-            const contract = new web3.eth.Contract(minABI, addr);
             const receipt = await sendAndTrackTransaction(contract, 'setRewardType', [rewardType]);
             return receipt;
         } catch (e) {
