@@ -1472,7 +1472,7 @@
                 
                 try {
                     if (tokenStakingLPContract) {
-                        const rewardRate = await tokenStakingLPContract.methods.rewardRate().call();
+                        const rewardRate = await tokenStakingLPContract.methods.getRewardRate().call();
                         const rewardRatePercent = (parseInt(rewardRate, 10) / 100).toFixed(2);
                         document.getElementById('dailyReleaseRatioDisplay').textContent = rewardRatePercent;
                         document.getElementById('currentReleaseRatio').textContent = rewardRatePercent + '%';
