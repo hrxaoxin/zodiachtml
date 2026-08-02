@@ -224,7 +224,7 @@
         </div>
 
         <div id="nftStakePanel">
-            <p class="text-lg text-gray-600 mb-8">质押NFT来挖矿，每分钟获得代币奖励</p>
+            <p class="text-lg text-gray-600 mb-8" id="nftStakeIntroText">质押NFT来挖矿，合约当前奖励类型累计奖励（LP/代币/BNB均可领取）</p>
 
             <div class="info-box mb-8">
                 <h3 class="text-xl font-bold text-gray-800 mb-4">🌟 挖矿规则</h3>
@@ -233,7 +233,7 @@
                     <li>• 稀有NFT权重更高，获得更多奖励</li>
                     <li>• 最低质押时间 <span id="minStakingDuration" class="font-bold text-blue-600">30分钟</span></li>
                     <li>• 每日释放比例 <span id="nftDailyReleaseRate" class="font-bold text-green-600">0.3%</span>，支持弹性增量机制</li>
-                    <li>• 随时可以领取已挖矿的代币</li>
+                    <li id="nftRuleClaimText">• 三种奖励类型独立累计，可随时分别领取LP/代币/BNB</li>
                     <li>• 随时可以赎回质押的NFT</li>
                 </ul>
             </div>
@@ -256,18 +256,44 @@
             </div>
 
             <div class="info-box mb-8">
-                <h3 class="text-xl font-bold text-gray-800 mb-4" id="rewardInfoTitle">🎁 LP奖励信息</h3>
-                <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg mb-4">
-                    <span class="text-lg font-medium text-gray-800" id="rewardLabel">可领取LP奖励</span>
-                    <span class="text-lg font-bold text-purple-600" id="rewardsAmount">0.00</span>
+                <h3 class="text-xl font-bold text-gray-800 mb-4">🎁 可领取奖励</h3>
+                <p class="text-xs text-gray-500 mb-4">每种奖励类型独立累计，可随时领取。合约当前奖励类型：<span id="currentRewardTypeBadge" class="font-bold text-blue-600">BNB</span></p>
+                
+                <div class="space-y-3 mb-4">
+                    <!-- LP奖励 -->
+                    <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                        <div>
+                            <span class="text-lg font-medium text-gray-800">LP奖励</span>
+                            <p class="text-xs text-gray-500">领取后自动兑换为代币+WBNB</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-lg font-bold text-purple-600" id="rewardsAmountLP">0.0000 LP</span>
+                            <button id="claimBtnLP" class="btn-primary text-sm ml-2 px-3 py-1" disabled>领取</button>
+                        </div>
+                    </div>
+                    <!-- 代币奖励 -->
+                    <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                        <div>
+                            <span class="text-lg font-medium text-gray-800">代币奖励</span>
+                            <p class="text-xs text-gray-500">直接发放至钱包</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-lg font-bold text-purple-600" id="rewardsAmountToken">0.0000 TOKEN</span>
+                            <button id="claimBtnToken" class="btn-primary text-sm ml-2 px-3 py-1" disabled>领取</button>
+                        </div>
+                    </div>
+                    <!-- BNB奖励 -->
+                    <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                        <div>
+                            <span class="text-lg font-medium text-gray-800">BNB奖励</span>
+                            <p class="text-xs text-gray-500">直接发放至钱包</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-lg font-bold text-purple-600" id="rewardsAmountBNB">0.0000 BNB</span>
+                            <button id="claimBtnBNB" class="btn-primary text-sm ml-2 px-3 py-1" disabled>领取</button>
+                        </div>
+                    </div>
                 </div>
-                <div class="p-4 bg-purple-50 rounded-lg mb-4">
-                    <div class="text-sm text-purple-600 font-medium mb-2" id="rewardDescTitle">💡 LP奖励说明</div>
-                    <p class="text-xs text-gray-600" id="rewardDescText">LP奖励领取后会自动兑换为代币和WBNB发送到您的钱包，您将获得双重收益：项目分红 + DEX交易手续费</p>
-                </div>
-                <button id="claimBtn" class="btn-primary w-full" disabled>
-                    <i class="fas fa-gift mr-2"></i><span id="claimBtnText">领取LP奖励</span>
-                </button>
             </div>
 
             <div class="info-box">
@@ -294,17 +320,17 @@
         </div>
 
         <div id="tokenStakePanel" class="hidden">
-            <p class="text-lg text-gray-600 mb-8" id="tokenStakeIntroText">质押代币获得LP奖励，支持弹性释放机制</p>
+            <p class="text-lg text-gray-600 mb-8" id="tokenStakeIntroText">质押代币获得奖励，合约当前奖励类型累计（LP/代币/BNB均可领取），支持弹性释放机制</p>
 
             <div class="info-box mb-8">
                 <h3 class="text-xl font-bold text-gray-800 mb-4">🌟 代币质押规则</h3>
                 <ul class="text-gray-600 space-y-2">
-                    <li id="tokenRule1">• 质押代币获得LP奖励</li>
+                    <li id="tokenRule1">• 质押代币获得奖励，三种类型独立累计</li>
                     <li>• 最低质押时长 <span id="tokenMinDuration" class="font-bold text-blue-600">30</span> 分钟</li>
                     <li>• 当前每日释放比例 <span id="dailyReleaseRatioDisplay" class="font-bold text-green-600">1.0</span>%，支持弹性增量机制</li>
                     <li>• 赎回时自动领取累积奖励</li>
-                    <li id="tokenRule5">• 奖励以LP形式发放，领取时自动兑换为代币和WBNB</li>
-                    <li id="tokenRule6">• 双重收益：项目分红 + DEX交易手续费</li>
+                    <li id="tokenRule5">• LP奖励领取时自动兑换为代币和WBNB；代币/BNB奖励直接到账钱包</li>
+                    <li id="tokenRule6">• 可随时分别领取LP/代币/BNB三种奖励</li>
                 </ul>
             </div>
 
@@ -333,10 +359,6 @@
                             <p class="text-xl font-bold text-gray-800" id="myTokenStakeAmount">0.00</p>
                         </div>
                         <div class="p-4 bg-gray-50 rounded-lg">
-                            <span class="text-sm text-gray-600" id="tokenRewardLabel">可领取LP奖励</span>
-                            <p class="text-xl font-bold text-purple-600" id="tokenRewardsAmount">0.00</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 rounded-lg">
                             <span class="text-sm text-gray-600">质押时间</span>
                             <p class="text-sm text-gray-800" id="tokenStakedAt">-</p>
                         </div>
@@ -362,7 +384,7 @@
                     <h3 class="text-xl font-bold text-gray-800 mb-4">📊 代币质押合约信息</h3>
                     <div class="space-y-4">
                         <div class="p-4 bg-gray-50 rounded-lg">
-                            <span class="text-sm text-gray-600" id="contractRewardBalanceLabel">合约LP奖励余额</span>
+                            <span class="text-sm text-gray-600" id="contractRewardBalanceLabel">合约奖励池余额（LP/代币/BNB）</span>
                             <p class="text-lg font-bold text-gray-800" id="tokenStakingBNBBalance">0.00</p>
                         </div>
                         <div class="p-4 bg-gray-50 rounded-lg">
@@ -378,18 +400,44 @@
             </div>
 
             <div class="info-box">
-                <h3 class="text-xl font-bold text-gray-800 mb-4" id="tokenRewardTitle">🎯 领取LP奖励</h3>
-                <div class="p-4 bg-purple-50 rounded-lg mb-4">
-                    <div class="text-sm text-purple-600 font-medium mb-2" id="tokenRewardDescTitle">💡 LP奖励说明</div>
-                    <p class="text-xs text-gray-600" id="tokenRewardDescText">LP奖励领取后会自动兑换为代币和WBNB发送到您的钱包</p>
+                <h3 class="text-xl font-bold text-gray-800 mb-4">🎁 可领取奖励</h3>
+                <p class="text-xs text-gray-500 mb-4">每种奖励类型独立累计，可随时领取。合约当前奖励类型：<span id="tokenCurrentRewardTypeBadge" class="font-bold text-blue-600">BNB</span></p>
+
+                <div class="space-y-3 mb-4">
+                    <!-- LP奖励 -->
+                    <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                        <div>
+                            <span class="text-lg font-medium text-gray-800">LP奖励</span>
+                            <p class="text-xs text-gray-500">领取后自动兑换为代币+WBNB</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-lg font-bold text-purple-600" id="tokenRewardsAmountLP">0.0000 LP</span>
+                            <button id="tokenClaimBtnLP" class="btn-primary text-sm ml-2 px-3 py-1" disabled>领取</button>
+                        </div>
+                    </div>
+                    <!-- 代币奖励 -->
+                    <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                        <div>
+                            <span class="text-lg font-medium text-gray-800">代币奖励</span>
+                            <p class="text-xs text-gray-500">直接发放至钱包</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-lg font-bold text-purple-600" id="tokenRewardsAmountToken">0.0000 TOKEN</span>
+                            <button id="tokenClaimBtnToken" class="btn-primary text-sm ml-2 px-3 py-1" disabled>领取</button>
+                        </div>
+                    </div>
+                    <!-- BNB奖励 -->
+                    <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                        <div>
+                            <span class="text-lg font-medium text-gray-800">BNB奖励</span>
+                            <p class="text-xs text-gray-500">直接发放至钱包</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-lg font-bold text-purple-600" id="tokenRewardsAmountBNB">0.0000 BNB</span>
+                            <button id="tokenClaimBtnBNB" class="btn-primary text-sm ml-2 px-3 py-1" disabled>领取</button>
+                        </div>
+                    </div>
                 </div>
-                <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg mb-4">
-                    <span class="text-lg font-medium text-gray-800" id="tokenRewardAmountLabel">可领取LP奖励</span>
-                    <span class="text-lg font-bold text-purple-600" id="claimableBNB">0.00</span>
-                </div>
-                <button id="claimTokenRewardsBtn" class="btn-primary w-full" disabled>
-                    <i class="fas fa-gift mr-2"></i><span id="claimTokenRewardsBtnText">领取LP奖励</span>
-                </button>
             </div>
         </div>
     </main>
@@ -517,9 +565,14 @@
             ZODIAC_WEB3.on('disconnect', () => {
                 stopRewardEstimateRefresh();
                 account = null;
-                const defaultUnit = 'BNB';
-                document.getElementById('rewardsAmount').textContent = '0.00 ' + defaultUnit;
-                document.getElementById('tokenRewardsAmount').textContent = '0.00 ' + defaultUnit;
+                setRewardDisplay('LP', '0');
+                setRewardDisplay('TOKEN', '0');
+                setRewardDisplay('BNB', '0');
+                setClaimBtnState('LP', false);
+                setClaimBtnState('TOKEN', false);
+                setClaimBtnState('BNB', false);
+                const tokenRewardsEl = document.getElementById('tokenRewardsAmount');
+                if (tokenRewardsEl) tokenRewardsEl.textContent = '0.00';
             });
         }
 
@@ -1040,23 +1093,82 @@
 
         async function loadRewards() {
             try {
-                const lpRewards = await stakingLPRewardContract.methods.getPendingLPReward(account).call();
-                const rawRewardType = await stakingLPRewardContract.methods.rewardType().call();
-                const rewardType = typeof rawRewardType === 'object' && rawRewardType.toString ? parseInt(rawRewardType.toString(), 10) : parseInt(rawRewardType, 10);
-                console.log('[STAKING] NFT staking rewardType from contract:', rawRewardType, 'parsed:', rewardType);
-                
-                const rewardsFormatted = web3.utils.fromWei(lpRewards, 'ether');
-                const unit = getRewardUnit(rewardType);
-                const displayText = getRewardDisplayText(rewardType);
-                
-                document.getElementById('rewardsAmount').textContent = parseFloat(rewardsFormatted).toFixed(4) + ' ' + unit;
-                document.getElementById('claimBtn').disabled = lpRewards === '0';
-                
-                updateNFTRewardDescription(rewardType);
+                // 默认重置为 0
+                setRewardDisplay('LP', '0');
+                setRewardDisplay('TOKEN', '0');
+                setRewardDisplay('BNB', '0');
+                setClaimBtnState('LP', false);
+                setClaimBtnState('TOKEN', false);
+                setClaimBtnState('BNB', false);
+
+                if (!stakingLPRewardContract || !account) return;
+
+                // 获取当前合约奖励类型（用于高亮当前累计类型）
+                let currentType = 2; // 默认 BNB
+                try {
+                    const rawRewardType = await stakingLPRewardContract.methods.rewardType().call();
+                    currentType = parseRewardType(rawRewardType);
+                } catch (e) { /* ignore */ }
+                updateCurrentRewardTypeBadge(currentType);
+
+                // 一次性获取三种类型的待领取奖励（已按池余额封顶）
+                let lpVal = '0', tokenVal = '0', bnbVal = '0';
+                try {
+                    const result = await stakingLPRewardContract.methods.getPendingRewards(account).call();
+                    lpVal = result[0] || result.lp || '0';
+                    tokenVal = result[1] || result.token || '0';
+                    bnbVal = result[2] || result.bnb || '0';
+                } catch (e) {
+                    console.warn('[STAKING] getPendingRewards 调用失败，回退到 getPendingRewardByType:', e);
+                    try {
+                        lpVal = await stakingLPRewardContract.methods.getPendingRewardByType(account, 0).call();
+                        tokenVal = await stakingLPRewardContract.methods.getPendingRewardByType(account, 1).call();
+                        bnbVal = await stakingLPRewardContract.methods.getPendingRewardByType(account, 2).call();
+                    } catch (e2) {
+                        console.error('[STAKING] 读取待领取奖励失败:', e2);
+                    }
+                }
+
+                setRewardDisplay('LP', lpVal);
+                setRewardDisplay('TOKEN', tokenVal);
+                setRewardDisplay('BNB', bnbVal);
+
+                setClaimBtnState('LP', BigInt(lpVal) > 0);
+                setClaimBtnState('TOKEN', BigInt(tokenVal) > 0);
+                setClaimBtnState('BNB', BigInt(bnbVal) > 0);
             } catch (error) {
-                console.error('加载LP奖励失败:', error);
-                ZODIAC_UI.showToast('加载LP奖励失败: ' + error.message, 'error');
+                console.error('加载奖励失败:', error);
+                ZODIAC_UI.showToast('加载奖励失败: ' + error.message, 'error');
             }
+        }
+
+        function parseRewardType(rawRewardType) {
+            return typeof rawRewardType === 'object' && rawRewardType.toString ? parseInt(rawRewardType.toString(), 10) : parseInt(rawRewardType, 10);
+        }
+
+        function setRewardDisplay(typeKey, rawValue) {
+            const el = document.getElementById('rewardsAmount' + typeKey);
+            if (!el) return;
+            const unit = typeKey === 'LP' ? 'LP' : (typeKey === 'TOKEN' ? 'TOKEN' : 'BNB');
+            try {
+                const formatted = web3.utils.fromWei(String(rawValue || '0'), 'ether');
+                el.textContent = parseFloat(formatted).toFixed(4) + ' ' + unit;
+            } catch (e) {
+                el.textContent = '0.0000 ' + unit;
+            }
+        }
+
+        function setClaimBtnState(typeKey, enabled) {
+            const btn = document.getElementById('claimBtn' + typeKey);
+            if (btn) btn.disabled = !enabled;
+        }
+
+        function updateCurrentRewardTypeBadge(rewardType) {
+            const type = parseRewardType(rewardType);
+            const badge = document.getElementById('currentRewardTypeBadge');
+            if (!badge) return;
+            const text = type === 0 ? 'LP' : (type === 1 ? '代币' : 'BNB');
+            badge.textContent = text;
         }
 
         function getRewardUnit(rewardType) {
@@ -1079,128 +1191,8 @@
             }
         }
 
-        function updateNFTRewardDescription(rewardType) {
-            const type = typeof rewardType === 'object' && rewardType.toString ? parseInt(rewardType.toString(), 10) : parseInt(rewardType, 10);
-            const displayText = getRewardDisplayText(type);
-            const icon = type === 2 ? '💰' : (type === 1 ? '🪙' : '🎁');
-            
-            const rewardInfoTitle = document.getElementById('rewardInfoTitle');
-            if (rewardInfoTitle) rewardInfoTitle.textContent = icon + ' ' + displayText + '信息';
-            
-            const rewardLabel = document.getElementById('rewardLabel');
-            if (rewardLabel) rewardLabel.textContent = '可领取' + displayText;
-            
-            const rewardDescTitle = document.getElementById('rewardDescTitle');
-            if (rewardDescTitle) rewardDescTitle.textContent = '💡 ' + displayText + '说明';
-            
-            const rewardDescText = document.getElementById('rewardDescText');
-            if (rewardDescText) {
-                switch(type) {
-                    case 0:
-                        rewardDescText.textContent = displayText + '领取后会自动兑换为代币和WBNB发送到您的钱包，您将获得双重收益：项目分红 + DEX交易手续费';
-                        break;
-                    case 1:
-                        rewardDescText.textContent = displayText + '直接发放至您的钱包';
-                        break;
-                    case 2:
-                        rewardDescText.textContent = displayText + '直接发放至您的钱包';
-                        break;
-                }
-            }
-            
-            const claimBtnText = document.getElementById('claimBtnText');
-            if (claimBtnText) claimBtnText.textContent = '领取' + displayText;
-        }
-
         function updateTokenRewardDescription(rewardType) {
-            const type = typeof rewardType === 'object' && rewardType.toString ? parseInt(rewardType.toString(), 10) : parseInt(rewardType, 10);
-            const displayText = getRewardDisplayText(type);
-            const icon = type === 2 ? '💰' : (type === 1 ? '🪙' : '🎁');
-            
-            const tokenRewardLabel = document.getElementById('tokenRewardLabel');
-            if (tokenRewardLabel) tokenRewardLabel.textContent = '可领取' + displayText;
-            
-            const tokenRewardTitle = document.getElementById('tokenRewardTitle');
-            if (tokenRewardTitle) tokenRewardTitle.textContent = icon + ' 领取' + displayText;
-            
-            const tokenRewardDescTitle = document.getElementById('tokenRewardDescTitle');
-            if (tokenRewardDescTitle) tokenRewardDescTitle.textContent = '💡 ' + displayText + '说明';
-            
-            const tokenRewardDescText = document.getElementById('tokenRewardDescText');
-            if (tokenRewardDescText) {
-                switch(type) {
-                    case 0:
-                        tokenRewardDescText.textContent = displayText + '领取后会自动兑换为代币和WBNB发送到您的钱包';
-                        break;
-                    case 1:
-                        tokenRewardDescText.textContent = displayText + '直接发放至您的钱包';
-                        break;
-                    case 2:
-                        tokenRewardDescText.textContent = displayText + '直接发放至您的钱包';
-                        break;
-                }
-            }
-            
-            const tokenRewardAmountLabel = document.getElementById('tokenRewardAmountLabel');
-            if (tokenRewardAmountLabel) tokenRewardAmountLabel.textContent = '可领取' + displayText;
-            
-            const claimTokenRewardsBtnText = document.getElementById('claimTokenRewardsBtnText');
-            if (claimTokenRewardsBtnText) claimTokenRewardsBtnText.textContent = '领取' + displayText;
-            
-            const tokenStakeIntroText = document.getElementById('tokenStakeIntroText');
-            if (tokenStakeIntroText) tokenStakeIntroText.textContent = '质押代币获得' + displayText + '，支持弹性释放机制';
-            
-            const tokenRule1 = document.getElementById('tokenRule1');
-            if (tokenRule1) tokenRule1.textContent = '• 质押代币获得' + displayText;
-            
-            const tokenRule5 = document.getElementById('tokenRule5');
-            if (tokenRule5) {
-                const unit = getRewardUnit(type);
-                switch(type) {
-                    case 0:
-                        tokenRule5.textContent = '• 奖励以' + unit + '形式发放，领取时自动兑换为代币和WBNB';
-                        break;
-                    case 1:
-                        tokenRule5.textContent = '• 奖励以' + unit + '形式发放，直接到账钱包';
-                        break;
-                    case 2:
-                        tokenRule5.textContent = '• 奖励以' + unit + '形式发放，直接到账钱包';
-                        break;
-                }
-            }
-            
-            const tokenRule6 = document.getElementById('tokenRule6');
-            if (tokenRule6) {
-                switch(type) {
-                    case 0:
-                        tokenRule6.textContent = '• 双重收益：项目分红 + DEX交易手续费';
-                        break;
-                    case 1:
-                        tokenRule6.textContent = '• 稳定收益：项目分红奖励';
-                        break;
-                    case 2:
-                        tokenRule6.textContent = '• 实时收益：' + getRewardUnit(type) + '直接到账';
-                        break;
-                }
-            }
-            
-            const contractRewardBalanceLabel = document.getElementById('contractRewardBalanceLabel');
-            if (contractRewardBalanceLabel) contractRewardBalanceLabel.textContent = '合约' + displayText + '余额';
-            
-            const descElement = document.querySelector('#rewardEstimate .text-xs.text-gray-500');
-            if (descElement) {
-                switch(type) {
-                    case 0:
-                        descElement.textContent = '收益预估基于当前总权重计算，实际收益可能因其他用户质押/解质押而变化。' + displayText + '领取后自动兑换为代币和WBNB';
-                        break;
-                    case 1:
-                        descElement.textContent = '收益预估基于当前总权重计算，实际收益可能因其他用户质押/解质押而变化';
-                        break;
-                    case 2:
-                        descElement.textContent = '收益预估基于当前总权重计算，实际收益可能因其他用户质押/解质押而变化。' + displayText + '直接发放至钱包';
-                        break;
-                }
-            }
+            // 已弃用：三类型奖励独立累计后，描述文本由静态 HTML 提供
         }
 
         async function loadContractInfo() {
@@ -1331,21 +1323,20 @@
             }
         }
 
-        async function claimRewards() {
-            const btn = document.getElementById('claimBtn');
+        // 按 RewardType 枚举值领取：0=LP, 1=TOKEN, 2=BNB
+        async function claimRewardsByType(typeKey) {
+            const typeEnum = typeKey === 'LP' ? 0 : (typeKey === 'TOKEN' ? 1 : 2);
+            const btn = document.getElementById('claimBtn' + typeKey);
+            if (!btn) return;
+            const originalText = btn.textContent;
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>领取中...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 领取中';
 
             try {
-                await stakingLPRewardContract.methods.claimLPReward().send({ from: account });
-                
-                const rewardType = await stakingLPRewardContract.methods.rewardType().call();
-                const displayText = getRewardDisplayText(rewardType);
-                const unit = getRewardUnit(rewardType);
-                let successMsg = displayText + '领取成功！';
-                if (parseInt(rewardType) === 0) {
-                    successMsg += '已兑换为代币和WBNB';
-                }
+                await stakingLPRewardContract.methods.claimReward(typeEnum).send({ from: account });
+
+                let successMsg = getRewardDisplayText(typeEnum) + '领取成功！';
+                if (typeEnum === 0) successMsg += '，已兑换为代币和WBNB';
                 ZODIAC_UI.showToast(successMsg, 'success');
                 loadRewards();
                 loadMyStakes();
@@ -1354,8 +1345,7 @@
                 ZODIAC_UI.showToast('领取失败: ' + (error.message || '未知错误'), 'error');
             } finally {
                 btn.disabled = false;
-                const rewardType = await stakingLPRewardContract.methods.rewardType().call().catch(() => 0);
-                btn.innerHTML = '<i class="fas fa-gift mr-2"></i>领取' + getRewardDisplayText(rewardType);
+                btn.textContent = '领取';
             }
         }
 
@@ -1369,7 +1359,9 @@
 
         document.getElementById('refreshWallet').addEventListener('click', initWeb3);
         document.getElementById('stakeBtn').addEventListener('click', stakeNFTs);
-        document.getElementById('claimBtn').addEventListener('click', claimRewards);
+        document.getElementById('claimBtnLP').addEventListener('click', () => claimRewardsByType('LP'));
+        document.getElementById('claimBtnToken').addEventListener('click', () => claimRewardsByType('TOKEN'));
+        document.getElementById('claimBtnBNB').addEventListener('click', () => claimRewardsByType('BNB'));
 
         setInterval(loadRewards, 60000);
     </script>
@@ -1410,27 +1402,42 @@
                     document.getElementById('myTokenStakeAmount').textContent = '0';
                 }
 
-                let claimableLP = '0';
-                let rewardUnit = 'LP';
-                let rewardDisplayText = '可领取LP奖励';
-                let rewardType = 0;
+                // 三种奖励类型独立累计，分别查询并展示
+                let tokenLpVal = '0', tokenTokenVal = '0', tokenBnbVal = '0';
+                let tokenRewardType = 2; // 默认 BNB
                 try {
                     if (tokenStakingLPContract && account) {
-                        const lpRewards = await tokenStakingLPContract.methods.getPendingLPReward(account).call();
-                        claimableLP = web3.utils.fromWei(lpRewards, 'ether').substring(0, 10);
-                        const rawRewardType = await tokenStakingLPContract.methods.getRewardType().call();
-                        rewardType = typeof rawRewardType === 'object' && rawRewardType.toString ? parseInt(rawRewardType.toString(), 10) : parseInt(rawRewardType, 10);
-                        console.log('[STAKING] Token staking rewardType from contract:', rawRewardType, 'parsed:', rewardType);
-                        rewardUnit = getRewardUnit(rewardType);
-                        rewardDisplayText = getRewardDisplayText(rewardType);
+                        try {
+                            const rawRewardType = await tokenStakingLPContract.methods.getRewardType().call();
+                            tokenRewardType = parseRewardType(rawRewardType);
+                        } catch (e) { /* ignore */ }
+                        try {
+                            const result = await tokenStakingLPContract.methods.getPendingRewards(account).call();
+                            tokenLpVal = result[0] || result.lp || '0';
+                            tokenTokenVal = result[1] || result.token || '0';
+                            tokenBnbVal = result[2] || result.bnb || '0';
+                        } catch (e) {
+                            console.warn('[STAKING] token getPendingRewards 失败，回退到按类型查询:', e);
+                            try {
+                                tokenLpVal = await tokenStakingLPContract.methods.getPendingRewardByType(account, 0).call();
+                                tokenTokenVal = await tokenStakingLPContract.methods.getPendingRewardByType(account, 1).call();
+                                tokenBnbVal = await tokenStakingLPContract.methods.getPendingRewardByType(account, 2).call();
+                            } catch (e2) {
+                                console.warn('[STAKING] 读取代币质押奖励失败:', e2);
+                            }
+                        }
                     }
                 } catch (e) {
-                    console.warn('读取LP奖励失败:', e);
-                    claimableLP = '0';
+                    console.warn('读取代币质押奖励失败:', e);
                 }
-                
-                document.getElementById('tokenRewardsAmount').textContent = claimableLP + ' ' + rewardUnit;
-                updateTokenRewardDescription(rewardType);
+
+                setTokenRewardDisplay('LP', tokenLpVal);
+                setTokenRewardDisplay('TOKEN', tokenTokenVal);
+                setTokenRewardDisplay('BNB', tokenBnbVal);
+                setTokenClaimBtnState('LP', BigInt(tokenLpVal) > 0);
+                setTokenClaimBtnState('TOKEN', BigInt(tokenTokenVal) > 0);
+                setTokenClaimBtnState('BNB', BigInt(tokenBnbVal) > 0);
+                updateTokenCurrentRewardTypeBadge(tokenRewardType);
 
                 if (stakedAt > 0) {
                     const date = new Date(stakedAt * 1000);
@@ -1440,22 +1447,15 @@
                 }
 
                 try {
-                    let lpBalance = '0';
-                    let rewardUnit = 'LP';
                     if (tokenStakingLPContract) {
                         const poolBalances = await tokenStakingLPContract.methods.getPoolBalances().call();
-                        const rawRewardType = await tokenStakingLPContract.methods.getRewardType().call();
-                        const rewardType = typeof rawRewardType === 'object' && rawRewardType.toString ? parseInt(rawRewardType.toString(), 10) : parseInt(rawRewardType, 10);
-                        rewardUnit = getRewardUnit(rewardType);
-                        if (rewardType === 0) {
-                            lpBalance = web3.utils.fromWei(poolBalances.lp || '0', 'ether').substring(0, 10);
-                        } else if (rewardType === 1) {
-                            lpBalance = web3.utils.fromWei(poolBalances.token || '0', 'ether').substring(0, 10);
-                        } else {
-                            lpBalance = web3.utils.fromWei(poolBalances.bnb || '0', 'ether').substring(0, 10);
-                        }
+                        const lpBal = web3.utils.fromWei(poolBalances.lp || poolBalances[0] || '0', 'ether').substring(0, 10);
+                        const tokBal = web3.utils.fromWei(poolBalances.token || poolBalances[1] || '0', 'ether').substring(0, 10);
+                        const bnbBal = web3.utils.fromWei(poolBalances.bnb || poolBalances[2] || '0', 'ether').substring(0, 10);
+                        document.getElementById('tokenStakingBNBBalance').textContent = 'LP:' + lpBal + ' / 代币:' + tokBal + ' / BNB:' + bnbBal;
+                    } else {
+                        document.getElementById('tokenStakingBNBBalance').textContent = '0';
                     }
-                    document.getElementById('tokenStakingBNBBalance').textContent = lpBalance + ' ' + rewardUnit;
                 } catch (e) {
                     document.getElementById('tokenStakingBNBBalance').textContent = '0';
                 }
@@ -1495,7 +1495,6 @@
                 if (hasStaked) {
                     document.getElementById('tokenUnstakeAmount').value = web3.utils.fromWei(stakedAmount, 'ether');
                 }
-                document.getElementById('claimTokenRewardsBtn').disabled = !(parseFloat(claimableLP) > 0);
             } catch (error) {
                 console.error('加载代币质押信息失败:', error);
                 document.getElementById('tokenStakeBtn').disabled = false;
@@ -1639,20 +1638,19 @@
             }
         }
 
-        async function claimTokenRewards() {
-            const btn = document.getElementById('claimTokenRewardsBtn');
+        // 按 RewardType 枚举值领取代币质押奖励：0=LP, 1=TOKEN, 2=BNB
+        async function claimTokenRewardsByType(typeKey) {
+            const typeEnum = typeKey === 'LP' ? 0 : (typeKey === 'TOKEN' ? 1 : 2);
+            const btn = document.getElementById('tokenClaimBtn' + typeKey);
+            if (!btn) return;
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>领取中...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 领取中';
 
             try {
-                await tokenStakingLPContract.methods.claimLPReward().send({ from: account });
+                await tokenStakingLPContract.methods.claimReward(typeEnum).send({ from: account });
 
-                const rewardType = await tokenStakingLPContract.methods.getRewardType().call();
-                const displayText = getRewardDisplayText(rewardType);
-                let successMsg = displayText + '领取成功！';
-                if (parseInt(rewardType) === 0) {
-                    successMsg += '已兑换为代币和WBNB';
-                }
+                let successMsg = getRewardDisplayText(typeEnum) + '领取成功！';
+                if (typeEnum === 0) successMsg += '，已兑换为代币和WBNB';
                 ZODIAC_UI.showToast(successMsg, 'success');
                 await loadTokenStakingInfo();
             } catch (error) {
@@ -1660,9 +1658,33 @@
                 ZODIAC_UI.showToast('领取奖励失败: ' + (error.message || '未知错误'), 'error');
             } finally {
                 btn.disabled = false;
-                const rewardType = await tokenStakingLPContract.methods.getRewardType().call().catch(() => 0);
-                btn.innerHTML = '<i class="fas fa-gift mr-2"></i>领取' + getRewardDisplayText(rewardType);
+                btn.textContent = '领取';
             }
+        }
+
+        function setTokenRewardDisplay(typeKey, rawValue) {
+            const el = document.getElementById('tokenRewardsAmount' + typeKey);
+            if (!el) return;
+            const unit = typeKey === 'LP' ? 'LP' : (typeKey === 'TOKEN' ? 'TOKEN' : 'BNB');
+            try {
+                const formatted = web3.utils.fromWei(String(rawValue || '0'), 'ether');
+                el.textContent = parseFloat(formatted).toFixed(4) + ' ' + unit;
+            } catch (e) {
+                el.textContent = '0.0000 ' + unit;
+            }
+        }
+
+        function setTokenClaimBtnState(typeKey, enabled) {
+            const btn = document.getElementById('tokenClaimBtn' + typeKey);
+            if (btn) btn.disabled = !enabled;
+        }
+
+        function updateTokenCurrentRewardTypeBadge(rewardType) {
+            const type = parseRewardType(rewardType);
+            const badge = document.getElementById('tokenCurrentRewardTypeBadge');
+            if (!badge) return;
+            const text = type === 0 ? 'LP' : (type === 1 ? '代币' : 'BNB');
+            badge.textContent = text;
         }
 
         async function showNFTModal(nftId, nftType, nftLevel, nftName, nftImage) {
@@ -1945,7 +1967,9 @@
 
         document.getElementById('tokenStakeBtn').addEventListener('click', handleTokenStake);
         document.getElementById('tokenUnstakeBtn').addEventListener('click', handleTokenUnstake);
-        document.getElementById('claimTokenRewardsBtn').addEventListener('click', claimTokenRewards);
+        document.getElementById('tokenClaimBtnLP').addEventListener('click', () => claimTokenRewardsByType('LP'));
+        document.getElementById('tokenClaimBtnToken').addEventListener('click', () => claimTokenRewardsByType('TOKEN'));
+        document.getElementById('tokenClaimBtnBNB').addEventListener('click', () => claimTokenRewardsByType('BNB'));
         
         document.getElementById('tokenStakeAmount').addEventListener('input', updateTokenStakeButton);
         document.getElementById('tokenUnstakeAmount').addEventListener('input', updateTokenUnstakeButton);

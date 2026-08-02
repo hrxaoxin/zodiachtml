@@ -2663,38 +2663,38 @@
             }
         }
 
-        async function loadClaimedRewards(claimedDiv, rewardType, rewardUnit, rewardName, currentSeasonId) {
+        async function loadClaimedRewards(claimedDiv, currentSeasonId) {
             console.log('[ARENA] loadClaimedRewards called');
             try {
                 let claimedHistory = [];
-                
+
                 if (arenaRewardLPContract && web3 && accounts.length > 0 && arenaRewardLPContract.events) {
                     try {
                         const maxSeasonsToCheck = 5;
                         const startSeason = Math.max(1, currentSeasonId - maxSeasonsToCheck);
                         const endSeason = currentSeasonId - 1;
-                        
+
                         console.log(`[ARENA] Checking seasons ${startSeason} to ${endSeason}`);
-                        
+
                         const checkSeasonPromises = [];
-                        
+
                         for (let seasonId = startSeason; seasonId <= endSeason; seasonId++) {
-                            checkSeasonPromises.push(checkSeasonClaimed(seasonId, accounts[0], rewardType));
+                            checkSeasonPromises.push(checkSeasonClaimed(seasonId, accounts[0]));
                         }
-                        
+
                         const results = await Promise.allSettled(checkSeasonPromises);
-                        
+
                         results.forEach((result, index) => {
                             if (result.status === 'fulfilled' && result.value) {
                                 claimedHistory.push(result.value);
                             }
                         });
-                        
+
                     } catch (e) {
                         console.warn('获取已领取奖励历史失败:', e.message);
                     }
                 }
-                
+
                 if (claimedHistory.length > 0) {
                     claimedDiv.innerHTML = claimedHistory.map(item => `
                         <div class="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
@@ -2710,68 +2710,68 @@
                 claimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">暂无已领取奖励</div>';
             }
         }
-        
-        async function checkSeasonClaimed(seasonId, account, rewardType) {
+
+        async function checkSeasonClaimed(seasonId, account) {
             try {
-                let claimed = false;
-                
-                if (arenaRankingQueryContract) {
+                if (!arenaRewardLPContract) return null;
+
+                // 检查三种类型的领取状态
+                const typeNames = ['LP', 'TOKEN', 'BNB'];
+                const eventNames = ['LPRewardClaimed', 'TokenRewardClaimed', 'BNBRewardClaimed'];
+                let claimedAmounts = [];
+
+                for (let t = 0; t < 3; t++) {
+                    let claimed = false;
                     try {
                         claimed = await withTimeout(
-                            arenaRankingQueryContract.methods.isSeasonRewardClaimed(account, seasonId).call(),
+                            arenaRewardLPContract.methods.isRewardClaimedByType(account, seasonId, t).call(),
                             5000,
                             false
                         );
                     } catch (e) {
-                        console.warn(`[ARENA] isSeasonRewardClaimed(${account}, ${seasonId}) failed:`, e.message);
-                        return null;
+                        console.warn(`[ARENA] isRewardClaimedByType(${seasonId}, ${t}) failed:`, e.message);
+                        continue;
                     }
-                } else {
-                    return null;
-                }
-                
-                if (claimed === true || claimed === 'true') {
-                    let rewardAmount = '0';
-                    try {
-                        if (arenaRewardLPContract && arenaRewardLPContract.getPastEvents) {
-                            const eventNames = ['BNBRewardClaimed', 'LPRewardClaimed', 'TokenRewardClaimed'];
-                            const allEvents = [];
-                            
-                            for (const eventName of eventNames) {
-                                try {
-                                    const events = await withTimeout(
-                                        arenaRewardLPContract.getPastEvents(eventName, {
-                                            filter: { user: account },
-                                            fromBlock: 0,
-                                            toBlock: 'latest'
-                                        }),
-                                        5000,
-                                        []
-                                    );
-                                    allEvents.push(...events);
-                                } catch (e) {
-                                    console.warn(`获取事件${eventName}失败:`, e.message);
-                                }
-                            }
-                            
-                            const seasonEvent = allEvents.find(evt => {
+
+                    if (claimed === true || claimed === 'true') {
+                        // 从事件中获取领取金额
+                        let rewardAmount = '0';
+                        try {
+                            const events = await withTimeout(
+                                arenaRewardLPContract.getPastEvents(eventNames[t], {
+                                    filter: { user: account },
+                                    fromBlock: 0,
+                                    toBlock: 'latest'
+                                }),
+                                5000,
+                                []
+                            );
+
+                            const seasonEvent = events.find(evt => {
                                 const eventSeasonId = evt.returnValues.seasonId || evt.returnValues[1];
                                 return parseInt(eventSeasonId) === seasonId;
                             });
-                            
+
                             if (seasonEvent) {
                                 const amountWei = seasonEvent.returnValues.amount || seasonEvent.returnValues[2] || '0';
                                 rewardAmount = web3.utils.fromWei(String(amountWei), 'ether');
                             }
+                        } catch (e) {
+                            console.warn(`获取赛季${seasonId} ${typeNames[t]}奖励事件失败:`, e.message);
                         }
-                    } catch (e) {
-                        console.warn(`获取赛季${seasonId}奖励事件失败:`, e.message);
+
+                        if (parseFloat(rewardAmount) > 0) {
+                            claimedAmounts.push(parseFloat(rewardAmount).toFixed(4) + ' ' + typeNames[t]);
+                        } else {
+                            claimedAmounts.push(typeNames[t] + ' 已领取');
+                        }
                     }
-                    
+                }
+
+                if (claimedAmounts.length > 0) {
                     return {
                         seasonId: seasonId,
-                        amount: parseFloat(rewardAmount) > 0 ? parseFloat(rewardAmount).toFixed(4) + ' ' + getRewardUnit(rewardType) : '已领取',
-                        unit: getRewardUnit(rewardType)
+                        amount: claimedAmounts.join(' | ')
                     };
                 }
             } catch (e) {
@@ -2816,74 +2816,71 @@
                     
                     try {
                         const poolBalances = await arenaRewardLPContract.methods.getPoolBalances().call();
-                        if (rewardType === 0) {
-                            rewardPoolWei = poolBalances.lp || '0';
-                        } else if (rewardType === 1) {
-                            rewardPoolWei = poolBalances.token || '0';
-                        } else {
-                            rewardPoolWei = poolBalances.bnb || '0';
+                        const lpPool = poolBalances.lp || poolBalances[0] || '0';
+                        const tokenPool = poolBalances.token || poolBalances[1] || '0';
+                        let bnbPool = poolBalances.bnb || poolBalances[2] || '0';
+                        console.log('[ARENA] poolBalances:', { lp: lpPool, token: tokenPool, bnb: bnbPool });
+
+                        // BNB 余额为 0 时尝试 getBalance 兜底
+                        if (!bnbPool || bnbPool === '0' || bnbPool === '0x0' || parseInt(bnbPool) === 0) {
+                            try {
+                                let contractAddress = arenaRewardLPContract && arenaRewardLPContract.options ? arenaRewardLPContract.options.address : null;
+                                if (contractAddress && web3) {
+                                    bnbPool = await withTimeout(web3.eth.getBalance(contractAddress), 5000, '0');
+                                }
+                            } catch (e) { /* ignore */ }
                         }
-                        console.log('[ARENA] poolBalances:', poolBalances, 'selected:', rewardPoolWei);
+
+                        const fmt = (wei) => {
+                            try { return parseFloat(web3.utils.fromWei(String(wei || '0'), 'ether')).toFixed(4); }
+                            catch (e) { return '0.0000'; }
+                        };
+
+                        const allDisplay = `LP: ${fmt(lpPool)} | 代币: ${fmt(tokenPool)} | BNB: ${fmt(bnbPool)}`;
+                        rewardPoolWei = bnbPool; // 保留用于后续兜底逻辑
+
+                        const rewardPoolAmountEl = document.getElementById('rewardPoolAmount');
+                        const rewardPoolLabelEl = document.getElementById('rewardPoolLabel');
+                        const rewardRateInfoEl = document.getElementById('rewardRateInfo');
+                        const rewardSectionTitleEl = document.getElementById('rewardSectionTitle');
+                        const unclaimedRewardTitleEl = document.getElementById('unclaimedRewardTitle');
+                        const claimedRewardTitleEl = document.getElementById('claimedRewardTitle');
+                        const rewardTipTextEl = document.getElementById('rewardTipText');
+
+                        if (rewardPoolAmountEl) rewardPoolAmountEl.textContent = allDisplay;
+                        if (rewardPoolLabelEl) rewardPoolLabelEl.textContent = '三类型总奖励池';
+                        if (rewardRateInfoEl) rewardRateInfoEl.textContent = 'LP/代币/BNB 三类型独立累计';
+                        if (rewardSectionTitleEl) rewardSectionTitleEl.textContent = '奖励领取';
+                        if (unclaimedRewardTitleEl) unclaimedRewardTitleEl.textContent = '可领取奖励';
+                        if (claimedRewardTitleEl) claimedRewardTitleEl.textContent = '已领取奖励';
+
+                        if (rewardTipTextEl) {
+                            rewardTipTextEl.textContent = '💡 三种奖励类型独立累计，可随时分别领取LP/代币/BNB';
+                        }
+
+                        console.log(`Reward Pool: ${allDisplay}`);
+                        return;
                     } catch (e) {
                         console.warn('调用getPoolBalances失败:', e.message);
                     }
-                    
-                    if (rewardType === 2 && (!rewardPoolWei || rewardPoolWei === '0' || rewardPoolWei === '0x0' || rewardPoolWei === '0x' || parseInt(rewardPoolWei) === 0)) {
-                        console.log('[ARENA] bnbRewardPoolBalance returned 0 or invalid, trying getBalance');
-                        try {
-                            let contractAddress = null;
-                            if (arenaRewardLPContract && arenaRewardLPContract.options && arenaRewardLPContract.options.address) {
-                                contractAddress = arenaRewardLPContract.options.address;
-                            } else {
-                                contractAddress = await withTimeout(
-                                    window.ZODIAC_WEB3.getContractAddress('arenaRewardLP', false),
-                                    5000,
-                                    null
-                                );
+
+                    if (!rewardPoolWei || rewardPoolWei === '0' || rewardPoolWei === '0x0') {
+                        if (!arenaRankingQueryContract) {
+                            try {
+                                arenaRankingQueryContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery', false);
+                            } catch (e) { console.warn('Failed to get arenaRankingQuery:', e.message); }
+                        }
+                        if (arenaRankingQueryContract) {
+                            try {
+                                const seasonInfo = await arenaRankingQueryContract.methods.getCurrentSeasonInfo().call();
+                                rewardPoolWei = seasonInfo.rewardPool || seasonInfo[2] || '0';
+                            } catch (e) {
+                                console.warn('从赛季信息获取奖励池失败:', e);
                             }
-                            if (contractAddress && contractAddress !== '0x0000000000000000000000000000000000000000' && web3) {
-                                rewardPoolWei = await withTimeout(
-                                    web3.eth.getBalance(contractAddress),
-                                    5000,
-                                    '0'
-                                );
-                                console.log('BNB reward pool balance via getBalance:', rewardPoolWei);
-                            }
-                        } catch (e) {
-                            console.warn('获取BNB余额失败:', e.message);
                         }
                     }
                 }
-                
-                if (!rewardPoolWei || rewardPoolWei === '0' || rewardPoolWei === '0x0') {
-                    if (!arenaRankingQueryContract) {
-                        try {
-                            arenaRankingQueryContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery', false);
-                        } catch (e) { console.warn('Failed to get arenaRankingQuery:', e.message); }
-                    }
-                    if (arenaRankingQueryContract) {
-                        try {
-                            const seasonInfo = await arenaRankingQueryContract.methods.getCurrentSeasonInfo().call();
-                            rewardPoolWei = seasonInfo.rewardPool || seasonInfo[2] || '0';
-                        } catch (e) {
-                            console.warn('从赛季信息获取奖励池失败:', e);
-                        }
-                    }
-                }
-                
-                if (!rewardPoolWei || rewardPoolWei === '0' || rewardPoolWei === '0x0') {
-                    if (window.ZODIAC_WEB3 && web3) {
-                        try {
-                            const contractAddress = await window.ZODIAC_WEB3.getContractAddress('arenaReward', false);
-                            if (contractAddress && contractAddress !== '0x0000000000000000000000000000000000000000') {
-                                rewardPoolWei = await web3.eth.getBalance(contractAddress).catch(() => '0');
-                            }
-                        } catch (e) {
-                            console.warn('从合约地址获取余额失败:', e);
-                        }
-                    }
-                }
-                
+
                 let displayAmount = '0';
                 if (rewardPoolWei && rewardPoolWei !== '0' && rewardPoolWei !== '0x0') {
                     try {
@@ -2898,37 +2895,9 @@
                         displayAmount = '0';
                     }
                 }
-                console.log(`[ARENA] Final rewardPoolWei: ${rewardPoolWei}, displayAmount: ${displayAmount}, rewardType: ${rewardType}`);
-                
-                const rewardUnit = getRewardUnit(rewardType);
-                const rewardName = getRewardName(rewardType);
-                
+
                 const rewardPoolAmountEl = document.getElementById('rewardPoolAmount');
-                const rewardPoolLabelEl = document.getElementById('rewardPoolLabel');
-                const rewardRateInfoEl = document.getElementById('rewardRateInfo');
-                const rewardSectionTitleEl = document.getElementById('rewardSectionTitle');
-                const unclaimedRewardTitleEl = document.getElementById('unclaimedRewardTitle');
-                const claimedRewardTitleEl = document.getElementById('claimedRewardTitle');
-                const rewardTipTextEl = document.getElementById('rewardTipText');
-                
-                if (rewardPoolAmountEl) rewardPoolAmountEl.textContent = displayAmount;
-                if (rewardPoolLabelEl) rewardPoolLabelEl.textContent = rewardUnit + '总奖励';
-                if (rewardRateInfoEl) rewardRateInfoEl.textContent = '奖励由' + rewardName + '合约发放';
-                if (rewardSectionTitleEl) rewardSectionTitleEl.textContent = rewardName + '领取';
-                if (unclaimedRewardTitleEl) unclaimedRewardTitleEl.textContent = '可领取' + rewardName;
-                if (claimedRewardTitleEl) claimedRewardTitleEl.textContent = '已领取' + rewardName;
-                
-                if (rewardTipTextEl) {
-                    if (rewardType === 2) {
-                        rewardTipTextEl.textContent = '💡 BNB奖励直接发放到您的钱包';
-                    } else if (rewardType === 1) {
-                        rewardTipTextEl.textContent = '💡 代币奖励直接发放到您的钱包';
-                    } else {
-                        rewardTipTextEl.textContent = '💡 LP奖励领取后会自动兑换为代币和WBNB发送到您的钱包';
-                    }
-                }
-                
-                console.log(`Reward Pool: ${displayAmount} ${rewardUnit} (type: ${rewardType})`);
+                if (rewardPoolAmountEl) rewardPoolAmountEl.textContent = displayAmount + ' BNB';
             } catch (error) {
                 console.error('加载奖励池失败:', error);
                 const rewardPoolAmountEl = document.getElementById('rewardPoolAmount');
@@ -3022,8 +2991,33 @@
                 }
                 console.log('[ARENA] rewardType:', rewardType);
 
-                const rewardUnit = getRewardUnit(rewardType);
-                const rewardName = getRewardName(rewardType);
+                // 一次性获取三种类型的待领取赛季奖励
+                let lpPending = '0', tokenPending = '0', bnbPending = '0';
+                if (arenaRewardLPContract && web3) {
+                    try {
+                        const result = await withTimeout(
+                            arenaRewardLPContract.methods.getPendingRewardsAllTypes(accounts[0], currentSeasonId).call(),
+                            5000,
+                            ['0', '0', '0']
+                        );
+                        lpPending = result[0] || result.lp || '0';
+                        tokenPending = result[1] || result.token || '0';
+                        bnbPending = result[2] || result.bnb || '0';
+                    } catch (e) {
+                        console.warn('获取三种类型待领取奖励失败，回退到按类型查询:', e);
+                        try {
+                            lpPending = await arenaRewardLPContract.methods.getPendingLPRewardByType(accounts[0], currentSeasonId, 0).call();
+                            tokenPending = await arenaRewardLPContract.methods.getPendingLPRewardByType(accounts[0], currentSeasonId, 1).call();
+                            bnbPending = await arenaRewardLPContract.methods.getPendingLPRewardByType(accounts[0], currentSeasonId, 2).call();
+                        } catch (e2) {
+                            console.warn('按类型查询也失败:', e2);
+                        }
+                    }
+                }
+
+                const lpAmount = web3.utils.fromWei(String(lpPending), 'ether');
+                const tokenAmount = web3.utils.fromWei(String(tokenPending), 'ether');
+                const bnbAmount = web3.utils.fromWei(String(bnbPending), 'ether');
 
                 if (seasonIsActive) {
                     let playerScore = '0';
@@ -3040,109 +3034,59 @@
                         }
                     }
 
-                    let estimatedReward = '0';
-                    if (arenaRewardLPContract && web3) {
-                        try {
-                            const rewardWei = await withTimeout(
-                                arenaRewardLPContract.methods.getPendingLPReward(accounts[0], currentSeasonId).call(),
-                                5000,
-                                '0'
-                            );
-                            estimatedReward = web3.utils.fromWei(rewardWei, 'ether');
-                        } catch (e) {
-                            console.warn('获取预估奖励失败:', e);
-                        }
+                    let estHtml = `<div class="text-gray-300 text-xs mt-1">当前积分: ${playerScore || '0'}</div>`;
+                    if (parseFloat(lpAmount) > 0 || parseFloat(tokenAmount) > 0 || parseFloat(bnbAmount) > 0) {
+                        estHtml += '<div class="text-gray-300 text-xs mt-1">预估奖励：</div>';
+                        if (parseFloat(lpAmount) > 0) estHtml += `<div class="text-gray-300 text-xs">LP: ${parseFloat(lpAmount).toFixed(4)} LP</div>`;
+                        if (parseFloat(tokenAmount) > 0) estHtml += `<div class="text-gray-300 text-xs">代币: ${parseFloat(tokenAmount).toFixed(4)} TOKEN</div>`;
+                        if (parseFloat(bnbAmount) > 0) estHtml += `<div class="text-gray-300 text-xs">BNB: ${parseFloat(bnbAmount).toFixed(4)} BNB</div>`;
                     }
+                    estHtml += '<div class="text-gray-500 text-xs mt-1">赛季结束后可领取奖励</div>';
 
                     unclaimedDiv.innerHTML = `
                         <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
                             <div class="text-yellow-400 text-sm font-medium">赛季进行中</div>
-                            <div class="text-gray-300 text-xs mt-1">
-                                当前积分: ${playerScore || '0'} 
-                                ${parseFloat(estimatedReward) > 0 ? ` | 预估${rewardName}: ${parseFloat(estimatedReward).toFixed(4)} ${rewardUnit}` : ''}
-                            </div>
-                            <div class="text-gray-500 text-xs mt-1">赛季结束后可领取${rewardName}</div>
+                            ${estHtml}
                         </div>
                     `;
-                    
-                    await loadClaimedRewards(claimedDiv, rewardType, rewardUnit, rewardName, currentSeasonId);
+
+                    await loadClaimedRewards(claimedDiv, currentSeasonId);
                 } else {
-                    let claimed = false;
-                    if (arenaRankingQueryContract) {
-                        try {
-                            claimed = await withTimeout(
-                                arenaRankingQueryContract.methods.isSeasonRewardClaimed(accounts[0], currentSeasonId).call(),
-                                5000,
-                                false
-                            );
-                        } catch (e) {
-                            console.warn('检查奖励领取状态失败:', e.message);
-                        }
-                    }
+                    // 赛季已结束，显示三种类型的可领取奖励，每种类型可独立领取
+                    const rewardTypes = [
+                        { enum: 0, amount: lpAmount, unit: 'LP', name: 'LP奖励', desc: '领取后自动兑换为代币+WBNB' },
+                        { enum: 1, amount: tokenAmount, unit: 'TOKEN', name: '代币奖励', desc: '直接发放至钱包' },
+                        { enum: 2, amount: bnbAmount, unit: 'BNB', name: 'BNB奖励', desc: '直接发放至钱包' }
+                    ];
 
-                    if (typeof claimed === 'string') {
-                        claimed = claimed.toLowerCase() === 'true';
-                    }
-
-                    if (claimed) {
-                        unclaimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">暂无待领取奖励</div>';
-                        let claimedAmount = '已领取';
-                        if (arenaRewardLPContract && web3) {
-                            try {
-                                const rewardWei = await withTimeout(
-                                    arenaRewardLPContract.methods.getPendingLPReward(accounts[0], currentSeasonId).call(),
-                                    5000,
-                                    '0'
-                                );
-                                const amount = web3.utils.fromWei(rewardWei, 'ether');
-                                if (parseFloat(amount) > 0) {
-                                    claimedAmount = parseFloat(amount).toFixed(4) + ' ' + rewardUnit;
-                                }
-                            } catch (e) {
-                                console.warn('获取已领取奖励金额失败:', e);
-                            }
-                        }
-                        claimedDiv.innerHTML = `
-                            <div class="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
-                                <div class="text-green-400 text-sm font-medium">赛季 ${currentSeasonId} 已领取</div>
-                                <div class="text-gray-300 text-xs mt-1">${claimedAmount}</div>
-                            </div>
-                        `;
-                        await loadClaimedRewards(claimedDiv, rewardType, rewardUnit, rewardName, currentSeasonId);
-                    } else {
-                        let rewardAmount = '0';
-                        if (arenaRewardLPContract && web3) {
-                            try {
-                                const rewardWei = await withTimeout(
-                                    arenaRewardLPContract.methods.getPendingLPReward(accounts[0], currentSeasonId).call(),
-                                    5000,
-                                    '0'
-                                );
-                                rewardAmount = web3.utils.fromWei(rewardWei, 'ether');
-                            } catch (e) {
-                                console.warn('获取待领取奖励失败:', e);
-                            }
-                        }
-
-                        if (parseFloat(rewardAmount) > 0) {
-                            unclaimedDiv.innerHTML = `
-                                <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                    let claimHtml = '';
+                    let hasAnyReward = false;
+                    for (const t of rewardTypes) {
+                        if (parseFloat(t.amount) > 0) {
+                            hasAnyReward = true;
+                            claimHtml += `
+                                <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-2">
                                     <div class="flex justify-between items-center">
                                         <div>
-                                            <div class="text-blue-400 text-sm font-medium">赛季奖励</div>
-                                            <div class="text-white text-xs mt-1">${parseFloat(rewardAmount).toFixed(4)} ${rewardUnit}</div>
+                                            <div class="text-blue-400 text-sm font-medium">${t.name}</div>
+                                            <div class="text-white text-xs mt-1">${parseFloat(t.amount).toFixed(4)} ${t.unit}</div>
+                                            <div class="text-gray-500 text-xs">${t.desc}</div>
                                         </div>
-                                        <button onclick="claimSeasonReward()" class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg transition-colors">
+                                        <button onclick="claimSeasonRewardByType(${currentSeasonId}, ${t.enum})" class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg transition-colors">
                                             领取
                                         </button>
                                     </div>
                                 </div>
                             `;
-                        } else {
-                            unclaimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">赛季结束，无奖励可领取</div>';
                         }
-                        claimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">暂无已领取奖励</div>';
                     }
+
+                    if (hasAnyReward) {
+                        unclaimedDiv.innerHTML = claimHtml;
+                    } else {
+                        unclaimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">赛季结束，无奖励可领取或已全部领取</div>';
+                    }
+                    await loadClaimedRewards(claimedDiv, currentSeasonId);
                 }
                 
                 console.log(`loadRewards completed - seasonIsActive: ${seasonIsActive}, rewardType: ${rewardType}`);
@@ -3153,36 +3097,21 @@
             }
         }
 
-        async function claimSeasonRewardHandler() {
+        // 按类型领取赛季奖励：0=LP, 1=TOKEN, 2=BNB
+        async function claimSeasonRewardByType(seasonId, typeEnum) {
             try {
-                let currentSeasonId = 1;
-                try {
-                    if (arenaRankingQueryContract) {
-                        currentSeasonId = await arenaRankingQueryContract.methods.currentSeasonId().call();
-                    }
-                } catch (e) {
-                    console.warn('获取当前赛季ID失败:', e);
+                if (!arenaRewardLPContract) {
+                    ZODIAC_UI.showToast('奖励合约未初始化', 'warning');
+                    return;
                 }
-                
-                const rewardType = parseInt(await arenaRewardLPContract.methods.rewardType().call());
-                
-                await arenaRewardLPContract.methods.claimLPReward(currentSeasonId).send({ from: accounts[0] });
-                
-                let successMsg = '';
-                switch(rewardType) {
-                    case 0:
-                        successMsg = 'LP奖励领取成功！已兑换为代币和WBNB';
-                        break;
-                    case 1:
-                        successMsg = '代币奖励领取成功！';
-                        break;
-                    case 2:
-                        successMsg = 'BNB奖励领取成功！';
-                        break;
-                    default:
-                        successMsg = '奖励领取成功！';
-                }
-                
+
+                const typeNames = ['LP', '代币', 'BNB'];
+                const typeName = typeNames[typeEnum] || '奖励';
+
+                await arenaRewardLPContract.methods.claimReward(seasonId, typeEnum).send({ from: accounts[0] });
+
+                let successMsg = typeName + '奖励领取成功！';
+                if (typeEnum === 0) successMsg += '，已兑换为代币和WBNB';
                 ZODIAC_UI.showToast(successMsg, 'success');
                 loadRewards();
             } catch (error) {
@@ -3192,7 +3121,9 @@
         }
 
         // 暴露给 inline onclick
-        window.claimSeasonReward = claimSeasonRewardHandler;
+        window.claimSeasonRewardByType = claimSeasonRewardByType;
+        // 旧接口兼容
+        window.claimSeasonReward = (seasonId) => claimSeasonRewardByType(seasonId, 2);
 
         let currentPage = 1;
         let totalPages = 1;

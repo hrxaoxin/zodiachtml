@@ -1,4 +1,4 @@
-﻿window.ZODIAC_CONFIG = (function() {
+window.ZODIAC_CONFIG = (function() {
     const NETWORK_ID = 56;
     const NETWORK_NAME = 'Binance Mainnet';
     const NETWORK_LABEL = 'BNB主网';
@@ -18970,6 +18970,72 @@
 	{
 		"inputs": [
 			{
+				"internalType": "enum RewardType",
+				"name": "_type",
+				"type": "uint8"
+			}
+		],
+		"name": "claimReward",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "getPendingRewards",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "lp",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "token",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "bnb",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"internalType": "enum RewardType",
+				"name": "_type",
+				"type": "uint8"
+			}
+		],
+		"name": "getPendingRewardByType",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "address",
 				"name": "",
 				"type": "address"
@@ -25651,6 +25717,72 @@
 	{
 		"inputs": [
 			{
+				"internalType": "enum RewardType",
+				"name": "_type",
+				"type": "uint8"
+			}
+		],
+		"name": "claimReward",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "getPendingRewards",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "lp",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "token",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "bnb",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"internalType": "enum RewardType",
+				"name": "_type",
+				"type": "uint8"
+			}
+		],
+		"name": "getPendingRewardByType",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "address",
 				"name": "",
 				"type": "address"
@@ -26804,6 +26936,19 @@
 	{
 		"inputs": [
 			{
+				"internalType": "enum RewardType",
+				"name": "_type",
+				"type": "uint8"
+			}
+		],
+		"name": "claimDividend",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "address",
 				"name": "",
 				"type": "address"
@@ -26862,6 +27007,59 @@
 			}
 		],
 		"name": "getClaimableLPDividend",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "getClaimableDividends",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "lp",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "token",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "bnb",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"internalType": "enum RewardType",
+				"name": "_type",
+				"type": "uint8"
+			}
+		],
+		"name": "getClaimableDividendByType",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -29014,6 +29212,30 @@
 	{
 		"inputs": [
 			{
+				"internalType": "uint256",
+				"name": "seasonId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "enum RewardType",
+				"name": "_type",
+				"type": "uint8"
+			}
+		],
+		"name": "claimReward",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "address",
 				"name": "",
 				"type": "address"
@@ -29082,6 +29304,98 @@
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "seasonId",
+				"type": "uint256"
+			}
+		],
+		"name": "getPendingRewardsAllTypes",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "lp",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "token",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "bnb",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "seasonId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "enum RewardType",
+				"name": "_type",
+				"type": "uint8"
+			}
+		],
+		"name": "getPendingLPRewardByType",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "seasonId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "enum RewardType",
+				"name": "_type",
+				"type": "uint8"
+			}
+		],
+		"name": "isRewardClaimedByType",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
 			}
 		],
 		"stateMutability": "view",

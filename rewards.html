@@ -222,7 +222,6 @@
                     <h2 class="text-lg font-semibold text-gray-800">生肖奖励</h2>
                 </div>
                 <div class="flex space-x-2">
-                    <button class="btn-primary" id="claimAllBtn"><i class="fas fa-gift mr-2"></i><span id="claimBtnText">领取分红</span></button>
                     <button class="btn-secondary" id="refreshRewardBtn">
                         <i class="fas fa-sync-alt mr-2"></i> 刷新分红
                     </button>
@@ -230,13 +229,44 @@
             </div>
 
             <div class="p-4 bg-purple-50 rounded-lg mb-4">
-                <div class="text-sm text-purple-600 font-medium mb-2" id="rewardDescTitle">💡 奖励说明</div>
-                <p class="text-xs text-gray-600 reward-description">奖励领取说明</p>
+                <div class="text-sm text-purple-600 font-medium mb-2">💡 奖励说明</div>
+                <p class="text-xs text-gray-600 reward-description">三种奖励类型独立累计，可随时分别领取。合约当前奖励类型：<span id="currentRewardTypeBadge" class="font-bold text-blue-600">LP</span></p>
             </div>
 
-            <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                <span class="text-lg font-medium text-gray-800" id="rewardLabel">可领取奖励</span>
-                <span class="text-lg font-bold text-purple-600" id="bnbReward">0.0000</span>
+            <div class="space-y-3 mb-4">
+                <!-- LP奖励 -->
+                <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                    <div>
+                        <span class="text-lg font-medium text-gray-800">LP奖励</span>
+                        <p class="text-xs text-gray-500">领取后自动兑换为代币+WBNB</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-lg font-bold text-purple-600" id="dividendAmountLP">0.0000 LP</span>
+                        <button id="claimDividendBtnLP" class="btn-primary text-sm ml-2 px-3 py-1" disabled>领取</button>
+                    </div>
+                </div>
+                <!-- 代币奖励 -->
+                <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                    <div>
+                        <span class="text-lg font-medium text-gray-800">代币奖励</span>
+                        <p class="text-xs text-gray-500">直接发放至钱包</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-lg font-bold text-purple-600" id="dividendAmountToken">0.0000 TOKEN</span>
+                        <button id="claimDividendBtnToken" class="btn-primary text-sm ml-2 px-3 py-1" disabled>领取</button>
+                    </div>
+                </div>
+                <!-- BNB奖励 -->
+                <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                    <div>
+                        <span class="text-lg font-medium text-gray-800">BNB奖励</span>
+                        <p class="text-xs text-gray-500">直接发放至钱包</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-lg font-bold text-purple-600" id="dividendAmountBNB">0.0000 BNB</span>
+                        <button id="claimDividendBtnBNB" class="btn-primary text-sm ml-2 px-3 py-1" disabled>领取</button>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -288,7 +318,9 @@
                 await loadLPReward();
             });
             ZODIAC_WEB3.on('disconnect', () => {
-                document.getElementById('bnbReward').textContent = '0.0000';
+                setDividendDisplay('LP', '0');
+                setDividendDisplay('TOKEN', '0');
+                setDividendDisplay('BNB', '0');
             });
         }
 
@@ -409,162 +441,115 @@
         }
 
         async function loadLPReward() {
-            let rewardType = 0;
-            let unit = 'LP';
-
-            try {
-                if (dividendManagerLPContract) {
-                    rewardType = await dividendManagerLPContract.methods.rewardType().call();
-                    unit = getRewardUnit(rewardType);
-                }
-            } catch (e) {
-                console.warn('读取rewardType失败:', e);
-            }
-
-            updateRewardInfo(rewardType);
+            // 禁用所有领取按钮
+            setClaimBtnState('LP', false);
+            setClaimBtnState('TOKEN', false);
+            setClaimBtnState('BNB', false);
 
             if (!dividendManagerLPContract || !account) {
-                document.getElementById('bnbReward').textContent = '0.0000 ' + unit;
+                setDividendDisplay('LP', '0');
+                setDividendDisplay('TOKEN', '0');
+                setDividendDisplay('BNB', '0');
                 return;
             }
 
+            // 获取当前合约奖励类型（用于高亮当前累计类型）
+            let currentType = 0;
             try {
-                const lpDividend = await dividendManagerLPContract.methods.getClaimableLPDividend(account).call();
-                const lpAmount = web3.utils.fromWei(lpDividend, 'ether');
-                document.getElementById('bnbReward').textContent = parseFloat(lpAmount).toFixed(4) + ' ' + unit;
-            } catch (error) {
-                console.error('获取LP分红失败:', error);
-                document.getElementById('bnbReward').textContent = '0.0000 ' + unit;
+                const rawRewardType = await dividendManagerLPContract.methods.rewardType().call();
+                currentType = parseRewardType(rawRewardType);
+            } catch (e) { /* ignore */ }
+            updateCurrentRewardTypeBadge(currentType);
+
+            // 一次性获取三种类型的待领取分红（已按池余额封顶）
+            let lpVal = '0', tokenVal = '0', bnbVal = '0';
+            try {
+                const result = await dividendManagerLPContract.methods.getClaimableDividends(account).call();
+                lpVal = result[0] || result.lp || '0';
+                tokenVal = result[1] || result.token || '0';
+                bnbVal = result[2] || result.bnb || '0';
+            } catch (e) {
+                console.warn('[DIVIDEND] getClaimableDividends 调用失败，回退到 getClaimableDividendByType:', e);
+                try {
+                    lpVal = await dividendManagerLPContract.methods.getClaimableDividendByType(account, 0).call();
+                    tokenVal = await dividendManagerLPContract.methods.getClaimableDividendByType(account, 1).call();
+                    bnbVal = await dividendManagerLPContract.methods.getClaimableDividendByType(account, 2).call();
+                } catch (e2) {
+                    console.error('[DIVIDEND] 读取待领取分红失败:', e2);
+                }
+            }
+
+            setDividendDisplay('LP', lpVal);
+            setDividendDisplay('TOKEN', tokenVal);
+            setDividendDisplay('BNB', bnbVal);
+
+            setClaimBtnState('LP', BigInt(lpVal) > 0);
+            setClaimBtnState('TOKEN', BigInt(tokenVal) > 0);
+            setClaimBtnState('BNB', BigInt(bnbVal) > 0);
+        }
+
+        function parseRewardType(rawRewardType) {
+            return typeof rawRewardType === 'object' && rawRewardType.toString ? parseInt(rawRewardType.toString(), 10) : parseInt(rawRewardType, 10);
+        }
+
+        function setDividendDisplay(typeKey, rawValue) {
+            const el = document.getElementById('dividendAmount' + typeKey);
+            if (!el) return;
+            const unit = typeKey === 'LP' ? 'LP' : (typeKey === 'TOKEN' ? 'TOKEN' : 'BNB');
+            try {
+                const formatted = web3.utils.fromWei(String(rawValue || '0'), 'ether');
+                el.textContent = parseFloat(formatted).toFixed(4) + ' ' + unit;
+            } catch (e) {
+                el.textContent = '0.0000 ' + unit;
             }
         }
 
-        function getRewardUnit(rewardType) {
-            switch(parseInt(rewardType)) {
-                case 0: return 'LP';
-                case 1: return 'TOKEN';
-                case 2: return 'BNB';
-                default: return 'LP';
-            }
+        function setClaimBtnState(typeKey, enabled) {
+            const btn = document.getElementById('claimDividendBtn' + typeKey);
+            if (btn) btn.disabled = !enabled;
         }
 
-        function updateRewardInfo(rewardType) {
-            const typeNum = parseInt(rewardType);
-            const claimBtn = document.getElementById('claimAllBtn');
-            const rewardDesc = document.querySelector('.reward-description');
-            const rewardDescTitle = document.getElementById('rewardDescTitle');
-            const rewardLabel = document.getElementById('rewardLabel');
-            
-            let btnText = '领取LP分红';
-            let descText = '';
-            let titleText = '';
-            let labelText = '';
-            
-            switch(typeNum) {
-                case 0:
-                    btnText = '领取LP分红';
-                    descText = '领取后，LP将自动兑换为代币和WBNB发送到您的钱包，您将获得双重收益：项目分红 + DEX交易手续费';
-                    titleText = '💡 LP奖励说明';
-                    labelText = '可领取LP奖励';
-                    break;
-                case 1:
-                    btnText = '领取代币分红';
-                    descText = '代币奖励将直接发放至您的钱包';
-                    titleText = '💡 代币奖励说明';
-                    labelText = '可领取代币奖励';
-                    break;
-                case 2:
-                    btnText = '领取BNB分红';
-                    descText = 'BNB奖励将直接发放至您的钱包';
-                    titleText = '💡 BNB奖励说明';
-                    labelText = '可领取BNB奖励';
-                    break;
-            }
-            
-            if (claimBtn) {
-                claimBtn.innerHTML = `<i class="fas fa-gift mr-2"></i>${btnText}`;
-            }
-            
-            if (rewardDesc) {
-                rewardDesc.textContent = descText;
-            }
-            
-            if (rewardDescTitle) {
-                rewardDescTitle.textContent = titleText;
-            }
-            
-            if (rewardLabel) {
-                rewardLabel.textContent = labelText;
-            }
+        function updateCurrentRewardTypeBadge(rewardType) {
+            const type = parseRewardType(rewardType);
+            const badge = document.getElementById('currentRewardTypeBadge');
+            if (!badge) return;
+            const text = type === 0 ? 'LP' : (type === 1 ? '代币' : 'BNB');
+            badge.textContent = text;
         }
 
-        document.getElementById('refreshRewardBtn').addEventListener('click', loadLPReward);
-
-        document.getElementById('claimAllBtn').addEventListener('click', async function() {
+        // 按 RewardType 枚举值领取：0=LP, 1=TOKEN, 2=BNB
+        async function claimDividendByType(typeKey) {
+            const typeEnum = typeKey === 'LP' ? 0 : (typeKey === 'TOKEN' ? 1 : 2);
             if (!dividendManagerLPContract || !account) {
                 ZODIAC_UI.showToast('请先连接钱包', 'warning');
                 return;
             }
-
-            const currentReward = document.getElementById('bnbReward').textContent;
-            const rewardType = await dividendManagerLPContract.methods.rewardType().call();
-            const unit = getRewardUnit(rewardType);
-            
-            if (currentReward === '0.0000 ' + unit) {
-                ZODIAC_UI.showToast('当前没有可领取的分红', 'info');
-                return;
-            }
-
-            let title = '确认领取分红';
-            let message = `当前可领取：${currentReward}\n\n`;
-            
-            switch(parseInt(rewardType)) {
-                case 0:
-                    title = '确认领取LP分红';
-                    message += '领取后，LP将自动兑换为代币和WBNB发送到您的钱包。您将获得双重收益：项目分红 + DEX交易手续费。确定要继续吗？';
-                    break;
-                case 1:
-                    title = '确认领取代币分红';
-                    message += '代币奖励将直接发放至您的钱包。确定要继续吗？';
-                    break;
-                case 2:
-                    title = '确认领取BNB分红';
-                    message += 'BNB奖励将直接发放至您的钱包。确定要继续吗？';
-                    break;
-            }
-
-            const confirm = await ZODIAC_UI.showConfirmModal(title, message);
-
-            if (!confirm) return;
-
-            const btn = this;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> 领取中...';
+            const btn = document.getElementById('claimDividendBtn' + typeKey);
+            if (!btn) return;
+            const originalText = btn.textContent;
             btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 领取中';
 
             try {
-                await dividendManagerLPContract.methods.claimLPDividend().send({ from: account });
-                
-                let successMsg = '';
-                switch(parseInt(rewardType)) {
-                    case 0:
-                        successMsg = 'LP分红领取成功！已兑换为代币和WBNB';
-                        break;
-                    case 1:
-                        successMsg = '代币分红领取成功！';
-                        break;
-                    case 2:
-                        successMsg = 'BNB分红领取成功！';
-                        break;
-                }
-                
+                await dividendManagerLPContract.methods.claimDividend(typeEnum).send({ from: account });
+
+                let successMsg = (typeEnum === 0 ? 'LP' : (typeEnum === 1 ? '代币' : 'BNB')) + '分红领取成功！';
+                if (typeEnum === 0) successMsg += '，已兑换为代币和WBNB';
                 ZODIAC_UI.showToast(successMsg, 'success');
                 await loadLPReward();
             } catch (error) {
+                console.error('领取分红失败:', error);
                 ZODIAC_UI.handleError(error, '领取分红');
             } finally {
-                updateRewardInfo(rewardType);
                 btn.disabled = false;
+                btn.textContent = '领取';
             }
-        });
+        }
+
+        document.getElementById('refreshRewardBtn').addEventListener('click', loadLPReward);
+        document.getElementById('claimDividendBtnLP').addEventListener('click', () => claimDividendByType('LP'));
+        document.getElementById('claimDividendBtnToken').addEventListener('click', () => claimDividendByType('TOKEN'));
+        document.getElementById('claimDividendBtnBNB').addEventListener('click', () => claimDividendByType('BNB'));
 
         document.getElementById('refreshWallet').addEventListener('click', initWeb3);
     </script>
