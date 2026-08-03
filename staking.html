@@ -267,7 +267,7 @@
                             <p class="text-xs text-gray-500">领取后自动兑换为代币+WBNB</p>
                         </div>
                         <div class="text-right">
-                            <span class="text-lg font-bold text-purple-600" id="rewardsAmountLP">0.0000 LP</span>
+                            <span class="text-lg font-bold text-purple-600" id="rewardsAmountLP">0.00000000 LP</span>
                             <button id="claimBtnLP" class="btn-primary text-sm ml-2 px-3 py-1" disabled>领取</button>
                         </div>
                     </div>
@@ -278,7 +278,7 @@
                             <p class="text-xs text-gray-500">直接发放至钱包</p>
                         </div>
                         <div class="text-right">
-                            <span class="text-lg font-bold text-purple-600" id="rewardsAmountToken">0.0000 TOKEN</span>
+                            <span class="text-lg font-bold text-purple-600" id="rewardsAmountToken">0.00000000 TOKEN</span>
                             <button id="claimBtnToken" class="btn-primary text-sm ml-2 px-3 py-1" disabled>领取</button>
                         </div>
                     </div>
@@ -289,7 +289,7 @@
                             <p class="text-xs text-gray-500">直接发放至钱包</p>
                         </div>
                         <div class="text-right">
-                            <span class="text-lg font-bold text-purple-600" id="rewardsAmountBNB">0.0000 BNB</span>
+                            <span class="text-lg font-bold text-purple-600" id="rewardsAmountBNB">0.00000000 BNB</span>
                             <button id="claimBtnBNB" class="btn-primary text-sm ml-2 px-3 py-1" disabled>领取</button>
                         </div>
                     </div>
@@ -411,7 +411,7 @@
                             <p class="text-xs text-gray-500">领取后自动兑换为代币+WBNB</p>
                         </div>
                         <div class="text-right">
-                            <span class="text-lg font-bold text-purple-600" id="tokenRewardsAmountLP">0.0000 LP</span>
+                            <span class="text-lg font-bold text-purple-600" id="tokenRewardsAmountLP">0.00000000 LP</span>
                             <button id="tokenClaimBtnLP" class="btn-primary text-sm ml-2 px-3 py-1" disabled>领取</button>
                         </div>
                     </div>
@@ -422,7 +422,7 @@
                             <p class="text-xs text-gray-500">直接发放至钱包</p>
                         </div>
                         <div class="text-right">
-                            <span class="text-lg font-bold text-purple-600" id="tokenRewardsAmountToken">0.0000 TOKEN</span>
+                            <span class="text-lg font-bold text-purple-600" id="tokenRewardsAmountToken">0.00000000 TOKEN</span>
                             <button id="tokenClaimBtnToken" class="btn-primary text-sm ml-2 px-3 py-1" disabled>领取</button>
                         </div>
                     </div>
@@ -433,7 +433,7 @@
                             <p class="text-xs text-gray-500">直接发放至钱包</p>
                         </div>
                         <div class="text-right">
-                            <span class="text-lg font-bold text-purple-600" id="tokenRewardsAmountBNB">0.0000 BNB</span>
+                            <span class="text-lg font-bold text-purple-600" id="tokenRewardsAmountBNB">0.00000000 BNB</span>
                             <button id="tokenClaimBtnBNB" class="btn-primary text-sm ml-2 px-3 py-1" disabled>领取</button>
                         </div>
                     </div>
@@ -1152,9 +1152,9 @@
             const unit = typeKey === 'LP' ? 'LP' : (typeKey === 'TOKEN' ? 'TOKEN' : 'BNB');
             try {
                 const formatted = web3.utils.fromWei(String(rawValue || '0'), 'ether');
-                el.textContent = parseFloat(formatted).toFixed(4) + ' ' + unit;
+                el.textContent = parseFloat(formatted).toFixed(8) + ' ' + unit;
             } catch (e) {
-                el.textContent = '0.0000 ' + unit;
+                el.textContent = '0.00000000 ' + unit;
             }
         }
 
@@ -1668,9 +1668,9 @@
             const unit = typeKey === 'LP' ? 'LP' : (typeKey === 'TOKEN' ? 'TOKEN' : 'BNB');
             try {
                 const formatted = web3.utils.fromWei(String(rawValue || '0'), 'ether');
-                el.textContent = parseFloat(formatted).toFixed(4) + ' ' + unit;
+                el.textContent = parseFloat(formatted).toFixed(8) + ' ' + unit;
             } catch (e) {
-                el.textContent = '0.0000 ' + unit;
+                el.textContent = '0.00000000 ' + unit;
             }
         }
 

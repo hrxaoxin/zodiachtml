@@ -637,12 +637,12 @@
                 }
                 const lpDividend = await dividendManagerLP.methods.getClaimableLPDividend(account).call();
                 const unclaimedLP = safeGetWeb3().utils.fromWei(lpDividend.toString(), 'ether');
-                document.getElementById('totalDividends').textContent = parseFloat(unclaimedLP).toFixed(4);
+                document.getElementById('totalDividends').textContent = parseFloat(unclaimedLP).toFixed(8);
                 
                 try {
                     const balances = await dividendManagerLP.methods.getPoolBalances().call();
                     const lpBalance = safeGetWeb3().utils.fromWei(balances.lp.toString(), 'ether');
-                    document.getElementById('lpPoolBalance').textContent = parseFloat(lpBalance).toFixed(4);
+                    document.getElementById('lpPoolBalance').textContent = parseFloat(lpBalance).toFixed(8);
                 } catch (e) {
                     document.getElementById('lpPoolBalance').textContent = '-';
                 }

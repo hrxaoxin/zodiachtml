@@ -2761,7 +2761,7 @@
                         }
 
                         if (parseFloat(rewardAmount) > 0) {
-                            claimedAmounts.push(parseFloat(rewardAmount).toFixed(4) + ' ' + typeNames[t]);
+                            claimedAmounts.push(parseFloat(rewardAmount).toFixed(8) + ' ' + typeNames[t]);
                         } else {
                             claimedAmounts.push(typeNames[t] + ' 已领取');
                         }
@@ -2832,8 +2832,8 @@
                         }
 
                         const fmt = (wei) => {
-                            try { return parseFloat(web3.utils.fromWei(String(wei || '0'), 'ether')).toFixed(4); }
-                            catch (e) { return '0.0000'; }
+                            try { return parseFloat(web3.utils.fromWei(String(wei || '0'), 'ether')).toFixed(8); }
+                            catch (e) { return '0.00000000'; }
                         };
 
                         const allDisplay = `LP: ${fmt(lpPool)} | 代币: ${fmt(tokenPool)} | BNB: ${fmt(bnbPool)}`;
@@ -2889,7 +2889,7 @@
                         }
                         const rewardPoolEth = web3.utils.fromWei(String(rewardPoolWei), 'ether');
                         const amount = parseFloat(rewardPoolEth);
-                        displayAmount = amount.toFixed(4);
+                        displayAmount = amount.toFixed(8);
                     } catch (e) {
                         console.warn('转换奖励池金额失败:', e);
                         displayAmount = '0';
@@ -3037,9 +3037,9 @@
                     let estHtml = `<div class="text-gray-300 text-xs mt-1">当前积分: ${playerScore || '0'}</div>`;
                     if (parseFloat(lpAmount) > 0 || parseFloat(tokenAmount) > 0 || parseFloat(bnbAmount) > 0) {
                         estHtml += '<div class="text-gray-300 text-xs mt-1">预估奖励：</div>';
-                        if (parseFloat(lpAmount) > 0) estHtml += `<div class="text-gray-300 text-xs">LP: ${parseFloat(lpAmount).toFixed(4)} LP</div>`;
-                        if (parseFloat(tokenAmount) > 0) estHtml += `<div class="text-gray-300 text-xs">代币: ${parseFloat(tokenAmount).toFixed(4)} TOKEN</div>`;
-                        if (parseFloat(bnbAmount) > 0) estHtml += `<div class="text-gray-300 text-xs">BNB: ${parseFloat(bnbAmount).toFixed(4)} BNB</div>`;
+                        if (parseFloat(lpAmount) > 0) estHtml += `<div class="text-gray-300 text-xs">LP: ${parseFloat(lpAmount).toFixed(8)} LP</div>`;
+                        if (parseFloat(tokenAmount) > 0) estHtml += `<div class="text-gray-300 text-xs">代币: ${parseFloat(tokenAmount).toFixed(8)} TOKEN</div>`;
+                        if (parseFloat(bnbAmount) > 0) estHtml += `<div class="text-gray-300 text-xs">BNB: ${parseFloat(bnbAmount).toFixed(8)} BNB</div>`;
                     }
                     estHtml += '<div class="text-gray-500 text-xs mt-1">赛季结束后可领取奖励</div>';
 
@@ -3069,7 +3069,7 @@
                                     <div class="flex justify-between items-center">
                                         <div>
                                             <div class="text-blue-400 text-sm font-medium">${t.name}</div>
-                                            <div class="text-white text-xs mt-1">${parseFloat(t.amount).toFixed(4)} ${t.unit}</div>
+                                            <div class="text-white text-xs mt-1">${parseFloat(t.amount).toFixed(8)} ${t.unit}</div>
                                             <div class="text-gray-500 text-xs">${t.desc}</div>
                                         </div>
                                         <button onclick="claimSeasonRewardByType(${currentSeasonId}, ${t.enum})" class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg transition-colors">
@@ -3372,7 +3372,7 @@
                                                    'bg-gray-700';
                             const rankTextColor = player.rank <= 3 ? 'text-yellow-400' : 'text-gray-400';
                             const rewardAmount = parseFloat(rewards[index] || '0');
-                            const rewardDisplay = rewardAmount > 0 ? `${rewardAmount.toFixed(4)} <span class="text-xs text-yellow-600">${rewardTypeLabel}</span>` : '--';
+                            const rewardDisplay = rewardAmount > 0 ? `${rewardAmount.toFixed(8)} <span class="text-xs text-yellow-600">${rewardTypeLabel}</span>` : '--';
                             const canChallenge = currentUserRank <= 0 || player.rank < currentUserRank;
                             const rowStyle = canChallenge 
                                 ? 'cursor-pointer hover:bg-white/10 border border-transparent hover:border-blue-500/30'

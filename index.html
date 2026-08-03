@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="utf-8">
@@ -710,7 +710,7 @@
                             const poolStats = await dividendManager.methods.getDividendPoolStats().call();
                             const totalPoolWei = poolStats.currentPool || poolStats['0'];
                             const totalPool = web3Instance.utils.fromWei(totalPoolWei, 'ether');
-                            document.getElementById('totalPool').textContent = parseFloat(totalPool).toFixed(4);
+                            document.getElementById('totalPool').textContent = parseFloat(totalPool).toFixed(8);
                         } catch (e) {
                             console.error('Failed to load total pool:', e);
                         }
@@ -721,7 +721,7 @@
                             try {
                                 const userDivWei = await dividendManager.methods.getClaimableDividend(account).call();
                                 const userDiv = web3Instance.utils.fromWei(userDivWei, 'ether');
-                                document.getElementById('unclaimedDividend').textContent = parseFloat(userDiv).toFixed(4);
+                                document.getElementById('unclaimedDividend').textContent = parseFloat(userDiv).toFixed(8);
                             } catch (e) {
                                 console.error('Failed to load user dividend:', e);
                             }
@@ -747,7 +747,7 @@
                     if (rewardManager) {
                         const distributedWei = await rewardManager.methods.totalDistributed().call();
                         const distributed = web3Instance.utils.fromWei(distributedWei, 'ether');
-                        document.getElementById('distributed').textContent = parseFloat(distributed).toFixed(4);
+                        document.getElementById('distributed').textContent = parseFloat(distributed).toFixed(8);
                     }
                 } catch (e) {
                     console.error('Failed to load distributed:', e);
