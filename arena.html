@@ -2657,28 +2657,103 @@
         function _toStr(val) {
             if (val === null || val === undefined) return '0';
             if (typeof val === 'bigint') return val.toString();
+            if (typeof val === 'string') return val;
+            if (typeof val === 'number') {
+                if (!isFinite(val)) return '0';
+                return String(val);
+            }
             if (typeof val === 'object') {
-                if (val.toString) return val.toString();
-                if (val._hex && web3 && web3.utils && web3.utils.hexToNumberString) return web3.utils.hexToNumberString(val._hex);
+                // web3.js BigNumber / BN.js - 优先使用 toString() 获取十进制字符串
+                if (typeof val.toString === 'function') {
+                    const s = val.toString();
+                    if (s && s !== '' && s !== 'undefined' && s !== '[object Object]') return s;
+                }
+                // 处理 BN.js BigNumber 的 _hex 属性（不带0x前缀）
+                if (val._hex) {
+                    const hexStr = val._hex.startsWith('0x') ? val._hex : '0x' + val._hex;
+                    try {
+                        if (web3 && web3.utils && web3.utils.hexToNumberString) {
+                            return web3.utils.hexToNumberString(hexStr);
+                        }
+                        return BigInt(hexStr).toString();
+                    } catch(e) {}
+                }
+                // toNumber 兜底
+                if (typeof val.toNumber === 'function') {
+                    try { return String(val.toNumber()); } catch(e) {}
+                }
+                // 最后尝试 JSON
+                try { return JSON.stringify(val); } catch(e) {}
             }
             return String(val);
         }
 
         function _formatTokenAmount(rawValue) {
             try {
-                const strVal = _toStr(rawValue);
-                if (strVal === '0' || strVal === 'undefined' || strVal === 'null') return '0.00000000';
-                if (typeof web3 !== 'undefined' && web3 && web3.utils && web3.utils.fromWei) {
-                    const formatted = web3.utils.fromWei(strVal, 'ether');
-                    const num = parseFloat(formatted);
+                let strVal = _toStr(rawValue);
+                console.log('[FORMAT] _toStr result:', strVal, 'type:', typeof strVal);
+                
+                if (strVal === '0' || strVal === 'undefined' || strVal === 'null' || strVal === '') {
+                    return '0.00000000';
+                }
+                // hex字符串转换
+                if (typeof strVal === 'string' && strVal.startsWith('0x')) {
+                    try { 
+                        strVal = web3.utils.hexToNumberString(strVal); 
+                        console.log('[FORMAT] hex converted:', strVal);
+                    } catch(e) {
+                        try { 
+                            strVal = BigInt(strVal).toString(); 
+                            console.log('[FORMAT] hex via BigInt:', strVal);
+                        } catch(e2) { 
+                            console.warn('[FORMAT] hex conversion failed');
+                            return '0.00000000'; 
+                        }
+                    }
+                }
+                
+                // 方法1: 使用 web3.utils.fromWei（推荐，避免精度丢失）
+                if (web3 && web3.utils && web3.utils.fromWei) {
+                    try {
+                        const formatted = web3.utils.fromWei(strVal, 'ether');
+                        console.log('[FORMAT] fromWei result:', formatted);
+                        const num = parseFloat(formatted);
+                        if (num === 0) {
+                            console.warn('[FORMAT] fromWei returned 0 for input:', strVal);
+                            return '0.00000000';
+                        }
+                        const fixed8 = num.toFixed(8);
+                        if (fixed8 === '0.00000000') {
+                            return num.toFixed(12);
+                        }
+                        return fixed8;
+                    } catch (fromWeiErr) {
+                        console.warn('[FORMAT] fromWei failed, trying manual calc:', fromWeiErr);
+                    }
+                }
+                
+                // 方法2: 手动计算兜底（使用 BigInt 避免精度丢失）
+                try {
+                    const bigVal = BigInt(strVal);
+                    const divisor = 1000000000000000000n; // 1e18
+                    const intPart = bigVal / divisor;
+                    const decPart = (bigVal % divisor).toString().padStart(18, '0');
+                    const combined = intPart.toString() + '.' + decPart;
+                    const num = parseFloat(combined);
+                    console.log('[FORMAT] manual BigInt calc:', combined, '->', num);
                     if (num === 0) return '0.00000000';
                     const fixed8 = num.toFixed(8);
                     if (fixed8 === '0.00000000') {
                         return num.toFixed(12);
                     }
                     return fixed8;
+                } catch (bigIntErr) {
+                    console.warn('[FORMAT] BigInt calc failed:', bigIntErr);
                 }
+                
+                // 方法3: 最终兜底（可能有精度问题）
                 const num = parseFloat(strVal) / 1e18;
+                console.log('[FORMAT] parseFloat calc:', strVal, '/ 1e18 =', num);
                 if (num === 0) return '0.00000000';
                 const fixed8 = num.toFixed(8);
                 if (fixed8 === '0.00000000') {
@@ -2686,6 +2761,7 @@
                 }
                 return fixed8;
             } catch (e) {
+                console.error('[FORMAT] _formatTokenAmount error:', e, 'rawValue:', rawValue);
                 return '0.00000000';
             }
         }
@@ -3022,33 +3098,50 @@
                 }
                 console.log('[ARENA] rewardType:', rewardType);
 
-                // 分别查询三种类型的待领取赛季奖励（更可靠）
+                // 独立查询三种类型的待领取赛季奖励
                 let lpPending = '0', tokenPending = '0', bnbPending = '0';
                 if (arenaRewardLPContract && web3) {
+                    // 策略A: 独立调用 getPendingLPRewardByType
                     try {
-                        const [lpR, tokenR, bnbR] = await Promise.all([
-                            withTimeout(arenaRewardLPContract.methods.getPendingLPRewardByType(accounts[0], currentSeasonId, 0).call(), 5000, '0'),
-                            withTimeout(arenaRewardLPContract.methods.getPendingLPRewardByType(accounts[0], currentSeasonId, 1).call(), 5000, '0'),
-                            withTimeout(arenaRewardLPContract.methods.getPendingLPRewardByType(accounts[0], currentSeasonId, 2).call(), 5000, '0')
-                        ]);
-                        lpPending = _toStr(lpR);
-                        tokenPending = _toStr(tokenR);
-                        bnbPending = _toStr(bnbR);
+                        const v = await withTimeout(arenaRewardLPContract.methods.getPendingLPRewardByType(accounts[0], currentSeasonId, 0).call(), 5000, '0');
+                        lpPending = _toStr(v);
+                    } catch(e) { console.warn('[ARENA] getPendingLPRewardByType(LP) 失败:', e); }
+
+                    try {
+                        const v = await withTimeout(arenaRewardLPContract.methods.getPendingLPRewardByType(accounts[0], currentSeasonId, 1).call(), 5000, '0');
+                        tokenPending = _toStr(v);
+                    } catch(e) { console.warn('[ARENA] getPendingLPRewardByType(TOKEN) 失败:', e); }
+
+                    try {
+                        const v = await withTimeout(arenaRewardLPContract.methods.getPendingLPRewardByType(accounts[0], currentSeasonId, 2).call(), 5000, '0');
+                        bnbPending = _toStr(v);
+                    } catch(e) { console.warn('[ARENA] getPendingLPRewardByType(BNB) 失败:', e); }
+
+                    console.log('[ARENA] 策略A:', {lp: lpPending, token: tokenPending, bnb: bnbPending});
+
+                    // 策略B: getPendingRewardsAllTypes 验证/补充
+                    try {
+                        const result = await withTimeout(
+                            arenaRewardLPContract.methods.getPendingRewardsAllTypes(accounts[0], currentSeasonId).call(),
+                            5000,
+                            ['0', '0', '0']
+                        );
+                        const r0 = _toStr(result[0]);
+                        const r1 = _toStr(result[1]);
+                        const r2 = _toStr(result[2]);
+                        console.log('[ARENA] 策略B:', {r0, r1, r2});
+
+                        if (lpPending === '0' && r0 !== '0') lpPending = r0;
+                        if (tokenPending === '0' && r1 !== '0') tokenPending = r1;
+                        if (bnbPending === '0' && r2 !== '0') bnbPending = r2;
+
+                        if (lpPending === '0') { try { const v = _toStr(result.lp); if (v !== '0') lpPending = v; } catch(e) {} }
+                        if (tokenPending === '0') { try { const v = _toStr(result.token); if (v !== '0') tokenPending = v; } catch(e) {} }
+                        if (bnbPending === '0') { try { const v = _toStr(result.bnb); if (v !== '0') bnbPending = v; } catch(e) {} }
                     } catch (e) {
-                        console.warn('按类型批量查询失败，回退到 getPendingRewardsAllTypes:', e);
-                        try {
-                            const result = await withTimeout(
-                                arenaRewardLPContract.methods.getPendingRewardsAllTypes(accounts[0], currentSeasonId).call(),
-                                5000,
-                                ['0', '0', '0']
-                            );
-                            lpPending = _toStr(result[0] !== undefined ? result[0] : (result.lp || '0'));
-                            tokenPending = _toStr(result[1] !== undefined ? result[1] : (result.token || '0'));
-                            bnbPending = _toStr(result[2] !== undefined ? result[2] : (result.bnb || '0'));
-                        } catch (e2) {
-                            console.warn('getPendingRewardsAllTypes 也失败:', e2);
-                        }
+                        console.warn('[ARENA] getPendingRewardsAllTypes 失败:', e);
                     }
+                    console.log('[ARENA] FINAL:', {lp: lpPending, token: tokenPending, bnb: bnbPending});
                 }
 
                 const lpAmount = web3.utils.fromWei(String(lpPending), 'ether');
