@@ -2757,19 +2757,38 @@ window.ZODIAC_WEB3 = (function() {
     function formatTokenAmount(rawValue, decimals) {
         try {
             const d = decimals || 18;
-            const strVal = String(rawValue || '0');
+            let strVal = '0';
+            if (rawValue === null || rawValue === undefined) {
+                strVal = '0';
+            } else if (typeof rawValue === 'bigint') {
+                strVal = rawValue.toString();
+            } else if (typeof rawValue === 'object') {
+                if (typeof rawValue.toString === 'function') {
+                    strVal = rawValue.toString();
+                } else if (rawValue._hex && typeof web3 !== 'undefined' && web3 && web3.utils && web3.utils.hexToNumberString) {
+                    strVal = web3.utils.hexToNumberString(rawValue._hex);
+                } else {
+                    strVal = String(rawValue);
+                }
+            } else {
+                strVal = String(rawValue);
+            }
             if (strVal === '0' || strVal === 'undefined' || strVal === 'null') {
                 return '0.00000000';
             }
             const w3 = web3 || (typeof window !== 'undefined' ? window.web3 : null);
-            if (!w3) {
-                const num = parseFloat(strVal);
+            if (w3 && w3.utils && w3.utils.fromWei) {
+                const formatted = w3.utils.fromWei(strVal, 'ether');
+                const num = parseFloat(formatted);
                 if (num === 0) return '0.00000000';
                 const fixed8 = num.toFixed(8);
-                return fixed8 === '0.00000000' ? num.toFixed(12) : fixed8;
+                if (fixed8 === '0.00000000') {
+                    return num.toFixed(12);
+                }
+                return fixed8;
             }
-            const formatted = w3.utils.fromWei(strVal, 'ether');
-            const num = parseFloat(formatted);
+            // 手动计算兜底
+            const num = parseFloat(strVal) / Math.pow(10, d);
             if (num === 0) return '0.00000000';
             const fixed8 = num.toFixed(8);
             if (fixed8 === '0.00000000') {

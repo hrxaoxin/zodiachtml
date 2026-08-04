@@ -407,12 +407,33 @@
 
         function _formatTokenAmount(rawValue) {
             try {
-                const strVal = String(rawValue || '0');
+                let strVal = '0';
+                if (rawValue === null || rawValue === undefined) {
+                    strVal = '0';
+                } else if (typeof rawValue === 'bigint') {
+                    strVal = rawValue.toString();
+                } else if (typeof rawValue === 'object') {
+                    if (typeof rawValue.toString === 'function') {
+                        strVal = rawValue.toString();
+                    } else {
+                        strVal = String(rawValue);
+                    }
+                } else {
+                    strVal = String(rawValue);
+                }
                 if (strVal === '0' || strVal === 'undefined' || strVal === 'null') return '0.00000000';
                 const w3 = safeGetWeb3();
-                if (!w3) return strVal;
-                const formatted = w3.utils.fromWei(strVal, 'ether');
-                const num = parseFloat(formatted);
+                if (w3 && w3.utils && w3.utils.fromWei) {
+                    const formatted = w3.utils.fromWei(strVal, 'ether');
+                    const num = parseFloat(formatted);
+                    if (num === 0) return '0.00000000';
+                    const fixed8 = num.toFixed(8);
+                    if (fixed8 === '0.00000000') {
+                        return num.toFixed(12);
+                    }
+                    return fixed8;
+                }
+                const num = parseFloat(strVal) / 1e18;
                 if (num === 0) return '0.00000000';
                 const fixed8 = num.toFixed(8);
                 if (fixed8 === '0.00000000') {

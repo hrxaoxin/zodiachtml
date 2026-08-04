@@ -1111,21 +1111,28 @@
                 } catch (e) { /* ignore */ }
                 updateCurrentRewardTypeBadge(currentType);
 
-                // 一次性获取三种类型的待领取奖励（已按池余额封顶）
+                // 分别查询三种类型的待领取奖励（更可靠，避免多返回值解析问题）
                 let lpVal = '0', tokenVal = '0', bnbVal = '0';
                 try {
-                    const result = await stakingLPRewardContract.methods.getPendingRewards(account).call();
-                    lpVal = _toStr(result[0] !== undefined ? result[0] : result.lp);
-                    tokenVal = _toStr(result[1] !== undefined ? result[1] : result.token);
-                    bnbVal = _toStr(result[2] !== undefined ? result[2] : result.bnb);
+                    const [lpR, tokenR, bnbR] = await Promise.all([
+                        stakingLPRewardContract.methods.getPendingRewardByType(account, 0).call(),
+                        stakingLPRewardContract.methods.getPendingRewardByType(account, 1).call(),
+                        stakingLPRewardContract.methods.getPendingRewardByType(account, 2).call()
+                    ]);
+                    lpVal = _toStr(lpR);
+                    tokenVal = _toStr(tokenR);
+                    bnbVal = _toStr(bnbR);
+                    console.log('[STAKING] getPendingRewardByType results:', {lp: lpVal, token: tokenVal, bnb: bnbVal});
                 } catch (e) {
-                    console.warn('[STAKING] getPendingRewards 调用失败，回退到 getPendingRewardByType:', e);
+                    console.warn('[STAKING] getPendingRewardByType 批量调用失败，回退到 getPendingRewards:', e);
                     try {
-                        lpVal = _toStr(await stakingLPRewardContract.methods.getPendingRewardByType(account, 0).call());
-                        tokenVal = _toStr(await stakingLPRewardContract.methods.getPendingRewardByType(account, 1).call());
-                        bnbVal = _toStr(await stakingLPRewardContract.methods.getPendingRewardByType(account, 2).call());
+                        const result = await stakingLPRewardContract.methods.getPendingRewards(account).call();
+                        lpVal = _toStr(result[0] !== undefined ? result[0] : (result.lp || '0'));
+                        tokenVal = _toStr(result[1] !== undefined ? result[1] : (result.token || '0'));
+                        bnbVal = _toStr(result[2] !== undefined ? result[2] : (result.bnb || '0'));
+                        console.log('[STAKING] getPendingRewards fallback results:', {lp: lpVal, token: tokenVal, bnb: bnbVal, rawResult: result});
                     } catch (e2) {
-                        console.error('[STAKING] 读取待领取奖励失败:', e2);
+                        console.error('[STAKING] 读取待领取奖励全部失败:', e2);
                     }
                 }
 
@@ -1149,7 +1156,11 @@
         function _toStr(val) {
             if (val === null || val === undefined) return '0';
             if (typeof val === 'bigint') return val.toString();
-            if (typeof val === 'object' && val.toString) return val.toString();
+            if (typeof val === 'object') {
+                if (val.toString) return val.toString();
+                if (val._hex) return web3.utils.hexToNumberString(val._hex);
+                if (typeof val.toNumber === 'function') return String(val.toNumber());
+            }
             return String(val);
         }
 
@@ -1157,8 +1168,18 @@
             try {
                 const strVal = _toStr(rawValue);
                 if (strVal === '0' || strVal === 'undefined' || strVal === 'null') return '0.00000000';
-                const formatted = web3.utils.fromWei(strVal, 'ether');
-                const num = parseFloat(formatted);
+                if (typeof web3 !== 'undefined' && web3 && web3.utils && web3.utils.fromWei) {
+                    const formatted = web3.utils.fromWei(strVal, 'ether');
+                    const num = parseFloat(formatted);
+                    if (num === 0) return '0.00000000';
+                    const fixed8 = num.toFixed(8);
+                    if (fixed8 === '0.00000000') {
+                        return num.toFixed(12);
+                    }
+                    return fixed8;
+                }
+                // 手动计算兜底: wei / 1e18
+                const num = parseFloat(strVal) / 1e18;
                 if (num === 0) return '0.00000000';
                 const fixed8 = num.toFixed(8);
                 if (fixed8 === '0.00000000') {
@@ -1431,16 +1452,21 @@
                             tokenRewardType = parseRewardType(rawRewardType);
                         } catch (e) { /* ignore */ }
                         try {
-                            const result = await tokenStakingLPContract.methods.getPendingRewards(account).call();
-                            tokenLpVal = _toStr(result[0] !== undefined ? result[0] : result.lp);
-                            tokenTokenVal = _toStr(result[1] !== undefined ? result[1] : result.token);
-                            tokenBnbVal = _toStr(result[2] !== undefined ? result[2] : result.bnb);
+                            const [tlR, ttR, tbR] = await Promise.all([
+                                tokenStakingLPContract.methods.getPendingRewardByType(account, 0).call(),
+                                tokenStakingLPContract.methods.getPendingRewardByType(account, 1).call(),
+                                tokenStakingLPContract.methods.getPendingRewardByType(account, 2).call()
+                            ]);
+                            tokenLpVal = _toStr(tlR);
+                            tokenTokenVal = _toStr(ttR);
+                            tokenBnbVal = _toStr(tbR);
                         } catch (e) {
-                            console.warn('[STAKING] token getPendingRewards 失败，回退到按类型查询:', e);
+                            console.warn('[STAKING] token getPendingRewardByType 失败，回退到 getPendingRewards:', e);
                             try {
-                                tokenLpVal = _toStr(await tokenStakingLPContract.methods.getPendingRewardByType(account, 0).call());
-                                tokenTokenVal = _toStr(await tokenStakingLPContract.methods.getPendingRewardByType(account, 1).call());
-                                tokenBnbVal = _toStr(await tokenStakingLPContract.methods.getPendingRewardByType(account, 2).call());
+                                const result = await tokenStakingLPContract.methods.getPendingRewards(account).call();
+                                tokenLpVal = _toStr(result[0] !== undefined ? result[0] : (result.lp || '0'));
+                                tokenTokenVal = _toStr(result[1] !== undefined ? result[1] : (result.token || '0'));
+                                tokenBnbVal = _toStr(result[2] !== undefined ? result[2] : (result.bnb || '0'));
                             } catch (e2) {
                                 console.warn('[STAKING] 读取代币质押奖励失败:', e2);
                             }

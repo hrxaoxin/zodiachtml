@@ -461,21 +461,26 @@
             } catch (e) { /* ignore */ }
             updateCurrentRewardTypeBadge(currentType);
 
-            // 一次性获取三种类型的待领取分红（已按池余额封顶）
+            // 分别查询三种类型的待领取分红（更可靠，避免多返回值解析问题）
             let lpVal = '0', tokenVal = '0', bnbVal = '0';
             try {
-                const result = await dividendManagerLPContract.methods.getClaimableDividends(account).call();
-                lpVal = _toStr(result[0] !== undefined ? result[0] : result.lp);
-                tokenVal = _toStr(result[1] !== undefined ? result[1] : result.token);
-                bnbVal = _toStr(result[2] !== undefined ? result[2] : result.bnb);
+                const [lpR, tokenR, bnbR] = await Promise.all([
+                    dividendManagerLPContract.methods.getClaimableDividendByType(account, 0).call(),
+                    dividendManagerLPContract.methods.getClaimableDividendByType(account, 1).call(),
+                    dividendManagerLPContract.methods.getClaimableDividendByType(account, 2).call()
+                ]);
+                lpVal = _toStr(lpR);
+                tokenVal = _toStr(tokenR);
+                bnbVal = _toStr(bnbR);
             } catch (e) {
-                console.warn('[DIVIDEND] getClaimableDividends 调用失败，回退到 getClaimableDividendByType:', e);
+                console.warn('[DIVIDEND] getClaimableDividendByType 批量调用失败，回退到 getClaimableDividends:', e);
                 try {
-                    lpVal = _toStr(await dividendManagerLPContract.methods.getClaimableDividendByType(account, 0).call());
-                    tokenVal = _toStr(await dividendManagerLPContract.methods.getClaimableDividendByType(account, 1).call());
-                    bnbVal = _toStr(await dividendManagerLPContract.methods.getClaimableDividendByType(account, 2).call());
+                    const result = await dividendManagerLPContract.methods.getClaimableDividends(account).call();
+                    lpVal = _toStr(result[0] !== undefined ? result[0] : (result.lp || '0'));
+                    tokenVal = _toStr(result[1] !== undefined ? result[1] : (result.token || '0'));
+                    bnbVal = _toStr(result[2] !== undefined ? result[2] : (result.bnb || '0'));
                 } catch (e2) {
-                    console.error('[DIVIDEND] 读取待领取分红失败:', e2);
+                    console.error('[DIVIDEND] 读取待领取分红全部失败:', e2);
                 }
             }
 
@@ -495,7 +500,10 @@
         function _toStr(val) {
             if (val === null || val === undefined) return '0';
             if (typeof val === 'bigint') return val.toString();
-            if (typeof val === 'object' && val.toString) return val.toString();
+            if (typeof val === 'object') {
+                if (val.toString) return val.toString();
+                if (val._hex && web3 && web3.utils && web3.utils.hexToNumberString) return web3.utils.hexToNumberString(val._hex);
+            }
             return String(val);
         }
 
@@ -503,8 +511,17 @@
             try {
                 const strVal = _toStr(rawValue);
                 if (strVal === '0' || strVal === 'undefined' || strVal === 'null') return '0.00000000';
-                const formatted = web3.utils.fromWei(strVal, 'ether');
-                const num = parseFloat(formatted);
+                if (typeof web3 !== 'undefined' && web3 && web3.utils && web3.utils.fromWei) {
+                    const formatted = web3.utils.fromWei(strVal, 'ether');
+                    const num = parseFloat(formatted);
+                    if (num === 0) return '0.00000000';
+                    const fixed8 = num.toFixed(8);
+                    if (fixed8 === '0.00000000') {
+                        return num.toFixed(12);
+                    }
+                    return fixed8;
+                }
+                const num = parseFloat(strVal) / 1e18;
                 if (num === 0) return '0.00000000';
                 const fixed8 = num.toFixed(8);
                 if (fixed8 === '0.00000000') {
