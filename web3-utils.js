@@ -2763,10 +2763,16 @@ window.ZODIAC_WEB3 = (function() {
             } else if (typeof rawValue === 'bigint') {
                 strVal = rawValue.toString();
             } else if (typeof rawValue === 'object') {
-                if (typeof rawValue.toString === 'function') {
-                    strVal = rawValue.toString();
-                } else if (rawValue._hex && typeof web3 !== 'undefined' && web3 && web3.utils && web3.utils.hexToNumberString) {
-                    strVal = web3.utils.hexToNumberString(rawValue._hex);
+                // BN.js BigNumber - 有 _hex 属性
+                if (rawValue._hex !== undefined) {
+                    strVal = rawValue.toString(); // BN.js toString() 返回十进制字符串
+                } else if (typeof rawValue.toString === 'function') {
+                    const s = rawValue.toString();
+                    if (s && s !== '' && s !== 'undefined' && s !== '[object Object]') {
+                        strVal = s;
+                    } else {
+                        strVal = String(rawValue);
+                    }
                 } else {
                     strVal = String(rawValue);
                 }
@@ -2776,11 +2782,23 @@ window.ZODIAC_WEB3 = (function() {
             if (strVal === '0' || strVal === 'undefined' || strVal === 'null') {
                 return '0.00000000';
             }
+            // hex字符串转换
+            if (typeof strVal === 'string' && strVal.startsWith('0x')) {
+                const w3 = web3 || (typeof window !== 'undefined' ? window.web3 : null);
+                if (w3 && w3.utils && w3.utils.hexToNumberString) {
+                    strVal = w3.utils.hexToNumberString(strVal);
+                } else {
+                    strVal = String(parseInt(strVal, 16));
+                }
+            }
             const w3 = web3 || (typeof window !== 'undefined' ? window.web3 : null);
             if (w3 && w3.utils && w3.utils.fromWei) {
                 const formatted = w3.utils.fromWei(strVal, 'ether');
+                if (!formatted || formatted === '0' || formatted === '0.0') {
+                    return '0.00000000';
+                }
                 const num = parseFloat(formatted);
-                if (num === 0) return '0.00000000';
+                if (num === 0 || !isFinite(num)) return '0.00000000';
                 const fixed8 = num.toFixed(8);
                 if (fixed8 === '0.00000000') {
                     return num.toFixed(12);
@@ -2789,7 +2807,7 @@ window.ZODIAC_WEB3 = (function() {
             }
             // 手动计算兜底
             const num = parseFloat(strVal) / Math.pow(10, d);
-            if (num === 0) return '0.00000000';
+            if (num === 0 || !isFinite(num)) return '0.00000000';
             const fixed8 = num.toFixed(8);
             if (fixed8 === '0.00000000') {
                 return num.toFixed(12);

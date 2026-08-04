@@ -524,26 +524,16 @@
                 return String(val);
             }
             if (typeof val === 'object') {
-                // web3.js BigNumber / BN.js - 优先使用 toString() 获取十进制字符串
+                // BN.js BigNumber / web3.js 返回值 - 有 _hex 属性
+                if (val._hex !== undefined) {
+                    return val.toString(); // BN.js toString() 返回十进制字符串
+                }
+                // 其他有 toString 方法的对象
                 if (typeof val.toString === 'function') {
                     const s = val.toString();
                     if (s && s !== '' && s !== 'undefined' && s !== '[object Object]') return s;
                 }
-                // 处理 BN.js BigNumber 的 _hex 属性（不带0x前缀）
-                if (val._hex) {
-                    const hexStr = val._hex.startsWith('0x') ? val._hex : '0x' + val._hex;
-                    try {
-                        if (web3 && web3.utils && web3.utils.hexToNumberString) {
-                            return web3.utils.hexToNumberString(hexStr);
-                        }
-                        return BigInt(hexStr).toString();
-                    } catch(e) {}
-                }
-                // toNumber 兜底
-                if (typeof val.toNumber === 'function') {
-                    try { return String(val.toNumber()); } catch(e) {}
-                }
-                // 最后尝试 JSON
+                // 兜底
                 try { return JSON.stringify(val); } catch(e) {}
             }
             return String(val);
@@ -552,35 +542,33 @@
         function _formatTokenAmount(rawValue) {
             try {
                 let strVal = _toStr(rawValue);
-                console.log('[FORMAT] _toStr result:', strVal, 'type:', typeof strVal);
                 
-                if (strVal === '0' || strVal === 'undefined' || strVal === 'null' || strVal === '') {
+                if (!strVal || strVal === '0' || strVal === 'undefined' || strVal === 'null') {
                     return '0.00000000';
                 }
-                // hex字符串转换
+                
+                // hex字符串转换为十进制
                 if (typeof strVal === 'string' && strVal.startsWith('0x')) {
-                    try { 
-                        strVal = web3.utils.hexToNumberString(strVal); 
-                        console.log('[FORMAT] hex converted:', strVal);
-                    } catch(e) {
-                        try { 
-                            strVal = BigInt(strVal).toString(); 
-                            console.log('[FORMAT] hex via BigInt:', strVal);
-                        } catch(e2) { 
-                            console.warn('[FORMAT] hex conversion failed');
-                            return '0.00000000'; 
+                    try {
+                        if (web3 && web3.utils && web3.utils.hexToNumberString) {
+                            strVal = web3.utils.hexToNumberString(strVal);
+                        } else {
+                            strVal = String(parseInt(strVal, 16));
                         }
+                    } catch(e) {
+                        return '0.00000000';
                     }
                 }
                 
-                // 方法1: 使用 web3.utils.fromWei（推荐，避免精度丢失）
+                // 使用 web3.utils.fromWei 转换
                 if (web3 && web3.utils && web3.utils.fromWei) {
                     try {
                         const formatted = web3.utils.fromWei(strVal, 'ether');
-                        console.log('[FORMAT] fromWei result:', formatted);
+                        if (!formatted || formatted === '0' || formatted === '0.0') {
+                            return '0.00000000';
+                        }
                         const num = parseFloat(formatted);
-                        if (num === 0) {
-                            console.warn('[FORMAT] fromWei returned 0 for input:', strVal);
+                        if (num === 0 || !isFinite(num)) {
                             return '0.00000000';
                         }
                         const fixed8 = num.toFixed(8);
@@ -588,41 +576,22 @@
                             return num.toFixed(12);
                         }
                         return fixed8;
-                    } catch (fromWeiErr) {
-                        console.warn('[FORMAT] fromWei failed, trying manual calc:', fromWeiErr);
+                    } catch (e) {
+                        // fromWei 失败，继续尝试手动计算
                     }
                 }
                 
-                // 方法2: 手动计算兜底（使用 BigInt 避免精度丢失）
-                try {
-                    const bigVal = BigInt(strVal);
-                    const divisor = 1000000000000000000n; // 1e18
-                    const intPart = bigVal / divisor;
-                    const decPart = (bigVal % divisor).toString().padStart(18, '0');
-                    const combined = intPart.toString() + '.' + decPart;
-                    const num = parseFloat(combined);
-                    console.log('[FORMAT] manual BigInt calc:', combined, '->', num);
-                    if (num === 0) return '0.00000000';
-                    const fixed8 = num.toFixed(8);
-                    if (fixed8 === '0.00000000') {
-                        return num.toFixed(12);
-                    }
-                    return fixed8;
-                } catch (bigIntErr) {
-                    console.warn('[FORMAT] BigInt calc failed:', bigIntErr);
-                }
-                
-                // 方法3: 最终兜底（可能有精度问题）
+                // 手动计算兜底
                 const num = parseFloat(strVal) / 1e18;
-                console.log('[FORMAT] parseFloat calc:', strVal, '/ 1e18 =', num);
-                if (num === 0) return '0.00000000';
+                if (num === 0 || !isFinite(num)) {
+                    return '0.00000000';
+                }
                 const fixed8 = num.toFixed(8);
                 if (fixed8 === '0.00000000') {
                     return num.toFixed(12);
                 }
                 return fixed8;
             } catch (e) {
-                console.error('[FORMAT] _formatTokenAmount error:', e, 'rawValue:', rawValue);
                 return '0.00000000';
             }
         }
