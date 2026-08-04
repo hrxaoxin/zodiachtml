@@ -1128,7 +1128,7 @@
                 // LP reward (type 0)
                 try {
                     const v = await stakingLPRewardContract.methods.getPendingRewardByType(account, 0).call();
-                    console.log('[STAKING] 策略A LP raw:', v, 'type:', typeof v, '_hex:', v?._hex:'N/A');
+                    console.log('[STAKING] 策略A LP raw:', v, 'type:', typeof v, '_hex:', v ? v._hex : 'N/A');
                     lpVal = _toStr(v);
                 } catch (e) { 
                     console.warn('[STAKING] getPendingRewardByType(LP) 失败:', e.message || e); 
@@ -1137,7 +1137,7 @@
                 // TOKEN reward (type 1)
                 try {
                     const v = await stakingLPRewardContract.methods.getPendingRewardByType(account, 1).call();
-                    console.log('[STAKING] 策略A TOKEN raw:', v, 'type:', typeof v, '_hex:', v?._hex:'N/A');
+                    console.log('[STAKING] 策略A TOKEN raw:', v, 'type:', typeof v, '_hex:', v ? v._hex : 'N/A');
                     tokenVal = _toStr(v);
                 } catch (e) { 
                     console.warn('[STAKING] getPendingRewardByType(TOKEN) 失败:', e.message || e); 
@@ -1146,7 +1146,7 @@
                 // BNB reward (type 2)
                 try {
                     const v = await stakingLPRewardContract.methods.getPendingRewardByType(account, 2).call();
-                    console.log('[STAKING] 策略A BNB raw:', v, 'type:', typeof v, '_hex:', v?._hex:'N/A');
+                    console.log('[STAKING] 策略A BNB raw:', v, 'type:', typeof v, '_hex:', v ? v._hex : 'N/A');
                     bnbVal = _toStr(v);
                 } catch (e) { 
                     console.warn('[STAKING] getPendingRewardByType(BNB) 失败:', e.message || e); 
