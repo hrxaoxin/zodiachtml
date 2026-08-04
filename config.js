@@ -2947,19 +2947,6 @@ window.ZODIAC_CONFIG = (function() {
 			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "timestamp",
-				"type": "uint256"
-			}
-		],
-		"name": "LPAutoConverted",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "uint256",
 				"name": "totalLocked",
 				"type": "uint256"
 			},
@@ -3261,19 +3248,6 @@ window.ZODIAC_CONFIG = (function() {
 	{
 		"inputs": [],
 		"name": "autoSwapEnabled",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "canConvertAllToLP",
 		"outputs": [
 			{
 				"internalType": "bool",
@@ -3704,19 +3678,6 @@ window.ZODIAC_CONFIG = (function() {
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "lpAutoConverted",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
 			}
 		],
 		"stateMutability": "view",
@@ -9081,8 +9042,19 @@ window.ZODIAC_CONFIG = (function() {
 		"type": "error"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "reason",
+				"type": "string"
+			}
+		],
+		"name": "TSL_ConvertFailed",
+		"type": "error"
+	},
+	{
 		"inputs": [],
-		"name": "SharedSwap_BNBTransferFailed",
+		"name": "TSL_SSLCallFailed",
 		"type": "error"
 	},
 	{
@@ -12372,6 +12344,11 @@ window.ZODIAC_CONFIG = (function() {
 	},
 	{
 		"inputs": [],
+		"name": "ArenaRewardNotSet",
+		"type": "error"
+	},
+	{
+		"inputs": [],
 		"name": "CannotChallengeSelf",
 		"type": "error"
 	},
@@ -12383,6 +12360,21 @@ window.ZODIAC_CONFIG = (function() {
 	{
 		"inputs": [],
 		"name": "InvalidAuthorizer",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "InvalidControlType",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "InvalidMode",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "InvalidRewardRate",
 		"type": "error"
 	},
 	{
@@ -12427,6 +12419,25 @@ window.ZODIAC_CONFIG = (function() {
 			}
 		],
 		"name": "AdminChanged",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint8",
+				"name": "oldMode",
+				"type": "uint8"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint8",
+				"name": "newMode",
+				"type": "uint8"
+			}
+		],
+		"name": "ArenaModeUpdated",
 		"type": "event"
 	},
 	{
@@ -12571,6 +12582,25 @@ window.ZODIAC_CONFIG = (function() {
 		"anonymous": false,
 		"inputs": [
 			{
+				"indexed": false,
+				"internalType": "uint8",
+				"name": "oldType",
+				"type": "uint8"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint8",
+				"name": "newType",
+				"type": "uint8"
+			}
+		],
+		"name": "ModeControlTypeUpdated",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
 				"indexed": true,
 				"internalType": "address",
 				"name": "previousOwner",
@@ -12641,6 +12671,44 @@ window.ZODIAC_CONFIG = (function() {
 			}
 		],
 		"name": "RewardClaimed",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "oldRate",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "newRate",
+				"type": "uint256"
+			}
+		],
+		"name": "RewardRateUpdated",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint8",
+				"name": "oldType",
+				"type": "uint8"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint8",
+				"name": "newType",
+				"type": "uint8"
+			}
+		],
+		"name": "RewardTypeUpdated",
 		"type": "event"
 	},
 	{
@@ -12842,6 +12910,19 @@ window.ZODIAC_CONFIG = (function() {
 	},
 	{
 		"inputs": [],
+		"name": "arenaMode",
+		"outputs": [
+			{
+				"internalType": "uint8",
+				"name": "",
+				"type": "uint8"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "authorizer",
 		"outputs": [
 			{
@@ -12905,6 +12986,24 @@ window.ZODIAC_CONFIG = (function() {
 		"type": "function"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "uint8",
+				"name": "controlType",
+				"type": "uint8"
+			},
+			{
+				"internalType": "uint8",
+				"name": "preferredMode",
+				"type": "uint8"
+			}
+		],
+		"name": "configureArenaMode",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"inputs": [],
 		"name": "currentSeasonId",
 		"outputs": [
@@ -12957,6 +13056,19 @@ window.ZODIAC_CONFIG = (function() {
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "getArenaMode",
+		"outputs": [
+			{
+				"internalType": "uint8",
+				"name": "",
+				"type": "uint8"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "uint256",
@@ -13000,12 +13112,38 @@ window.ZODIAC_CONFIG = (function() {
 	},
 	{
 		"inputs": [],
+		"name": "lastSeasonMode",
+		"outputs": [
+			{
+				"internalType": "uint8",
+				"name": "",
+				"type": "uint8"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "maxLeaderboardSize",
 		"outputs": [
 			{
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "modeControlType",
+		"outputs": [
+			{
+				"internalType": "uint8",
+				"name": "",
+				"type": "uint8"
 			}
 		],
 		"stateMutability": "view",
@@ -13193,6 +13331,19 @@ window.ZODIAC_CONFIG = (function() {
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "seasonRewardRate",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "uint256",
@@ -13293,6 +13444,19 @@ window.ZODIAC_CONFIG = (function() {
 	{
 		"inputs": [
 			{
+				"internalType": "uint8",
+				"name": "mode",
+				"type": "uint8"
+			}
+		],
+		"name": "setArenaMode",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "address",
 				"name": "_authorizerAddress",
 				"type": "address"
@@ -13319,12 +13483,51 @@ window.ZODIAC_CONFIG = (function() {
 	{
 		"inputs": [
 			{
+				"internalType": "uint8",
+				"name": "controlType",
+				"type": "uint8"
+			}
+		],
+		"name": "setModeControlType",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "enum RewardType",
+				"name": "_rewardType",
+				"type": "uint8"
+			}
+		],
+		"name": "setRewardType",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "uint256",
 				"name": "duration",
 				"type": "uint256"
 			}
 		],
 		"name": "setSeasonDuration",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "rate",
+				"type": "uint256"
+			}
+		],
+		"name": "setSeasonRewardRate",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -14825,128 +15028,6 @@ window.ZODIAC_CONFIG = (function() {
 		"name": "upgradeToAndCall",
 		"outputs": [],
 		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "arenaMode",
-		"outputs": [
-			{
-				"internalType": "uint8",
-				"name": "",
-				"type": "uint8"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "modeControlType",
-		"outputs": [
-			{
-				"internalType": "uint8",
-				"name": "",
-				"type": "uint8"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "getArenaMode",
-		"outputs": [
-			{
-				"internalType": "uint8",
-				"name": "",
-				"type": "uint8"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint8",
-				"name": "mode",
-				"type": "uint8"
-			}
-		],
-		"name": "setArenaMode",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint8",
-				"name": "controlType",
-				"type": "uint8"
-			}
-		],
-		"name": "setModeControlType",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint8",
-				"name": "controlType",
-				"type": "uint8"
-			},
-			{
-				"internalType": "uint8",
-				"name": "preferredMode",
-				"type": "uint8"
-			}
-		],
-		"name": "configureArenaMode",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint8",
-				"name": "_rewardType",
-				"type": "uint8"
-			}
-		],
-		"name": "setRewardType",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_reward",
-				"type": "uint256"
-			}
-		],
-		"name": "setBaseRewardPerWin",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "rate",
-				"type": "uint256"
-			}
-		],
-		"name": "setSeasonRewardRate",
-		"outputs": [],
-		"stateMutability": "nonpayable",
 		"type": "function"
 	}
 ],
@@ -17888,693 +17969,12 @@ window.ZODIAC_CONFIG = (function() {
 		stakingLPRewardABI: [
 	{
 		"inputs": [],
-		"name": "UnknownError",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "MIG_InsufficientLP",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "MIG_RedeemFailed",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "MIG_SameDEX",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "MIG_ZeroAmount",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "SLP_BNBTransferFailed",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "SL_AmountMustBeGreaterThanZero",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "SL_BNBTransferFailed",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "Unauthorized",
-		"type": "error"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "address",
-				"name": "previousAdmin",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "address",
-				"name": "newAdmin",
-				"type": "address"
-			}
-		],
-		"name": "AdminChanged",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "beacon",
-				"type": "address"
-			}
-		],
-		"name": "BeaconUpgraded",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "caller",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "timestamp",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "oldEpoch",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "newEpoch",
-				"type": "uint256"
-			}
-		],
-		"name": "ContractDataReset",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "tokenAmount",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "wbnbAmount",
-				"type": "uint256"
-			}
-		],
-		"name": "EmergencyLPRedeemed",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "operator",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "to",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			}
-		],
-		"name": "EmergencyWBNBWithdrawn",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "lpAmount",
-				"type": "uint256"
-			}
-		],
-		"name": "FeesCompounded",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "uint8",
-				"name": "version",
-				"type": "uint8"
-			}
-		],
-		"name": "Initialized",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "uint8",
-				"name": "oldDexType",
-				"type": "uint8"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint8",
-				"name": "newDexType",
-				"type": "uint8"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "oldLPAmount",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "newLPAmount",
-				"type": "uint256"
-			}
-		],
-		"name": "LPMigrated",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "uint8",
-				"name": "oldDexType",
-				"type": "uint8"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint8",
-				"name": "newDexType",
-				"type": "uint8"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "oldLPAmount",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "newLPAmount",
-				"type": "uint256"
-			}
-		],
-		"name": "LPMigrated",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "previousOwner",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "OwnershipTransferStarted",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "previousOwner",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "OwnershipTransferred",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "address",
-				"name": "account",
-				"type": "address"
-			}
-		],
-		"name": "Paused",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "address",
-				"name": "account",
-				"type": "address"
-			}
-		],
-		"name": "Unpaused",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "implementation",
-				"type": "address"
-			}
-		],
-		"name": "Upgraded",
-		"type": "event"
-	},
-	{
-		"inputs": [],
-		"name": "MAX_EPOCHS",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "acceptOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "authorizer",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "compoundFees",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			}
-		],
-		"name": "emergencyWithdrawWBNB",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "epoch",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_authorizerAddress",
-				"type": "address"
-			}
-		],
-		"name": "initialize",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint8",
-				"name": "oldDexType",
-				"type": "uint8"
-			},
-			{
-				"internalType": "uint8",
-				"name": "newDexType",
-				"type": "uint8"
-			},
-			{
-				"internalType": "uint256",
-				"name": "lpAmount",
-				"type": "uint256"
-			}
-		],
-		"name": "migrateLP",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "owner",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "pause",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "paused",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "pendingOwner",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "proxiableUUID",
-		"outputs": [
-			{
-				"internalType": "bytes32",
-				"name": "",
-				"type": "bytes32"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "token",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			}
-		],
-		"name": "receiveToken",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			}
-		],
-		"name": "recordIncomingBNB",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "lpAmount",
-				"type": "uint256"
-			},
-			{
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			}
-		],
-		"name": "redeemLPToUser",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "renounceOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "resetContractData",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_authorizerAddress",
-				"type": "address"
-			}
-		],
-		"name": "setAuthorizer",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "__slippage",
-				"type": "uint256"
-			}
-		],
-		"name": "setSlippage",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "transferOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "unpause",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "newImplementation",
-				"type": "address"
-			}
-		],
-		"name": "upgradeTo",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "newImplementation",
-				"type": "address"
-			},
-			{
-				"internalType": "bytes",
-				"name": "data",
-				"type": "bytes"
-			}
-		],
-		"name": "upgradeToAndCall",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "to",
-				"type": "address"
-			}
-		],
-		"name": "withdrawBNB",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "token",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "to",
-				"type": "address"
-			}
-		],
-		"name": "withdrawToken",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"stateMutability": "payable",
-		"type": "receive"
-	}
-],
-		stakingLPRewardABI: [
-	{
-		"inputs": [],
 		"stateMutability": "nonpayable",
 		"type": "constructor"
 	},
 	{
 		"inputs": [],
-		"name": "InsufficientLP",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "InsufficientToken",
-		"type": "error"
-	},
-	{
-		"inputs": [],
 		"name": "InvalidParam",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "NoStakedNFTs",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "SLP_BNBTransferFailed",
 		"type": "error"
 	},
 	{
@@ -18845,45 +18245,6 @@ window.ZODIAC_CONFIG = (function() {
 	},
 	{
 		"inputs": [],
-		"name": "MAX_EPOCHS",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "REWARD_PRECISION",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "STAKING_REWARD_PRECISION",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
 		"name": "acceptOwnership",
 		"outputs": [],
 		"stateMutability": "nonpayable",
@@ -18909,35 +18270,9 @@ window.ZODIAC_CONFIG = (function() {
 	},
 	{
 		"inputs": [],
-		"name": "authorizer",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
 		"name": "autoConvertToLP",
 		"outputs": [],
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "bnbRewardPoolBalance",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -18961,13 +18296,6 @@ window.ZODIAC_CONFIG = (function() {
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "claimLPReward",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "enum RewardType",
@@ -18981,28 +18309,12 @@ window.ZODIAC_CONFIG = (function() {
 		"type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			}
-		],
-		"name": "getPendingRewards",
+		"inputs": [],
+		"name": "epoch",
 		"outputs": [
 			{
 				"internalType": "uint256",
-				"name": "lp",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "token",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "bnb",
+				"name": "",
 				"type": "uint256"
 			}
 		],
@@ -19037,16 +18349,26 @@ window.ZODIAC_CONFIG = (function() {
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "",
+				"name": "user",
 				"type": "address"
 			}
 		],
-		"name": "claimedTypeChangeBonus",
+		"name": "getPendingRewards",
 		"outputs": [
 			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
+				"internalType": "uint256",
+				"name": "lp",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "token",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "bnb",
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -19054,7 +18376,92 @@ window.ZODIAC_CONFIG = (function() {
 	},
 	{
 		"inputs": [],
-		"name": "epoch",
+		"name": "getPoolState",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "uint256",
+						"name": "lpBalance",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "tokenBalance",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "bnbBalance",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "totalWeightedNFTs",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "globalRewardPerWeight",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "stakingRewardPrecision",
+						"type": "uint256"
+					},
+					{
+						"internalType": "enum RewardType",
+						"name": "rewardType",
+						"type": "uint8"
+					},
+					{
+						"internalType": "uint256",
+						"name": "todayStart",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "rewardRate",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "maxRewardRate",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "maxDailyRewardPercent",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "rateStep",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "todayRewardAmount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "todayIncomingTokens",
+						"type": "uint256"
+					}
+				],
+				"internalType": "struct PoolState",
+				"name": "",
+				"type": "tuple"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "globalRewardPerWeight",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -19068,103 +18475,12 @@ window.ZODIAC_CONFIG = (function() {
 	{
 		"inputs": [
 			{
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			}
-		],
-		"name": "getPendingLPReward",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "getPoolState",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			},
-			{
 				"internalType": "enum RewardType",
-				"name": "",
+				"name": "t",
 				"type": "uint8"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
 			}
 		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "globalRewardPerWeight",
+		"name": "globalRewardPerWeightByType",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -19190,15 +18506,9 @@ window.ZODIAC_CONFIG = (function() {
 	},
 	{
 		"inputs": [],
-		"name": "lpRewardPoolBalance",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
+		"name": "migrateToV2",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -19242,6 +18552,25 @@ window.ZODIAC_CONFIG = (function() {
 				"internalType": "address",
 				"name": "",
 				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "enum RewardType",
+				"name": "t",
+				"type": "uint8"
+			}
+		],
+		"name": "poolBalanceByType",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -19366,32 +18695,6 @@ window.ZODIAC_CONFIG = (function() {
 		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "__percent",
-				"type": "uint256"
-			}
-		],
-		"name": "setMaxDailyRewardPercent",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "__maxRewardRate",
-				"type": "uint256"
-			}
-		],
-		"name": "setMaxRewardRate",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
 				"name": "lp",
 				"type": "uint256"
 			},
@@ -19445,24 +18748,26 @@ window.ZODIAC_CONFIG = (function() {
 		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "__rateStep",
+				"name": "rate",
 				"type": "uint256"
-			}
-		],
-		"name": "setRateStep",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
+			},
 			{
 				"internalType": "uint256",
-				"name": "__rewardRate",
+				"name": "maxRate",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "maxPercent",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "step",
 				"type": "uint256"
 			}
 		],
-		"name": "setRewardRate",
+		"name": "setRewardParams",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -19481,19 +18786,6 @@ window.ZODIAC_CONFIG = (function() {
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "shouldCalculateDailyReward",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "address",
@@ -19509,19 +18801,6 @@ window.ZODIAC_CONFIG = (function() {
 		"name": "syncUserWeight",
 		"outputs": [],
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "tokenRewardPoolBalance",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -19548,45 +18827,6 @@ window.ZODIAC_CONFIG = (function() {
 		"name": "transferOwnership",
 		"outputs": [],
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "typeChangeCumulative",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "typeChangePoolBalance",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "typeChangeTotalWeight",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -19663,33 +18903,7 @@ window.ZODIAC_CONFIG = (function() {
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "to",
-				"type": "address"
-			}
-		],
-		"name": "withdrawBNB",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "to",
-				"type": "address"
-			}
-		],
-		"name": "withdrawLP",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "token",
+				"name": "asset",
 				"type": "address"
 			},
 			{
@@ -19698,20 +18912,7 @@ window.ZODIAC_CONFIG = (function() {
 				"type": "address"
 			}
 		],
-		"name": "withdrawToken",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "to",
-				"type": "address"
-			}
-		],
-		"name": "withdrawWBNB",
+		"name": "withdraw",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"

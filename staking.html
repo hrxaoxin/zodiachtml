@@ -1115,15 +1115,15 @@
                 let lpVal = '0', tokenVal = '0', bnbVal = '0';
                 try {
                     const result = await stakingLPRewardContract.methods.getPendingRewards(account).call();
-                    lpVal = result[0] || result.lp || '0';
-                    tokenVal = result[1] || result.token || '0';
-                    bnbVal = result[2] || result.bnb || '0';
+                    lpVal = _toStr(result[0] !== undefined ? result[0] : result.lp);
+                    tokenVal = _toStr(result[1] !== undefined ? result[1] : result.token);
+                    bnbVal = _toStr(result[2] !== undefined ? result[2] : result.bnb);
                 } catch (e) {
                     console.warn('[STAKING] getPendingRewards 调用失败，回退到 getPendingRewardByType:', e);
                     try {
-                        lpVal = await stakingLPRewardContract.methods.getPendingRewardByType(account, 0).call();
-                        tokenVal = await stakingLPRewardContract.methods.getPendingRewardByType(account, 1).call();
-                        bnbVal = await stakingLPRewardContract.methods.getPendingRewardByType(account, 2).call();
+                        lpVal = _toStr(await stakingLPRewardContract.methods.getPendingRewardByType(account, 0).call());
+                        tokenVal = _toStr(await stakingLPRewardContract.methods.getPendingRewardByType(account, 1).call());
+                        bnbVal = _toStr(await stakingLPRewardContract.methods.getPendingRewardByType(account, 2).call());
                     } catch (e2) {
                         console.error('[STAKING] 读取待领取奖励失败:', e2);
                     }
@@ -1146,16 +1146,35 @@
             return typeof rawRewardType === 'object' && rawRewardType.toString ? parseInt(rawRewardType.toString(), 10) : parseInt(rawRewardType, 10);
         }
 
+        function _toStr(val) {
+            if (val === null || val === undefined) return '0';
+            if (typeof val === 'bigint') return val.toString();
+            if (typeof val === 'object' && val.toString) return val.toString();
+            return String(val);
+        }
+
+        function _formatTokenAmount(rawValue) {
+            try {
+                const strVal = _toStr(rawValue);
+                if (strVal === '0' || strVal === 'undefined' || strVal === 'null') return '0.00000000';
+                const formatted = web3.utils.fromWei(strVal, 'ether');
+                const num = parseFloat(formatted);
+                if (num === 0) return '0.00000000';
+                const fixed8 = num.toFixed(8);
+                if (fixed8 === '0.00000000') {
+                    return num.toFixed(12);
+                }
+                return fixed8;
+            } catch (e) {
+                return '0.00000000';
+            }
+        }
+
         function setRewardDisplay(typeKey, rawValue) {
             const el = document.getElementById('rewardsAmount' + typeKey);
             if (!el) return;
             const unit = typeKey === 'LP' ? 'LP' : (typeKey === 'TOKEN' ? 'TOKEN' : 'BNB');
-            try {
-                const formatted = web3.utils.fromWei(String(rawValue || '0'), 'ether');
-                el.textContent = parseFloat(formatted).toFixed(8) + ' ' + unit;
-            } catch (e) {
-                el.textContent = '0.00000000 ' + unit;
-            }
+            el.textContent = _formatTokenAmount(rawValue) + ' ' + unit;
         }
 
         function setClaimBtnState(typeKey, enabled) {
@@ -1413,15 +1432,15 @@
                         } catch (e) { /* ignore */ }
                         try {
                             const result = await tokenStakingLPContract.methods.getPendingRewards(account).call();
-                            tokenLpVal = result[0] || result.lp || '0';
-                            tokenTokenVal = result[1] || result.token || '0';
-                            tokenBnbVal = result[2] || result.bnb || '0';
+                            tokenLpVal = _toStr(result[0] !== undefined ? result[0] : result.lp);
+                            tokenTokenVal = _toStr(result[1] !== undefined ? result[1] : result.token);
+                            tokenBnbVal = _toStr(result[2] !== undefined ? result[2] : result.bnb);
                         } catch (e) {
                             console.warn('[STAKING] token getPendingRewards 失败，回退到按类型查询:', e);
                             try {
-                                tokenLpVal = await tokenStakingLPContract.methods.getPendingRewardByType(account, 0).call();
-                                tokenTokenVal = await tokenStakingLPContract.methods.getPendingRewardByType(account, 1).call();
-                                tokenBnbVal = await tokenStakingLPContract.methods.getPendingRewardByType(account, 2).call();
+                                tokenLpVal = _toStr(await tokenStakingLPContract.methods.getPendingRewardByType(account, 0).call());
+                                tokenTokenVal = _toStr(await tokenStakingLPContract.methods.getPendingRewardByType(account, 1).call());
+                                tokenBnbVal = _toStr(await tokenStakingLPContract.methods.getPendingRewardByType(account, 2).call());
                             } catch (e2) {
                                 console.warn('[STAKING] 读取代币质押奖励失败:', e2);
                             }
@@ -1666,12 +1685,7 @@
             const el = document.getElementById('tokenRewardsAmount' + typeKey);
             if (!el) return;
             const unit = typeKey === 'LP' ? 'LP' : (typeKey === 'TOKEN' ? 'TOKEN' : 'BNB');
-            try {
-                const formatted = web3.utils.fromWei(String(rawValue || '0'), 'ether');
-                el.textContent = parseFloat(formatted).toFixed(8) + ' ' + unit;
-            } catch (e) {
-                el.textContent = '0.00000000 ' + unit;
-            }
+            el.textContent = _formatTokenAmount(rawValue) + ' ' + unit;
         }
 
         function setTokenClaimBtnState(typeKey, enabled) {

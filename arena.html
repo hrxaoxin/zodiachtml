@@ -2654,6 +2654,30 @@
             }
         }
 
+        function _toStr(val) {
+            if (val === null || val === undefined) return '0';
+            if (typeof val === 'bigint') return val.toString();
+            if (typeof val === 'object' && val.toString) return val.toString();
+            return String(val);
+        }
+
+        function _formatTokenAmount(rawValue) {
+            try {
+                const strVal = _toStr(rawValue);
+                if (strVal === '0' || strVal === 'undefined' || strVal === 'null') return '0.00000000';
+                const formatted = web3.utils.fromWei(strVal, 'ether');
+                const num = parseFloat(formatted);
+                if (num === 0) return '0.00000000';
+                const fixed8 = num.toFixed(8);
+                if (fixed8 === '0.00000000') {
+                    return num.toFixed(12);
+                }
+                return fixed8;
+            } catch (e) {
+                return '0.00000000';
+            }
+        }
+
         function getRewardName(type) {
             switch(type) {
                 case 0: return 'LP奖励';
@@ -2761,7 +2785,7 @@
                         }
 
                         if (parseFloat(rewardAmount) > 0) {
-                            claimedAmounts.push(parseFloat(rewardAmount).toFixed(8) + ' ' + typeNames[t]);
+                            claimedAmounts.push(_formatTokenAmount(amountWei) + ' ' + typeNames[t]);
                         } else {
                             claimedAmounts.push(typeNames[t] + ' 已领取');
                         }
@@ -2831,10 +2855,7 @@
                             } catch (e) { /* ignore */ }
                         }
 
-                        const fmt = (wei) => {
-                            try { return parseFloat(web3.utils.fromWei(String(wei || '0'), 'ether')).toFixed(8); }
-                            catch (e) { return '0.00000000'; }
-                        };
+                        const fmt = (wei) => _formatTokenAmount(wei);
 
                         const allDisplay = `LP: ${fmt(lpPool)} | 代币: ${fmt(tokenPool)} | BNB: ${fmt(bnbPool)}`;
                         rewardPoolWei = bnbPool; // 保留用于后续兜底逻辑
@@ -2887,12 +2908,10 @@
                         if (!web3) {
                             web3 = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
                         }
-                        const rewardPoolEth = web3.utils.fromWei(String(rewardPoolWei), 'ether');
-                        const amount = parseFloat(rewardPoolEth);
-                        displayAmount = amount.toFixed(8);
+                        displayAmount = _formatTokenAmount(rewardPoolWei);
                     } catch (e) {
                         console.warn('转换奖励池金额失败:', e);
-                        displayAmount = '0';
+                        displayAmount = '0.00000000';
                     }
                 }
 
@@ -3000,15 +3019,15 @@
                             5000,
                             ['0', '0', '0']
                         );
-                        lpPending = result[0] || result.lp || '0';
-                        tokenPending = result[1] || result.token || '0';
-                        bnbPending = result[2] || result.bnb || '0';
+                        lpPending = _toStr(result[0] !== undefined ? result[0] : result.lp);
+                        tokenPending = _toStr(result[1] !== undefined ? result[1] : result.token);
+                        bnbPending = _toStr(result[2] !== undefined ? result[2] : result.bnb);
                     } catch (e) {
                         console.warn('获取三种类型待领取奖励失败，回退到按类型查询:', e);
                         try {
-                            lpPending = await arenaRewardLPContract.methods.getPendingLPRewardByType(accounts[0], currentSeasonId, 0).call();
-                            tokenPending = await arenaRewardLPContract.methods.getPendingLPRewardByType(accounts[0], currentSeasonId, 1).call();
-                            bnbPending = await arenaRewardLPContract.methods.getPendingLPRewardByType(accounts[0], currentSeasonId, 2).call();
+                            lpPending = _toStr(await arenaRewardLPContract.methods.getPendingLPRewardByType(accounts[0], currentSeasonId, 0).call());
+                            tokenPending = _toStr(await arenaRewardLPContract.methods.getPendingLPRewardByType(accounts[0], currentSeasonId, 1).call());
+                            bnbPending = _toStr(await arenaRewardLPContract.methods.getPendingLPRewardByType(accounts[0], currentSeasonId, 2).call());
                         } catch (e2) {
                             console.warn('按类型查询也失败:', e2);
                         }
@@ -3037,9 +3056,9 @@
                     let estHtml = `<div class="text-gray-300 text-xs mt-1">当前积分: ${playerScore || '0'}</div>`;
                     if (parseFloat(lpAmount) > 0 || parseFloat(tokenAmount) > 0 || parseFloat(bnbAmount) > 0) {
                         estHtml += '<div class="text-gray-300 text-xs mt-1">预估奖励：</div>';
-                        if (parseFloat(lpAmount) > 0) estHtml += `<div class="text-gray-300 text-xs">LP: ${parseFloat(lpAmount).toFixed(8)} LP</div>`;
-                        if (parseFloat(tokenAmount) > 0) estHtml += `<div class="text-gray-300 text-xs">代币: ${parseFloat(tokenAmount).toFixed(8)} TOKEN</div>`;
-                        if (parseFloat(bnbAmount) > 0) estHtml += `<div class="text-gray-300 text-xs">BNB: ${parseFloat(bnbAmount).toFixed(8)} BNB</div>`;
+                        if (parseFloat(lpAmount) > 0) estHtml += `<div class="text-gray-300 text-xs">LP: ${_formatTokenAmount(lpPending)} LP</div>`;
+                        if (parseFloat(tokenAmount) > 0) estHtml += `<div class="text-gray-300 text-xs">代币: ${_formatTokenAmount(tokenPending)} TOKEN</div>`;
+                        if (parseFloat(bnbAmount) > 0) estHtml += `<div class="text-gray-300 text-xs">BNB: ${_formatTokenAmount(bnbPending)} BNB</div>`;
                     }
                     estHtml += '<div class="text-gray-500 text-xs mt-1">赛季结束后可领取奖励</div>';
 
@@ -3054,9 +3073,9 @@
                 } else {
                     // 赛季已结束，显示三种类型的可领取奖励，每种类型可独立领取
                     const rewardTypes = [
-                        { enum: 0, amount: lpAmount, unit: 'LP', name: 'LP奖励', desc: '领取后自动兑换为代币+WBNB' },
-                        { enum: 1, amount: tokenAmount, unit: 'TOKEN', name: '代币奖励', desc: '直接发放至钱包' },
-                        { enum: 2, amount: bnbAmount, unit: 'BNB', name: 'BNB奖励', desc: '直接发放至钱包' }
+                        { enum: 0, amount: lpAmount, rawWei: lpPending, unit: 'LP', name: 'LP奖励', desc: '领取后自动兑换为代币+WBNB' },
+                        { enum: 1, amount: tokenAmount, rawWei: tokenPending, unit: 'TOKEN', name: '代币奖励', desc: '直接发放至钱包' },
+                        { enum: 2, amount: bnbAmount, rawWei: bnbPending, unit: 'BNB', name: 'BNB奖励', desc: '直接发放至钱包' }
                     ];
 
                     let claimHtml = '';
@@ -3069,7 +3088,7 @@
                                     <div class="flex justify-between items-center">
                                         <div>
                                             <div class="text-blue-400 text-sm font-medium">${t.name}</div>
-                                            <div class="text-white text-xs mt-1">${parseFloat(t.amount).toFixed(8)} ${t.unit}</div>
+                                            <div class="text-white text-xs mt-1">${_formatTokenAmount(t.rawWei)} ${t.unit}</div>
                                             <div class="text-gray-500 text-xs">${t.desc}</div>
                                         </div>
                                         <button onclick="claimSeasonRewardByType(${currentSeasonId}, ${t.enum})" class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg transition-colors">
@@ -3372,7 +3391,11 @@
                                                    'bg-gray-700';
                             const rankTextColor = player.rank <= 3 ? 'text-yellow-400' : 'text-gray-400';
                             const rewardAmount = parseFloat(rewards[index] || '0');
-                            const rewardDisplay = rewardAmount > 0 ? `${rewardAmount.toFixed(8)} <span class="text-xs text-yellow-600">${rewardTypeLabel}</span>` : '--';
+                            let rewardDisplay = '--';
+                            if (rewardAmount > 0) {
+                                const fixed8 = rewardAmount.toFixed(8);
+                                rewardDisplay = `${fixed8 === '0.00000000' ? rewardAmount.toFixed(12) : fixed8} <span class="text-xs text-yellow-600">${rewardTypeLabel}</span>`;
+                            }
                             const canChallenge = currentUserRank <= 0 || player.rank < currentUserRank;
                             const rowStyle = canChallenge 
                                 ? 'cursor-pointer hover:bg-white/10 border border-transparent hover:border-blue-500/30'

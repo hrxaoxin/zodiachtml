@@ -405,6 +405,25 @@
             return ZODIAC_WEB3.getWeb3();
         }
 
+        function _formatTokenAmount(rawValue) {
+            try {
+                const strVal = String(rawValue || '0');
+                if (strVal === '0' || strVal === 'undefined' || strVal === 'null') return '0.00000000';
+                const w3 = safeGetWeb3();
+                if (!w3) return strVal;
+                const formatted = w3.utils.fromWei(strVal, 'ether');
+                const num = parseFloat(formatted);
+                if (num === 0) return '0.00000000';
+                const fixed8 = num.toFixed(8);
+                if (fixed8 === '0.00000000') {
+                    return num.toFixed(12);
+                }
+                return fixed8;
+            } catch (e) {
+                return '0.00000000';
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', async function() {
             particlesJS('particles-js', {
                 particles: {
@@ -636,13 +655,12 @@
                     return;
                 }
                 const lpDividend = await dividendManagerLP.methods.getClaimableLPDividend(account).call();
-                const unclaimedLP = safeGetWeb3().utils.fromWei(lpDividend.toString(), 'ether');
-                document.getElementById('totalDividends').textContent = parseFloat(unclaimedLP).toFixed(8);
+                document.getElementById('totalDividends').textContent = _formatTokenAmount(lpDividend);
                 
                 try {
                     const balances = await dividendManagerLP.methods.getPoolBalances().call();
-                    const lpBalance = safeGetWeb3().utils.fromWei(balances.lp.toString(), 'ether');
-                    document.getElementById('lpPoolBalance').textContent = parseFloat(lpBalance).toFixed(8);
+                    const lpBal = balances.lp !== undefined ? balances.lp : balances[0];
+                    document.getElementById('lpPoolBalance').textContent = _formatTokenAmount(lpBal);
                 } catch (e) {
                     document.getElementById('lpPoolBalance').textContent = '-';
                 }
@@ -650,7 +668,7 @@
                 document.getElementById('lpFeesEarned').textContent = '-';
                 
                 const claimBtn = document.getElementById('claimLPDividendBtn');
-                claimBtn.disabled = parseFloat(unclaimedLP) <= 0;
+                claimBtn.disabled = parseInt(String(lpDividend || '0')) <= 0;
             } catch (error) {
                 document.getElementById('totalDividends').textContent = '0';
                 document.getElementById('claimLPDividendBtn').disabled = true;

@@ -2739,8 +2739,47 @@ window.ZODIAC_WEB3 = (function() {
         getNFTSkillInfo,
 
         // Launch State
-        checkLaunchState
+        checkLaunchState,
+
+        // Formatting
+        formatTokenAmount
     };
+
+    /**
+     * @dev 格式化代币数量，自适应精度：
+     *      - 正常显示 8 位小数
+     *      - 极小数（8位显示为0）自动扩展到 12 位
+     *      - 真正为0时显示 "0.00000000"
+     * @param {string|number|BigInt|BigNumber} rawValue - 原始wei值
+     * @param {number} [decimals=18] - 代币精度
+     * @returns {string} 格式化后的字符串
+     */
+    function formatTokenAmount(rawValue, decimals) {
+        try {
+            const d = decimals || 18;
+            const strVal = String(rawValue || '0');
+            if (strVal === '0' || strVal === 'undefined' || strVal === 'null') {
+                return '0.00000000';
+            }
+            const w3 = web3 || (typeof window !== 'undefined' ? window.web3 : null);
+            if (!w3) {
+                const num = parseFloat(strVal);
+                if (num === 0) return '0.00000000';
+                const fixed8 = num.toFixed(8);
+                return fixed8 === '0.00000000' ? num.toFixed(12) : fixed8;
+            }
+            const formatted = w3.utils.fromWei(strVal, 'ether');
+            const num = parseFloat(formatted);
+            if (num === 0) return '0.00000000';
+            const fixed8 = num.toFixed(8);
+            if (fixed8 === '0.00000000') {
+                return num.toFixed(12);
+            }
+            return fixed8;
+        } catch (e) {
+            return '0.00000000';
+        }
+    }
 })();
 
 /**
