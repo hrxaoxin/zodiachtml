@@ -2663,16 +2663,30 @@
                 return String(val);
             }
             if (typeof val === 'object') {
-                // BN.js BigNumber / web3.js 返回值 - 有 _hex 属性
-                if (val._hex !== undefined) {
-                    return val.toString(); // BN.js toString() 返回十进制字符串
+                // 方法1: 检查是否有 _hex 属性 (BN.js BigNumber)
+                if (val._hex) {
+                    try {
+                        const hexStr = val._hex.startsWith('0x') ? val._hex : '0x' + val._hex;
+                        if (hexStr === '0x0') return '0';
+                        if (web3 && web3.utils && web3.utils.hexToNumberString) {
+                            const result = web3.utils.hexToNumberString(hexStr);
+                            if (result && result !== '') return result;
+                        }
+                        return parseInt(hexStr, 16).toString();
+                    } catch(e) {
+                        console.warn('_toStr hex转换失败:', e.message);
+                    }
                 }
-                // 其他有 toString 方法的对象
+                // 方法2: 尝试 toString(10) 强制十进制
                 if (typeof val.toString === 'function') {
-                    const s = val.toString();
-                    if (s && s !== '' && s !== 'undefined' && s !== '[object Object]') return s;
+                    try {
+                        const s = val.toString(10);
+                        if (s && s !== '' && s !== 'undefined' && s !== '[object Object]' && s !== 'NaN') {
+                            return s;
+                        }
+                    } catch(e) {}
                 }
-                // 兜底
+                // 方法3: 兜底
                 try { return JSON.stringify(val); } catch(e) {}
             }
             return String(val);

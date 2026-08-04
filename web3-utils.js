@@ -2763,17 +2763,32 @@ window.ZODIAC_WEB3 = (function() {
             } else if (typeof rawValue === 'bigint') {
                 strVal = rawValue.toString();
             } else if (typeof rawValue === 'object') {
-                // BN.js BigNumber - 有 _hex 属性
-                if (rawValue._hex !== undefined) {
-                    strVal = rawValue.toString(); // BN.js toString() 返回十进制字符串
-                } else if (typeof rawValue.toString === 'function') {
-                    const s = rawValue.toString();
-                    if (s && s !== '' && s !== 'undefined' && s !== '[object Object]') {
-                        strVal = s;
-                    } else {
-                        strVal = String(rawValue);
+                // 方法1: 检查是否有 _hex 属性 (BN.js BigNumber)
+                if (rawValue._hex) {
+                    try {
+                        const hexStr = rawValue._hex.startsWith('0x') ? rawValue._hex : '0x' + rawValue._hex;
+                        if (hexStr === '0x0') {
+                            strVal = '0';
+                        } else if (web3 && web3.utils && web3.utils.hexToNumberString) {
+                            strVal = web3.utils.hexToNumberString(hexStr);
+                        } else {
+                            strVal = parseInt(hexStr, 16).toString();
+                        }
+                    } catch(e) {}
+                }
+                // 方法2: 尝试 toString(10) 强制十进制
+                if (!strVal || strVal === '0') {
+                    if (typeof rawValue.toString === 'function') {
+                        try {
+                            const s = rawValue.toString(10);
+                            if (s && s !== '' && s !== 'undefined' && s !== '[object Object]' && s !== 'NaN') {
+                                strVal = s;
+                            }
+                        } catch(e) {}
                     }
-                } else {
+                }
+                // 方法3: 兜底
+                if (!strVal || strVal === '0') {
                     strVal = String(rawValue);
                 }
             } else {
