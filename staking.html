@@ -1575,50 +1575,71 @@
                 let tokenRewardType = 2; // 默认 BNB
                 try {
                     if (tokenStakingLPContract && account) {
+                        // 诊断：打印合约地址
+                        console.log('[STAKING-TOKEN] tokenStakingLPContract address:', tokenStakingLPContract._address);
+                        
+                        // 检查用户是否在代币质押合约中有质押记录
+                        let hasTokenStake = false;
                         try {
-                            const rawRewardType = await tokenStakingLPContract.methods.getRewardType().call();
-                            tokenRewardType = parseRewardType(rawRewardType);
-                        } catch (e) { /* ignore */ }
-                        try {
-                            // 策略A: 独立调用 getPendingRewardByType
-                            try {
-                                const v0 = await tokenStakingLPContract.methods.getPendingRewardByType(account, 0).call();
-                                tokenLpVal = _toStr(v0);
-                            } catch(e) { console.warn('[STAKING-TOKEN] getPendingRewardByType(LP) 失败:', e); }
-
-                            try {
-                                const v1 = await tokenStakingLPContract.methods.getPendingRewardByType(account, 1).call();
-                                tokenTokenVal = _toStr(v1);
-                            } catch(e) { console.warn('[STAKING-TOKEN] getPendingRewardByType(TOKEN) 失败:', e); }
-
-                            try {
-                                const v2 = await tokenStakingLPContract.methods.getPendingRewardByType(account, 2).call();
-                                tokenBnbVal = _toStr(v2);
-                            } catch(e) { console.warn('[STAKING-TOKEN] getPendingRewardByType(BNB) 失败:', e); }
-
-                            console.log('[STAKING-TOKEN] 策略A:', {lp: tokenLpVal, token: tokenTokenVal, bnb: tokenBnbVal});
-
-                            // 策略B: getPendingRewards 验证/补充
-                            try {
-                                const result = await tokenStakingLPContract.methods.getPendingRewards(account).call();
-                                const r0 = _toStr(result[0]);
-                                const r1 = _toStr(result[1]);
-                                const r2 = _toStr(result[2]);
-                                console.log('[STAKING-TOKEN] 策略B:', {r0, r1, r2});
-
-                                if (tokenLpVal === '0' && r0 !== '0') tokenLpVal = r0;
-                                if (tokenTokenVal === '0' && r1 !== '0') tokenTokenVal = r1;
-                                if (tokenBnbVal === '0' && r2 !== '0') tokenBnbVal = r2;
-
-                                if (tokenLpVal === '0') { try { const v = _toStr(result.lp); if (v !== '0') tokenLpVal = v; } catch(e) {} }
-                                if (tokenTokenVal === '0') { try { const v = _toStr(result.token); if (v !== '0') tokenTokenVal = v; } catch(e) {} }
-                                if (tokenBnbVal === '0') { try { const v = _toStr(result.bnb); if (v !== '0') tokenBnbVal = v; } catch(e) {} }
-                            } catch (e) {
-                                console.warn('[STAKING-TOKEN] getPendingRewards 失败:', e);
-                            }
-                            console.log('[STAKING-TOKEN] FINAL:', {lp: tokenLpVal, token: tokenTokenVal, bnb: tokenBnbVal});
+                            const stakeInfo = await tokenStakingContract.methods.getUserStake(account).call();
+                            const stakedAmount = web3.utils.fromWei(stakeInfo.amount || stakeInfo[0] || '0', 'ether');
+                            hasTokenStake = parseFloat(stakedAmount) > 0;
+                            console.log('[STAKING-TOKEN] 用户代币质押量:', stakedAmount, '有质押:', hasTokenStake);
                         } catch (e) {
-                            console.warn('[STAKING-TOKEN] 读取代币质押奖励失败:', e);
+                            console.warn('[STAKING-TOKEN] 检查质押状态失败:', e.message);
+                        }
+                        
+                        // 如果没有质押，跳过奖励查询
+                        if (!hasTokenStake) {
+                            console.log('[STAKING-TOKEN] 用户无代币质押，跳过奖励查询');
+                        } else {
+                            try {
+                                const rawRewardType = await tokenStakingLPContract.methods.getRewardType().call();
+                                tokenRewardType = parseRewardType(rawRewardType);
+                            } catch (e) { 
+                                console.warn('[STAKING-TOKEN] getRewardType 失败:', e.message); 
+                            }
+                            try {
+                                // 策略A: 独立调用 getPendingRewardByType
+                                try {
+                                    const v0 = await tokenStakingLPContract.methods.getPendingRewardByType(account, 0).call();
+                                    tokenLpVal = _toStr(v0);
+                                } catch(e) { console.warn('[STAKING-TOKEN] getPendingRewardByType(LP) 失败:', e.message || e); }
+
+                                try {
+                                    const v1 = await tokenStakingLPContract.methods.getPendingRewardByType(account, 1).call();
+                                    tokenTokenVal = _toStr(v1);
+                                } catch(e) { console.warn('[STAKING-TOKEN] getPendingRewardByType(TOKEN) 失败:', e.message || e); }
+
+                                try {
+                                    const v2 = await tokenStakingLPContract.methods.getPendingRewardByType(account, 2).call();
+                                    tokenBnbVal = _toStr(v2);
+                                } catch(e) { console.warn('[STAKING-TOKEN] getPendingRewardByType(BNB) 失败:', e.message || e); }
+
+                                console.log('[STAKING-TOKEN] 策略A:', {lp: tokenLpVal, token: tokenTokenVal, bnb: tokenBnbVal});
+
+                                // 策略B: getPendingRewards 验证/补充
+                                try {
+                                    const result = await tokenStakingLPContract.methods.getPendingRewards(account).call();
+                                    const r0 = _toStr(result[0]);
+                                    const r1 = _toStr(result[1]);
+                                    const r2 = _toStr(result[2]);
+                                    console.log('[STAKING-TOKEN] 策略B:', {r0, r1, r2});
+
+                                    if (tokenLpVal === '0' && r0 !== '0') tokenLpVal = r0;
+                                    if (tokenTokenVal === '0' && r1 !== '0') tokenTokenVal = r1;
+                                    if (tokenBnbVal === '0' && r2 !== '0') tokenBnbVal = r2;
+
+                                    if (tokenLpVal === '0') { try { const v = _toStr(result.lp); if (v !== '0') tokenLpVal = v; } catch(e) {} }
+                                    if (tokenTokenVal === '0') { try { const v = _toStr(result.token); if (v !== '0') tokenTokenVal = v; } catch(e) {} }
+                                    if (tokenBnbVal === '0') { try { const v = _toStr(result.bnb); if (v !== '0') tokenBnbVal = v; } catch(e) {} }
+                                } catch (e) {
+                                    console.warn('[STAKING-TOKEN] getPendingRewards 失败:', e.message || e);
+                                }
+                                console.log('[STAKING-TOKEN] FINAL:', {lp: tokenLpVal, token: tokenTokenVal, bnb: tokenBnbVal});
+                            } catch (e) {
+                                console.warn('[STAKING-TOKEN] 读取代币质押奖励失败:', e);
+                            }
                         }
                     }
                 } catch (e) {
