@@ -278,8 +278,8 @@
                             <p class="text-xs text-gray-500">直接发放至钱包</p>
                         </div>
                         <div class="text-right">
-                            <span class="text-lg font-bold text-purple-600" id="rewardsAmountToken">0.00000000 TOKEN</span>
-                            <button id="claimBtnToken" class="btn-primary text-sm ml-2 px-3 py-1" disabled>领取</button>
+                            <span class="text-lg font-bold text-purple-600" id="rewardsAmountTOKEN">0.00000000 TOKEN</span>
+                            <button id="claimBtnTOKEN" class="btn-primary text-sm ml-2 px-3 py-1" disabled>领取</button>
                         </div>
                     </div>
                     <!-- BNB奖励 -->
@@ -422,8 +422,8 @@
                             <p class="text-xs text-gray-500">直接发放至钱包</p>
                         </div>
                         <div class="text-right">
-                            <span class="text-lg font-bold text-purple-600" id="tokenRewardsAmountToken">0.00000000 TOKEN</span>
-                            <button id="tokenClaimBtnToken" class="btn-primary text-sm ml-2 px-3 py-1" disabled>领取</button>
+                            <span class="text-lg font-bold text-purple-600" id="tokenRewardsAmountTOKEN">0.00000000 TOKEN</span>
+                            <button id="tokenClaimBtnTOKEN" class="btn-primary text-sm ml-2 px-3 py-1" disabled>领取</button>
                         </div>
                     </div>
                     <!-- BNB奖励 -->
@@ -1513,7 +1513,7 @@
         document.getElementById('refreshWallet').addEventListener('click', initWeb3);
         document.getElementById('stakeBtn').addEventListener('click', stakeNFTs);
         document.getElementById('claimBtnLP').addEventListener('click', () => claimRewardsByType('LP'));
-        document.getElementById('claimBtnToken').addEventListener('click', () => claimRewardsByType('TOKEN'));
+        document.getElementById('claimBtnTOKEN').addEventListener('click', () => claimRewardsByType('TOKEN'));
         document.getElementById('claimBtnBNB').addEventListener('click', () => claimRewardsByType('BNB'));
 
         setInterval(loadRewards, 60000);
@@ -2174,7 +2174,7 @@
         document.getElementById('tokenStakeBtn').addEventListener('click', handleTokenStake);
         document.getElementById('tokenUnstakeBtn').addEventListener('click', handleTokenUnstake);
         document.getElementById('tokenClaimBtnLP').addEventListener('click', () => claimTokenRewardsByType('LP'));
-        document.getElementById('tokenClaimBtnToken').addEventListener('click', () => claimTokenRewardsByType('TOKEN'));
+        document.getElementById('tokenClaimBtnTOKEN').addEventListener('click', () => claimTokenRewardsByType('TOKEN'));
         document.getElementById('tokenClaimBtnBNB').addEventListener('click', () => claimTokenRewardsByType('BNB'));
         
         document.getElementById('tokenStakeAmount').addEventListener('input', updateTokenStakeButton);
