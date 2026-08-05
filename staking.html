@@ -1231,7 +1231,6 @@
         function _formatTokenAmount(rawValue) {
             try {
                 let strVal = _toStr(rawValue);
-                console.log('[FORMAT] _toStr result:', strVal, 'type:', typeof strVal);
                 
                 if (!strVal || strVal === '0' || strVal === 'undefined' || strVal === 'null') {
                     return '0.00000000';
@@ -1256,11 +1255,21 @@
                         const formatted = web3.utils.fromWei(strVal, 'ether');
                         console.log('[FORMAT] fromWei:', strVal, '->', formatted);
                         if (!formatted || formatted === '0' || formatted === '0.0') {
-                            return '0.00000000';
+                            // fromWei 返回0，尝试手动计算
+                            const manualNum = parseFloat(strVal) / 1e18;
+                            console.log('[FORMAT] fromWei返回0, 手动计算:', strVal, '/ 1e18 =', manualNum);
+                            if (manualNum === 0 || !isFinite(manualNum)) return '0.00000000';
+                            const fixed8 = manualNum.toFixed(8);
+                            return fixed8 === '0.00000000' ? manualNum.toFixed(12) : fixed8;
                         }
                         const num = parseFloat(formatted);
                         if (num === 0 || !isFinite(num)) {
-                            return '0.00000000';
+                            // 尝试手动计算
+                            const manualNum = parseFloat(strVal) / 1e18;
+                            console.log('[FORMAT] parseFloat结果异常, 手动计算:', strVal, '/ 1e18 =', manualNum);
+                            if (manualNum === 0 || !isFinite(manualNum)) return '0.00000000';
+                            const fixed8 = manualNum.toFixed(8);
+                            return fixed8 === '0.00000000' ? manualNum.toFixed(12) : fixed8;
                         }
                         const fixed8 = num.toFixed(8);
                         if (fixed8 === '0.00000000') {
@@ -1269,6 +1278,7 @@
                         return fixed8;
                     } catch (e) {
                         console.warn('[FORMAT] fromWei 失败:', e.message);
+                        // fromWei 失败，继续尝试手动计算
                     }
                 }
                 
@@ -1297,7 +1307,7 @@
             }
             const unit = typeKey === 'LP' ? 'LP' : (typeKey === 'TOKEN' ? 'TOKEN' : 'BNB');
             const formatted = _formatTokenAmount(rawValue);
-            console.log('[STAKING] setRewardDisplay', typeKey, 'raw:', rawValue, '-> formatted:', formatted);
+            console.log('[STAKING] setRewardDisplay', typeKey, 'raw:', rawValue, 'formatted:', formatted);
             el.textContent = formatted + ' ' + unit;
         }
 
