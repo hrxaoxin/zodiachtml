@@ -66,7 +66,7 @@ window.ZODIAC_COMPONENTS = (function() {
             <div class="hidden md:block fixed left-0 top-0 bottom-0 w-20 bg-white shadow-lg z-20 overflow-y-auto">
                 <div class="p-3">
                     <div class="text-center mb-4">
-                        <div class="text-3xl mb-1">🐾</div>
+                        <img src="images/fu-cards/shiershengxiao.png" alt="十二生肖" class="w-12 h-12 object-contain mx-auto mb-1">
                         <h1 class="text-sm font-bold text-gray-800">生肖</h1>
                     </div>
                     <div class="space-y-1">

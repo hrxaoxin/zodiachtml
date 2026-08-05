@@ -558,7 +558,7 @@
                 let strVal = _toStr(rawValue);
                 
                 if (!strVal || strVal === '0' || strVal === 'undefined' || strVal === 'null') {
-                    return '0.00000000';
+                    return '0.0000';
                 }
                 
                 // hex字符串转换为十进制
@@ -570,7 +570,7 @@
                             strVal = String(parseInt(strVal, 16));
                         }
                     } catch(e) {
-                        return '0.00000000';
+                        return '0.0000';
                     }
                 }
                 
@@ -579,17 +579,17 @@
                     try {
                         const formatted = web3.utils.fromWei(strVal, 'ether');
                         if (!formatted || formatted === '0' || formatted === '0.0') {
-                            return '0.00000000';
+                            return '0.0000';
                         }
                         const num = parseFloat(formatted);
                         if (num === 0 || !isFinite(num)) {
-                            return '0.00000000';
+                            return '0.0000';
                         }
-                        const fixed8 = num.toFixed(8);
-                        if (fixed8 === '0.00000000') {
-                            return num.toFixed(12);
+                        const fixed4 = num.toFixed(4);
+                        if (fixed4 === '0.0000') {
+                            return num.toFixed(8);
                         }
-                        return fixed8;
+                        return fixed4;
                     } catch (e) {
                         // fromWei 失败，继续尝试手动计算
                     }
@@ -598,15 +598,15 @@
                 // 手动计算兜底
                 const num = parseFloat(strVal) / 1e18;
                 if (num === 0 || !isFinite(num)) {
-                    return '0.00000000';
+                    return '0.0000';
                 }
-                const fixed8 = num.toFixed(8);
-                if (fixed8 === '0.00000000') {
-                    return num.toFixed(12);
+                const fixed4 = num.toFixed(4);
+                if (fixed4 === '0.0000') {
+                    return num.toFixed(8);
                 }
-                return fixed8;
+                return fixed4;
             } catch (e) {
-                return '0.00000000';
+                return '0.0000';
             }
         }
 
