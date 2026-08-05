@@ -1092,146 +1092,93 @@
         }
 
         async function loadRewards() {
-            try {
-                // 默认重置为 0
-                setRewardDisplay('LP', '0');
-                setRewardDisplay('TOKEN', '0');
-                setRewardDisplay('BNB', '0');
-                setClaimBtnState('LP', false);
-                setClaimBtnState('TOKEN', false);
-                setClaimBtnState('BNB', false);
+            // 先重置显示
+            setRewardDisplay('LP', '0');
+            setRewardDisplay('TOKEN', '0');
+            setRewardDisplay('BNB', '0');
+            setClaimBtnState('LP', false);
+            setClaimBtnState('TOKEN', false);
+            setClaimBtnState('BNB', false);
 
-                if (!stakingLPRewardContract || !account) {
-                    console.warn('[STAKING] loadRewards: contract or account not ready', {
-                        hasContract: !!stakingLPRewardContract,
-                        account: account
-                    });
-                    return;
-                }
-
-                console.log('[STAKING] loadRewards called with account:', account);
-
-                // 获取当前合约奖励类型
-                let currentType = 2;
-                try {
-                    const rawRewardType = await stakingLPRewardContract.methods.rewardType().call();
-                    currentType = parseRewardType(rawRewardType);
-                    console.log('[STAKING] current rewardType:', currentType, 'raw:', rawRewardType);
-                } catch (e) {
-                    console.warn('[STAKING] rewardType call failed:', e.message || e);
-                }
-                updateCurrentRewardTypeBadge(currentType);
-
-                // ====== 策略A: 独立调用 getPendingRewardByType（每个独立容错）======
-                let lpVal = '0', tokenVal = '0', bnbVal = '0';
-
-                // LP reward (type 0)
-                try {
-                    const v = await stakingLPRewardContract.methods.getPendingRewardByType(account, 0).call();
-                    console.log('[STAKING] 策略A LP raw:', v, 'type:', typeof v, '_hex:', v ? v._hex : 'N/A');
-                    lpVal = _toStr(v);
-                } catch (e) { 
-                    console.warn('[STAKING] getPendingRewardByType(LP) 失败:', e.message || e); 
-                }
-
-                // TOKEN reward (type 1)
-                try {
-                    const v = await stakingLPRewardContract.methods.getPendingRewardByType(account, 1).call();
-                    console.log('[STAKING] 策略A TOKEN raw:', v, 'type:', typeof v, '_hex:', v ? v._hex : 'N/A');
-                    tokenVal = _toStr(v);
-                } catch (e) { 
-                    console.warn('[STAKING] getPendingRewardByType(TOKEN) 失败:', e.message || e); 
-                }
-
-                // BNB reward (type 2)
-                try {
-                    const v = await stakingLPRewardContract.methods.getPendingRewardByType(account, 2).call();
-                    console.log('[STAKING] 策略A BNB raw:', v, 'type:', typeof v, '_hex:', v ? v._hex : 'N/A');
-                    bnbVal = _toStr(v);
-                } catch (e) { 
-                    console.warn('[STAKING] getPendingRewardByType(BNB) 失败:', e.message || e); 
-                }
-
-                console.log('[STAKING] 策略A results:', {lp: lpVal, token: tokenVal, bnb: bnbVal});
-
-                // ====== 策略B: 调用 getPendingRewards 验证/补充 ======
-                try {
-                    const result = await stakingLPRewardContract.methods.getPendingRewards(account).call();
-                    console.log('[STAKING] 策略B raw result:', result, 'keys:', Object.keys(result));
-                    const r0 = _toStr(result[0]);
-                    const r1 = _toStr(result[1]);
-                    const r2 = _toStr(result[2]);
-                    console.log('[STAKING] 策略B parsed:', {r0, r1, r2});
-
-                    // 如果策略A返回0但策略B有值，则用策略B
-                    if (lpVal === '0' && r0 !== '0') {
-                        console.log('[STAKING] 用策略B覆盖LP');
-                        lpVal = r0;
-                    }
-                    if (tokenVal === '0' && r1 !== '0') {
-                        console.log('[STAKING] 用策略B覆盖TOKEN');
-                        tokenVal = r1;
-                    }
-                    if (bnbVal === '0' && r2 !== '0') {
-                        console.log('[STAKING] 用策略B覆盖BNB');
-                        bnbVal = r2;
-                    }
-
-                    // 尝试具名属性作为最后兜底
-                    if (lpVal === '0') {
-                        try { 
-                            if (result.lp !== undefined) {
-                                const v = _toStr(result.lp); 
-                                console.log('[STAKING] 具名属性 lp:', result.lp, '->', v);
-                                if (v !== '0') lpVal = v; 
-                            }
-                        } catch(e) {}
-                    }
-                    if (tokenVal === '0') {
-                        try { 
-                            if (result.token !== undefined) {
-                                const v = _toStr(result.token); 
-                                console.log('[STAKING] 具名属性 token:', result.token, '->', v);
-                                if (v !== '0') tokenVal = v; 
-                            }
-                        } catch(e) {}
-                    }
-                    if (bnbVal === '0') {
-                        try { 
-                            if (result.bnb !== undefined) {
-                                const v = _toStr(result.bnb); 
-                                console.log('[STAKING] 具名属性 bnb:', result.bnb, '->', v);
-                                if (v !== '0') bnbVal = v; 
-                            }
-                        } catch(e) {}
-                    }
-                } catch (e) {
-                    console.warn('[STAKING] getPendingRewards 失败:', e.message || e);
-                }
-
-                console.log('[STAKING] FINAL values before display:', {lp: lpVal, token: tokenVal, bnb: bnbVal});
-
-                setRewardDisplay('LP', lpVal);
-                setRewardDisplay('TOKEN', tokenVal);
-                setRewardDisplay('BNB', bnbVal);
-
-                // 更新领取按钮状态
-                const checkPositive = (val) => {
-                    try {
-                        if (!val || val === '0') return false;
-                        const b = BigInt(val);
-                        return b > 0n;
-                    } catch(e) {
-                        return false;
-                    }
-                };
-                setClaimBtnState('LP', checkPositive(lpVal));
-                setClaimBtnState('TOKEN', checkPositive(tokenVal));
-                setClaimBtnState('BNB', checkPositive(bnbVal));
-                
-            } catch (error) {
-                console.error('加载奖励失败:', error);
+            if (!stakingLPRewardContract || !account) {
+                console.warn('[STAKING] loadRewards: contract or account not ready', {
+                    hasContract: !!stakingLPRewardContract,
+                    account: account
+                });
+                return;
             }
+
+            console.log('[STAKING] ====== loadRewards START ======');
+            console.log('[STAKING] account:', account, 'contract:', stakingLPRewardContract._address);
+
+            let lpVal = '0', tokenVal = '0', bnbVal = '0';
+
+            // 直接调用 getPendingRewards
+            try {
+                const result = await stakingLPRewardContract.methods.getPendingRewards(account).call();
+                console.log('[STAKING] raw result:', result, 'typeof:', typeof result);
+                
+                // 获取原始值
+                const rawLp = result[0];
+                const rawToken = result[1];
+                const rawBnb = result[2];
+                console.log('[STAKING] raw values:', {rawLp, rawToken, rawBnb});
+                
+                // 使用 _toStr 转换
+                lpVal = _toStr(rawLp);
+                tokenVal = _toStr(rawToken);
+                bnbVal = _toStr(rawBnb);
+                console.log('[STAKING] after _toStr:', {lpVal, tokenVal, bnbVal});
+                
+                // 检查是否需要用具名属性兜底
+                if ((lpVal === '0' || tokenVal === '0' || bnbVal === '0') && Object.keys(result).length > 3) {
+                    console.log('[STAKING] 尝试具名属性兜底');
+                    if (lpVal === '0' && result.lp !== undefined) lpVal = _toStr(result.lp);
+                    if (tokenVal === '0' && result.token !== undefined) tokenVal = _toStr(result.token);
+                    if (bnbVal === '0' && result.bnb !== undefined) bnbVal = _toStr(result.bnb);
+                    console.log('[STAKING] 兜底后:', {lpVal, tokenVal, bnbVal});
+                }
+                
+            } catch (e) {
+                console.error('[STAKING] getPendingRewards 调用失败:', e.message);
+                
+                // 备用: 逐个调用
+                try {
+                    const v0 = await stakingLPRewardContract.methods.getPendingRewardByType(account, 0).call();
+                    lpVal = _toStr(v0);
+                } catch(e2) { console.warn('[STAKING] getPendingRewardByType(0) 失败:', e2.message); }
+                
+                try {
+                    const v1 = await stakingLPRewardContract.methods.getPendingRewardByType(account, 1).call();
+                    tokenVal = _toStr(v1);
+                } catch(e2) { console.warn('[STAKING] getPendingRewardByType(1) 失败:', e2.message); }
+                
+                try {
+                    const v2 = await stakingLPRewardContract.methods.getPendingRewardByType(account, 2).call();
+                    bnbVal = _toStr(v2);
+                } catch(e2) { console.warn('[STAKING] getPendingRewardByType(2) 失败:', e2.message); }
+                
+                console.log('[STAKING] 备用方案结果:', {lpVal, tokenVal, bnbVal});
+            }
+
+            console.log('[STAKING] ====== FINAL:', {lpVal, tokenVal, bnbVal});
+
+            setRewardDisplay('LP', lpVal);
+            setRewardDisplay('TOKEN', tokenVal);
+            setRewardDisplay('BNB', bnbVal);
+
+            // 更新领取按钮状态
+            const checkPositive = (val) => {
+                if (!val || val === '0') return false;
+                try {
+                    return parseFloat(val) > 0;
+                } catch(e) { return false; }
+            };
+            setClaimBtnState('LP', checkPositive(lpVal));
+            setClaimBtnState('TOKEN', checkPositive(tokenVal));
+            setClaimBtnState('BNB', checkPositive(bnbVal));
+            
+            console.log('[STAKING] ====== loadRewards END ======');
         }
 
         function parseRewardType(rawRewardType) {
@@ -1247,30 +1194,35 @@
                 return String(val);
             }
             if (typeof val === 'object') {
-                // 方法1: 检查是否有 _hex 属性 (BN.js BigNumber)
+                // BN.js BigNumber - 使用 _hex 属性转换
                 if (val._hex) {
+                    const hexStr = val._hex.startsWith('0x') ? val._hex : '0x' + val._hex;
+                    if (hexStr === '0x0') return '0';
                     try {
-                        const hexStr = val._hex.startsWith('0x') ? val._hex : '0x' + val._hex;
-                        if (hexStr === '0x0') return '0';
                         if (web3 && web3.utils && web3.utils.hexToNumberString) {
                             const result = web3.utils.hexToNumberString(hexStr);
-                            if (result && result !== '') return result;
+                            if (result) return result;
                         }
+                    } catch(e) {}
+                    // 手动 hex 转十进制
+                    try {
                         return parseInt(hexStr, 16).toString();
-                    } catch(e) {
-                        console.warn('_toStr hex转换失败:', e.message);
-                    }
+                    } catch(e) {}
                 }
-                // 方法2: 尝试 toString(10) 强制十进制
+                // 其他对象
                 if (typeof val.toString === 'function') {
                     try {
                         const s = val.toString(10);
                         if (s && s !== '' && s !== 'undefined' && s !== '[object Object]' && s !== 'NaN') {
                             return s;
                         }
-                    } catch(e) {}
+                    } catch(e) {
+                        try {
+                            const s2 = val.toString();
+                            if (s2 && s2 !== '' && s2 !== '[object Object]') return s2;
+                        } catch(e2) {}
+                    }
                 }
-                // 方法3: 兜底
                 try { return JSON.stringify(val); } catch(e) {}
             }
             return String(val);
@@ -1279,6 +1231,7 @@
         function _formatTokenAmount(rawValue) {
             try {
                 let strVal = _toStr(rawValue);
+                console.log('[FORMAT] _toStr result:', strVal, 'type:', typeof strVal);
                 
                 if (!strVal || strVal === '0' || strVal === 'undefined' || strVal === 'null') {
                     return '0.00000000';
@@ -1301,6 +1254,7 @@
                 if (web3 && web3.utils && web3.utils.fromWei) {
                     try {
                         const formatted = web3.utils.fromWei(strVal, 'ether');
+                        console.log('[FORMAT] fromWei:', strVal, '->', formatted);
                         if (!formatted || formatted === '0' || formatted === '0.0') {
                             return '0.00000000';
                         }
@@ -1314,12 +1268,13 @@
                         }
                         return fixed8;
                     } catch (e) {
-                        // fromWei 失败，继续尝试手动计算
+                        console.warn('[FORMAT] fromWei 失败:', e.message);
                     }
                 }
                 
                 // 手动计算兜底
                 const num = parseFloat(strVal) / 1e18;
+                console.log('[FORMAT] manual:', strVal, '/ 1e18 =', num);
                 if (num === 0 || !isFinite(num)) {
                     return '0.00000000';
                 }
@@ -1329,15 +1284,21 @@
                 }
                 return fixed8;
             } catch (e) {
+                console.error('[FORMAT] _formatTokenAmount error:', e);
                 return '0.00000000';
             }
         }
 
         function setRewardDisplay(typeKey, rawValue) {
             const el = document.getElementById('rewardsAmount' + typeKey);
-            if (!el) return;
+            if (!el) {
+                console.warn('[STAKING] setRewardDisplay: element not found for', typeKey);
+                return;
+            }
             const unit = typeKey === 'LP' ? 'LP' : (typeKey === 'TOKEN' ? 'TOKEN' : 'BNB');
-            el.textContent = _formatTokenAmount(rawValue) + ' ' + unit;
+            const formatted = _formatTokenAmount(rawValue);
+            console.log('[STAKING] setRewardDisplay', typeKey, 'raw:', rawValue, '-> formatted:', formatted);
+            el.textContent = formatted + ' ' + unit;
         }
 
         function setClaimBtnState(typeKey, enabled) {
