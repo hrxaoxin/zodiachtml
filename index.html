@@ -738,29 +738,47 @@
                 
                 // 加载公共数据（无需连接钱包）
                 try {
+                    const dividendManagerLP = await ZODIAC_WEB3.getContract('dividendManagerLP', false);
                     const dividendManager = await ZODIAC_WEB3.getContract('dividendManager', false);
-                    if (dividendManager) {
-                        // 加载总池金额
+
+                    // 加载总池金额（从 DividendManagerLP 获取三类型池余额）
+                    if (dividendManagerLP) {
                         try {
-                            const poolStats = await dividendManager.methods.getDividendPoolStats().call();
-                            const totalPoolWei = poolStats.currentPool || poolStats['0'];
-                            const totalPool = web3Instance.utils.fromWei(totalPoolWei, 'ether');
-                            document.getElementById('totalPool').textContent = _formatTokenAmount(totalPoolWei);
+                            const balances = await dividendManagerLP.methods.getPoolBalances().call();
+                            const lpWei = balances[0] || balances.lp || '0';
+                            const tokenWei = balances[1] || balances.token || '0';
+                            const bnbWei = balances[2] || balances.bnb || '0';
+                            const totalLPWei = BigInt(lpWei);
+                            document.getElementById('totalPool').textContent = _formatTokenAmount(lpWei);
                         } catch (e) {
-                            console.error('Failed to load total pool:', e);
+                            console.error('Failed to load total pool from DMLP:', e);
                         }
-                        
-                        // 如果已连接钱包，加载用户个人数据
-                        if (account) {
-                            // 加载待领取分红
-                            try {
-                                const userDivWei = await dividendManager.methods.getClaimableDividend(account).call();
-                                document.getElementById('unclaimedDividend').textContent = _formatTokenAmount(userDivWei);
-                            } catch (e) {
-                                console.error('Failed to load user dividend:', e);
+                    } else {
+                        console.warn('DividendManagerLP contract not available');
+                    }
+
+                    // 如果已连接钱包，加载用户个人数据
+                    if (account && dividendManagerLP) {
+                        // 加载待领取分红（从 DividendManagerLP 获取三类型）
+                        try {
+                            const claimable = await dividendManagerLP.methods.getClaimableDividends(account).call();
+                            const lpClaimable = claimable[0] || claimable.lp || '0';
+                            document.getElementById('unclaimedDividend').textContent = _formatTokenAmount(lpClaimable);
+                        } catch (e) {
+                            console.error('Failed to load user dividend from DMLP:', e);
+                            // 回退：尝试旧版合约
+                            if (dividendManager) {
+                                try {
+                                    const userDivWei = await dividendManager.methods.getClaimableDividend(account).call();
+                                    document.getElementById('unclaimedDividend').textContent = _formatTokenAmount(userDivWei);
+                                } catch (e2) {
+                                    console.error('Fallback also failed:', e2);
+                                }
                             }
-                            
-                            // 加载用户权重
+                        }
+
+                        // 加载用户权重（从旧版 DividendManager，权重数据仍在此维护）
+                        if (dividendManager) {
                             try {
                                 const userWeight = await dividendManager.methods.getUserWeight(account).call();
                                 document.getElementById('userWeight').textContent = userWeight.toString();
@@ -768,11 +786,9 @@
                                 console.error('Load user weight failed:', e);
                             }
                         }
-                    } else {
-                        console.warn('DividendManager contract not available');
                     }
                 } catch (e) {
-                    console.error('Failed to get dividendManager:', e);
+                    console.error('Failed to get dividend contracts:', e);
                 }
                 
                 // 加载已分配金额（从 rewardManager 合约获取）
