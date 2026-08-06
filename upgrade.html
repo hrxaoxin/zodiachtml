@@ -961,14 +961,43 @@
                 return;
             }
 
+            const countMap = {};
+            const sourceNFTs = (typeof allUserNFTs !== 'undefined' && allUserNFTs) ? allUserNFTs : nfts;
+            sourceNFTs.forEach(nft => {
+                const key = nft.type + '-' + nft.level;
+                countMap[key] = (countMap[key] || 0) + 1;
+            });
+
             let html = '';
             nfts.forEach(nft => {
                 const isSelected = selectedNft && selectedNft.id === nft.id;
                 const selectedClass = isSelected ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-white bg-blue-50' : '';
                 const genderText = nft.gender === 1 ? '<span class="text-blue-500">公</span>' : '<span class="text-pink-500">母</span>';
+
+                const sameCount = countMap[nft.type + '-' + nft.level] || 1;
+                const showCountBadge = sameCount >= 2;
+                const levelNum = parseInt(nft.level, 10);
+                const requiredCount = levelNum + 1;
+                let badgeBg, badgeTitle;
+                if (levelNum >= 5) {
+                    badgeBg = 'bg-gray-500';
+                    badgeTitle = `相同NFT共 ${sameCount} 张（已达最高等级）`;
+                } else if (sameCount >= requiredCount) {
+                    badgeBg = 'bg-green-500';
+                    badgeTitle = `相同NFT共 ${sameCount} 张，满足NFT升阶需求（需 ${requiredCount} 张）`;
+                } else {
+                    badgeBg = 'bg-orange-500';
+                    badgeTitle = `相同NFT共 ${sameCount} 张，不足NFT升阶需求（需 ${requiredCount} 张）`;
+                }
+                const countBadgeHtml = showCountBadge
+                    ? `<div class="absolute top-2 right-2 ${badgeBg} text-white rounded-full min-w-[28px] h-7 px-1.5 flex items-center justify-center font-bold text-xs shadow-lg z-10" title="${badgeTitle}">×${sameCount}</div>`
+                    : '';
+                const infoBtnPos = showCountBadge ? 'top-2 right-10' : 'top-2 right-2';
+
                 html += `
                     <div class="nft-card cursor-pointer transition-all duration-200 hover:shadow-lg ${selectedClass}" onclick="selectNFT(${nft.id}, ${nft.type}, ${nft.level}, '${nft.name}', '${nft.image}')">
-                        <button onclick="event.stopPropagation(); showNFTModal(${nft.id}, ${nft.type}, ${nft.level}, '${nft.name}', '${nft.image}')" class="info-btn absolute top-2 right-2 w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors" title="查看详情">
+                        ${countBadgeHtml}
+                        <button onclick="event.stopPropagation(); showNFTModal(${nft.id}, ${nft.type}, ${nft.level}, '${nft.name}', '${nft.image}')" class="info-btn absolute ${infoBtnPos} w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors" title="查看详情">
                             <i class="fas fa-info text-blue-600 text-xs"></i>
                         </button>
                         <img src="${nft.image}" alt="${nft.name}">
