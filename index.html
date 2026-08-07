@@ -718,9 +718,9 @@
             const account = ZODIAC_WEB3 ? ZODIAC_WEB3.getAccount() : null;
             
             // 初始化默认值
-            document.getElementById('totalPool').textContent = '--';
-            document.getElementById('distributed').textContent = '--';
-            document.getElementById('unclaimedDividend').textContent = '--';
+            document.getElementById('totalPool').textContent = '0.0000';
+            document.getElementById('distributed').textContent = '0.0000';
+            document.getElementById('unclaimedDividend').textContent = '0.0000';
             document.getElementById('holders').textContent = '--';
             document.getElementById('userWeight').textContent = '--';
 
@@ -729,77 +729,157 @@
                 if (!web3Instance) {
                     try {
                         web3Instance = new Web3(new Web3.providers.HttpProvider('https://bsc-dataseed1.binance.org/'));
-                        console.log('index: Created web3 from public RPC for read-only access');
+                        console.log('[FENHONG] Created web3 from public RPC for read-only access');
                     } catch (e) {
-                        console.warn('Failed to create web3 instance:', e.message);
+                        console.warn('[FENHONG] Failed to create web3 instance:', e.message);
                         return;
                     }
                 }
                 
-                // 加载公共数据（无需连接钱包）
+                // 获取RewardManager合约（优先获取，用于回退）
+                let rewardManager = null;
                 try {
-                    const dividendManagerLP = await ZODIAC_WEB3.getContract('dividendManagerLP', false);
-                    const dividendManager = await ZODIAC_WEB3.getContract('dividendManager', false);
+                    rewardManager = await ZODIAC_WEB3.getContract('rewardManager', false);
+                    if (rewardManager) {
+                        const rmAddress = rewardManager.options.address;
+                        console.log('[FENHONG] RewardManager contract:', rmAddress);
+                        
+                        // 直接获取RewardManager合约的BNB余额作为总池的回退
+                        try {
+                            const rmBalance = await web3Instance.eth.getBalance(rmAddress);
+                            console.log('[FENHONG] RewardManager BNB balance:', web3Instance.utils.fromWei(rmBalance, 'ether'));
+                            
+                            // 获取RewardManager中已锁定的BNB
+                            try {
+                                const lockedBNB = await rewardManager.methods.lockedBNBAmount().call();
+                                console.log('[FENHONG] RewardManager locked BNB:', web3Instance.utils.fromWei(lockedBNB, 'ether'));
+                            } catch(e) {
+                                console.warn('[FENHONG] Failed to get lockedBNBAmount:', e.message);
+                            }
+                        } catch (e) {
+                            console.warn('[FENHONG] Failed to get RewardManager balance:', e.message);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[FENHONG] Failed to get rewardManager contract:', e.message);
+                }
+                
+                // 获取DividendManagerLP合约
+                let dividendManagerLP = null;
+                let dividendManager = null;
+                try {
+                    dividendManagerLP = await ZODIAC_WEB3.getContract('dividendManagerLP', false);
+                    dividendManager = await ZODIAC_WEB3.getContract('dividendManager', false);
+                    console.log('[FENHONG] DividendManagerLP contract:', dividendManagerLP ? dividendManagerLP.options.address : 'null');
+                    console.log('[FENHONG] DividendManager contract:', dividendManager ? dividendManager.options.address : 'null');
+                } catch (e) {
+                    console.warn('[FENHONG] Failed to get dividend contracts:', e.message);
+                }
 
-                    // 加载总池金额（从 DividendManagerLP 获取三类型池余额）
+                // 加载总池金额（从 DividendManagerLP 获取三类型池余额）
+                let totalPoolLoaded = false;
+                if (dividendManagerLP) {
+                    try {
+                        const balances = await dividendManagerLP.methods.getPoolBalances().call();
+                        console.log('[FENHONG] Pool balances result:', balances);
+                        const lpWei = balances[0] || balances.lp || '0';
+                        const tokenWei = balances[1] || balances.token || '0';
+                        const bnbWei = balances[2] || balances.bnb || '0';
+                        
+                        const lpFormatted = _formatTokenAmount(lpWei);
+                        console.log('[FENHONG] LP pool:', lpFormatted, 'Token pool:', _formatTokenAmount(tokenWei), 'BNB pool:', _formatTokenAmount(bnbWei));
+                        
+                        document.getElementById('totalPool').textContent = lpFormatted;
+                        totalPoolLoaded = true;
+                    } catch (e) {
+                        console.error('[FENHONG] Failed to load total pool from DMLP:', e.message);
+                    }
+                } else {
+                    console.warn('[FENHONG] DividendManagerLP contract not available');
+                }
+
+                // 回退：如果DividendManagerLP获取失败，尝试从RewardManager获取总BNB余额
+                if (!totalPoolLoaded && rewardManager) {
+                    try {
+                        const rmBalance = await web3Instance.eth.getBalance(rewardManager.options.address);
+                        const formatted = _formatTokenAmount(rmBalance);
+                        if (formatted !== '0.0000') {
+                            console.log('[FENHONG] Fallback: Using RewardManager balance as totalPool:', formatted);
+                            document.getElementById('totalPool').textContent = formatted;
+                            totalPoolLoaded = true;
+                        }
+                    } catch (e) {
+                        console.warn('[FENHONG] Fallback pool loading also failed:', e.message);
+                    }
+                }
+
+                // 如果总池还是0，尝试直接获取DividendManagerLP合约的BNB余额
+                if (!totalPoolLoaded || document.getElementById('totalPool').textContent === '0.0000') {
+                    try {
+                        const dmlpAddress = dividendManagerLP ? dividendManagerLP.options.address : 
+                            await ZODIAC_WEB3.getContractAddress('dividendManagerLP');
+                        if (dmlpAddress && dmlpAddress !== '0x0000000000000000000000000000000000000000') {
+                            const dmlpBalance = await web3Instance.eth.getBalance(dmlpAddress);
+                            const formatted = _formatTokenAmount(dmlpBalance);
+                            console.log('[FENHONG] Direct DMLP BNB balance:', formatted);
+                            if (formatted !== '0.0000') {
+                                document.getElementById('totalPool').textContent = formatted;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[FENHONG] Failed to get direct DMLP balance:', e.message);
+                    }
+                }
+
+                // 加载已分配金额（从 rewardManager 合约获取）
+                if (rewardManager) {
+                    try {
+                        const distributedWei = await rewardManager.methods.totalDistributed().call();
+                        console.log('[FENHONG] Total distributed:', _formatTokenAmount(distributedWei));
+                        document.getElementById('distributed').textContent = _formatTokenAmount(distributedWei);
+                    } catch (e) {
+                        console.error('[FENHONG] Failed to load totalDistributed:', e.message);
+                    }
+                } else {
+                    console.warn('[FENHONG] RewardManager not available for distributed amount');
+                }
+
+                // 如果已连接钱包，加载用户个人数据
+                if (account) {
+                    console.log('[FENHONG] Loading user data for account:', account);
+                    
+                    // 加载待领取分红
                     if (dividendManagerLP) {
                         try {
-                            const balances = await dividendManagerLP.methods.getPoolBalances().call();
-                            const lpWei = balances[0] || balances.lp || '0';
-                            const tokenWei = balances[1] || balances.token || '0';
-                            const bnbWei = balances[2] || balances.bnb || '0';
-                            const totalLPWei = BigInt(lpWei);
-                            document.getElementById('totalPool').textContent = _formatTokenAmount(lpWei);
-                        } catch (e) {
-                            console.error('Failed to load total pool from DMLP:', e);
-                        }
-                    } else {
-                        console.warn('DividendManagerLP contract not available');
-                    }
-
-                    // 如果已连接钱包，加载用户个人数据
-                    if (account && dividendManagerLP) {
-                        // 加载待领取分红（从 DividendManagerLP 获取三类型）
-                        try {
                             const claimable = await dividendManagerLP.methods.getClaimableDividends(account).call();
+                            console.log('[FENHONG] Claimable dividends:', claimable);
                             const lpClaimable = claimable[0] || claimable.lp || '0';
                             document.getElementById('unclaimedDividend').textContent = _formatTokenAmount(lpClaimable);
                         } catch (e) {
-                            console.error('Failed to load user dividend from DMLP:', e);
+                            console.error('[FENHONG] Failed to load user dividend from DMLP:', e.message);
                             // 回退：尝试旧版合约
                             if (dividendManager) {
                                 try {
                                     const userDivWei = await dividendManager.methods.getClaimableDividend(account).call();
+                                    console.log('[FENHONG] Fallback claimable dividend:', _formatTokenAmount(userDivWei));
                                     document.getElementById('unclaimedDividend').textContent = _formatTokenAmount(userDivWei);
                                 } catch (e2) {
-                                    console.error('Fallback also failed:', e2);
+                                    console.error('[FENHONG] Fallback also failed:', e2.message);
                                 }
                             }
                         }
+                    }
 
-                        // 加载用户权重（从旧版 DividendManager，权重数据仍在此维护）
-                        if (dividendManager) {
-                            try {
-                                const userWeight = await dividendManager.methods.getUserWeight(account).call();
-                                document.getElementById('userWeight').textContent = userWeight.toString();
-                            } catch (e) {
-                                console.error('Load user weight failed:', e);
-                            }
+                    // 加载用户权重
+                    if (dividendManager) {
+                        try {
+                            const userWeight = await dividendManager.methods.getUserWeight(account).call();
+                            console.log('[FENHONG] User weight:', userWeight.toString());
+                            document.getElementById('userWeight').textContent = userWeight.toString();
+                        } catch (e) {
+                            console.error('[FENHONG] Load user weight failed:', e.message);
                         }
                     }
-                } catch (e) {
-                    console.error('Failed to get dividend contracts:', e);
-                }
-                
-                // 加载已分配金额（从 rewardManager 合约获取）
-                try {
-                    const rewardManager = await ZODIAC_WEB3.getContract('rewardManager', false);
-                    if (rewardManager) {
-                        const distributedWei = await rewardManager.methods.totalDistributed().call();
-                        document.getElementById('distributed').textContent = _formatTokenAmount(distributedWei);
-                    }
-                } catch (e) {
-                    console.error('Failed to load distributed:', e);
                 }
 
                 // 加载NFT总数
@@ -810,12 +890,12 @@
                         document.getElementById('holders').textContent = totalSupply.toString();
                     }
                 } catch (e) {
-                    console.error('Failed to load NFT total supply:', e);
+                    console.error('[FENHONG] Failed to load NFT total supply:', e.message);
                 }
                 
-                console.log('loadFenHongData completed - account:', account ? 'connected' : 'not connected');
+                console.log('[FENHONG] loadFenHongData completed - account:', account ? 'connected' : 'not connected');
             } catch (error) {
-                console.error('Load dividend data failed:', error);
+                console.error('[FENHONG] Load dividend data failed:', error);
             }
         }
 

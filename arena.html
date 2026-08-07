@@ -3533,7 +3533,72 @@
                 
                 if (leaderboardEl) {
                     if (topPlayers.length === 0) {
-                        leaderboardEl.innerHTML = '<div class="text-center text-gray-500 py-8">暂无玩家数据</div>';
+                        // 当排行榜为空时，尝试显示当前用户的战队信息
+                        if (accounts && accounts.length > 0 && window.ZODIAC_WEB3) {
+                            try {
+                                if (!arenaPlayerContract) {
+                                    arenaPlayerContract = await window.ZODIAC_WEB3.getContract('arenaPlayer', false);
+                                }
+                                if (arenaPlayerContract) {
+                                    const userTeamTokens = await withTimeout(
+                                        arenaPlayerContract.methods.getPlayerBattleTeam(accounts[0]).call(),
+                                        5000,
+                                        []
+                                    );
+                                    const validTokens = userTeamTokens.filter(t => t && t !== '0' && t !== 0);
+                                    
+                                    if (validTokens.length > 0) {
+                                        const userTeam = [];
+                                        for (const tokenId of validTokens) {
+                                            try {
+                                                const nftInfo = await window.ZODIAC_WEB3.getNFTFullInfo(tokenId).catch(() => null);
+                                                if (nftInfo && nftInfo.tokenType > 0) {
+                                                    const nftBasicInfo = ZODIAC_UTILS.getNFTInfo(nftInfo.tokenType);
+                                                    userTeam.push({
+                                                        tokenId: tokenId,
+                                                        name: `${nftBasicInfo.attrName}${nftBasicInfo.animalName}`,
+                                                        level: nftInfo.level,
+                                                        element: nftBasicInfo.elementKey,
+                                                        imagePath: nftBasicInfo.imagePath
+                                                    });
+                                                }
+                                            } catch (e) {
+                                                console.warn(`获取NFT #${tokenId}信息失败:`, e);
+                                            }
+                                        }
+                                        
+                                        if (userTeam.length > 0) {
+                                            leaderboardEl.innerHTML = `
+                                                <div class="bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-xl p-4 mb-4 border border-blue-500/30">
+                                                    <div class="text-center text-blue-400 font-semibold mb-2">您的战队</div>
+                                                    <div class="text-center text-gray-400 text-xs mb-3">参加战斗后将出现在排行榜中</div>
+                                                    <div class="flex justify-center gap-1 flex-wrap">
+                                                        ${userTeam.map(nft => `
+                                                            <div class="relative w-10 h-10">
+                                                                <img src="${nft.imagePath}" alt="${nft.name}" class="w-10 h-10 rounded-lg object-cover border border-white/30" />
+                                                                <span class="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold border border-gray-900">${nft.level}</span>
+                                                            </div>
+                                                        `).join('')}
+                                                    </div>
+                                                </div>
+                                                <div class="text-center text-gray-500 py-4 text-sm">暂无其他玩家数据，快去参加战斗吧！</div>
+                                            `;
+                                        } else {
+                                            leaderboardEl.innerHTML = '<div class="text-center text-gray-500 py-8">暂无玩家数据</div>';
+                                        }
+                                    } else {
+                                        leaderboardEl.innerHTML = '<div class="text-center text-gray-500 py-8">暂无玩家数据，<span class="text-blue-400 cursor-pointer underline" onclick="showTeamSetup()">点击设置战队</span></div>';
+                                    }
+                                } else {
+                                    leaderboardEl.innerHTML = '<div class="text-center text-gray-500 py-8">暂无玩家数据</div>';
+                                }
+                            } catch (e) {
+                                console.warn('获取用户战队信息失败:', e);
+                                leaderboardEl.innerHTML = '<div class="text-center text-gray-500 py-8">暂无玩家数据</div>';
+                            }
+                        } else {
+                            leaderboardEl.innerHTML = '<div class="text-center text-gray-500 py-8">暂无玩家数据，请先连接钱包</div>';
+                        }
                     } else {
                         leaderboardEl.innerHTML = topPlayers.map((player, index) => {
                             const rankBadgeColor = player.rank === 1 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' : 
