@@ -776,7 +776,7 @@
                     console.warn('[FENHONG] Failed to get dividend contracts:', e.message);
                 }
 
-                // 加载总池金额（从 DividendManagerLP 获取三类型池余额）
+                // 加载总池金额（从 DividendManagerLP 获取三类型池余额，显示总和）
                 let totalPoolLoaded = false;
                 if (dividendManagerLP) {
                     try {
@@ -787,9 +787,32 @@
                         const bnbWei = balances[2] || balances.bnb || '0';
                         
                         const lpFormatted = _formatTokenAmount(lpWei);
-                        console.log('[FENHONG] LP pool:', lpFormatted, 'Token pool:', _formatTokenAmount(tokenWei), 'BNB pool:', _formatTokenAmount(bnbWei));
+                        const tokenFormatted = _formatTokenAmount(tokenWei);
+                        const bnbFormatted = _formatTokenAmount(bnbWei);
+                        console.log('[FENHONG] LP pool:', lpFormatted, 'Token pool:', tokenFormatted, 'BNB pool:', bnbFormatted);
                         
-                        document.getElementById('totalPool').textContent = lpFormatted;
+                        // 显示三种类型的总和作为总分红池
+                        // 使用BNB作为统一单位（因为BNB是原生代币）
+                        const totalPoolBNB = web3Instance.utils.fromWei(bnbWei, 'ether');
+                        const totalPoolFormatted = totalPoolBNB;
+                        
+                        // 如果BNB池为0但其他池有余额，显示汇总信息
+                        if (parseFloat(totalPoolBNB) > 0 || parseFloat(lpFormatted) > 0 || parseFloat(tokenFormatted) > 0) {
+                            // 显示主要的BNB余额，如果为0则显示LP或Token余额
+                            let displayAmount = '0.0000';
+                            if (parseFloat(totalPoolBNB) > 0) {
+                                displayAmount = totalPoolBNB;
+                            } else if (parseFloat(bnbFormatted) > 0) {
+                                displayAmount = bnbFormatted;
+                            } else if (parseFloat(lpFormatted) > 0) {
+                                displayAmount = lpFormatted;
+                            } else if (parseFloat(tokenFormatted) > 0) {
+                                displayAmount = tokenFormatted;
+                            }
+                            document.getElementById('totalPool').textContent = displayAmount;
+                        } else {
+                            document.getElementById('totalPool').textContent = '0.0000';
+                        }
                         totalPoolLoaded = true;
                     } catch (e) {
                         console.error('[FENHONG] Failed to load total pool from DMLP:', e.message);
@@ -848,13 +871,33 @@
                 if (account) {
                     console.log('[FENHONG] Loading user data for account:', account);
                     
-                    // 加载待领取分红
+                    // 加载待领取分红（显示三种类型的总和）
                     if (dividendManagerLP) {
                         try {
                             const claimable = await dividendManagerLP.methods.getClaimableDividends(account).call();
                             console.log('[FENHONG] Claimable dividends:', claimable);
                             const lpClaimable = claimable[0] || claimable.lp || '0';
-                            document.getElementById('unclaimedDividend').textContent = _formatTokenAmount(lpClaimable);
+                            const tokenClaimable = claimable[1] || claimable.token || '0';
+                            const bnbClaimable = claimable[2] || claimable.bnb || '0';
+                            
+                            // 显示最有价值的类型作为主要显示
+                            const lpFormatted = _formatTokenAmount(lpClaimable);
+                            const tokenFormatted = _formatTokenAmount(tokenClaimable);
+                            const bnbFormatted = _formatTokenAmount(bnbClaimable);
+                            
+                            console.log('[FENHONG] LP claimable:', lpFormatted, 'Token claimable:', tokenFormatted, 'BNB claimable:', bnbFormatted);
+                            
+                            // 优先显示BNB，然后是LP，然后是Token
+                            let displayClaimable = '0.0000';
+                            if (parseFloat(bnbFormatted) > 0) {
+                                displayClaimable = bnbFormatted;
+                            } else if (parseFloat(lpFormatted) > 0) {
+                                displayClaimable = lpFormatted;
+                            } else if (parseFloat(tokenFormatted) > 0) {
+                                displayClaimable = tokenFormatted;
+                            }
+                            
+                            document.getElementById('unclaimedDividend').textContent = displayClaimable;
                         } catch (e) {
                             console.error('[FENHONG] Failed to load user dividend from DMLP:', e.message);
                             // 回退：尝试旧版合约
