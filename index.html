@@ -781,29 +781,29 @@
                 if (dividendManagerLP) {
                     try {
                         const balances = await dividendManagerLP.methods.getPoolBalances().call();
-                        console.log('[FENHONG] Pool balances result:', balances);
-                        const lpWei = balances[0] || balances.lp || '0';
-                        const tokenWei = balances[1] || balances.token || '0';
-                        const bnbWei = balances[2] || balances.bnb || '0';
+                        console.log('[FENHONG] Pool balances raw:', balances);
+                        const lpWei = balances[0]?.toString() || balances.lp?.toString() || '0';
+                        const tokenWei = balances[1]?.toString() || balances.token?.toString() || '0';
+                        const bnbWei = balances[2]?.toString() || balances.bnb?.toString() || '0';
                         
                         const lpFormatted = _formatTokenAmount(lpWei);
                         const tokenFormatted = _formatTokenAmount(tokenWei);
                         const bnbFormatted = _formatTokenAmount(bnbWei);
-                        console.log('[FENHONG] LP pool:', lpFormatted, 'Token pool:', tokenFormatted, 'BNB pool:', bnbFormatted);
+                        console.log(`[FENHONG] Pool balances - LP: ${lpWei} (${lpFormatted}), Token: ${tokenWei} (${tokenFormatted}), BNB: ${bnbWei} (${bnbFormatted})`);
                         
-                        // 显示三种类型的总和作为总分红池
-                        // 显示所有类型的汇总（BNB + LP + Token）
+                        // 显示所有类型的汇总
                         const bnbPoolNum = parseFloat(web3Instance.utils.fromWei(bnbWei, 'ether'));
-                        const lpPoolNum = parseFloat(lpFormatted);
-                        const tokenPoolNum = parseFloat(tokenFormatted);
+                        const lpPoolNum = parseFloat(web3Instance.utils.fromWei(lpWei, 'ether'));
+                        const tokenPoolNum = parseFloat(web3Instance.utils.fromWei(tokenWei, 'ether'));
+                        
+                        console.log(`[FENHONG] Pool numeric values - BNB: ${bnbPoolNum}, LP: ${lpPoolNum}, Token: ${tokenPoolNum}`);
                         
                         if (bnbPoolNum > 0 || lpPoolNum > 0 || tokenPoolNum > 0) {
-                            let displayAmount = '0.0000';
+                            let displayAmount = '';
                             if (bnbPoolNum > 0) {
-                                displayAmount = bnbFormatted;
-                                if (lpPoolNum > 0 || tokenPoolNum > 0) {
-                                    displayAmount += ` + ${lpFormatted} LP + ${tokenFormatted} TOKEN`;
-                                }
+                                displayAmount = bnbFormatted + ' BNB';
+                                if (lpPoolNum > 0) displayAmount += ` + ${lpFormatted} LP`;
+                                if (tokenPoolNum > 0) displayAmount += ` + ${tokenFormatted} TOKEN`;
                             } else if (lpPoolNum > 0) {
                                 displayAmount = lpFormatted + ' LP';
                                 if (tokenPoolNum > 0) displayAmount += ` + ${tokenFormatted} TOKEN`;
@@ -855,25 +855,38 @@
                     }
                 }
 
-                // 加载已领取金额（从 DividendManagerLP 合约获取）
+                // 加载已领取金额（从 DividendManagerLP 合约获取 totalDistributed）
                 if (dividendManagerLP) {
                     try {
+                        // 先尝试调用 totalDistributed（如果合约已升级）
                         const distributedWei = await dividendManagerLP.methods.totalDistributed().call();
-                        console.log('[FENHONG] Total distributed from DMLP:', _formatTokenAmount(distributedWei));
-                        document.getElementById('distributed').textContent = _formatTokenAmount(distributedWei);
+                        console.log('[FENHONG] totalDistributed from DMLP raw:', distributedWei?.toString());
+                        const formatted = _formatTokenAmount(distributedWei);
+                        document.getElementById('distributed').textContent = formatted;
+                        console.log('[FENHONG] totalDistributed formatted:', formatted);
                     } catch (e) {
-                        console.error('[FENHONG] Failed to load totalDistributed from DMLP:', e.message);
-                        // 回退：尝试从 rewardManager 获取
-                        if (rewardManager) {
-                            try {
-                                const distributedWei = await rewardManager.methods.totalDistributed().call();
-                                console.log('[FENHONG] Fallback total distributed:', _formatTokenAmount(distributedWei));
-                                document.getElementById('distributed').textContent = _formatTokenAmount(distributedWei);
-                            } catch (e2) {
-                                console.error('[FENHONG] Fallback also failed:', e2.message);
+                        console.warn('[FENHONG] totalDistributed not available on DMLP (contract not upgraded):', e.message);
+                        // 回退方案：尝试获取合约收到的所有 DividendClaimed 事件累计
+                        try {
+                            const claimedEvents = await dividendManagerLP.getPastEvents('DividendClaimed', {
+                                fromBlock: 0,
+                                toBlock: 'latest'
+                            });
+                            let totalClaimed = BigInt(0);
+                            for (const evt of claimedEvents) {
+                                const amt = evt.returnValues?.amount || evt.returnValues?.[1] || '0';
+                                totalClaimed += BigInt(amt.toString());
                             }
+                            console.log('[FENHONG] Total claimed from events:', totalClaimed.toString());
+                            document.getElementById('distributed').textContent = _formatTokenAmount(totalClaimed.toString());
+                        } catch (e3) {
+                            console.warn('[FENHONG] Event fallback also failed:', e3.message);
+                            document.getElementById('distributed').textContent = '0.0000';
                         }
                     }
+                } else {
+                    console.warn('[FENHONG] DividendManagerLP not available for distributed amount');
+                    document.getElementById('distributed').textContent = '0.0000';
                 }
 
                 // 如果已连接钱包，加载用户个人数据
@@ -884,17 +897,22 @@
                     if (dividendManagerLP) {
                         try {
                             const claimable = await dividendManagerLP.methods.getClaimableDividends(account).call();
-                            console.log('[FENHONG] Claimable dividends:', claimable);
-                            const lpClaimable = claimable[0] || claimable.lp || '0';
-                            const tokenClaimable = claimable[1] || claimable.token || '0';
-                            const bnbClaimable = claimable[2] || claimable.bnb || '0';
+                            console.log('[FENHONG] getClaimableDividends raw:', claimable);
+                            // 处理 BigNumber / string / number 类型
+                            const toStr = (v) => {
+                                if (v === null || v === undefined) return '0';
+                                if (typeof v === 'object' && v.toString) return v.toString();
+                                return String(v);
+                            };
+                            const lpClaimable = toStr(claimable[0] ?? claimable.lp);
+                            const tokenClaimable = toStr(claimable[1] ?? claimable.token);
+                            const bnbClaimable = toStr(claimable[2] ?? claimable.bnb);
                             
-                            // 显示最有价值的类型作为主要显示
                             const lpFormatted = _formatTokenAmount(lpClaimable);
                             const tokenFormatted = _formatTokenAmount(tokenClaimable);
                             const bnbFormatted = _formatTokenAmount(bnbClaimable);
                             
-                            console.log('[FENHONG] LP claimable:', lpFormatted, 'Token claimable:', tokenFormatted, 'BNB claimable:', bnbFormatted);
+                            console.log(`[FENHONG] Claimable - LP: ${lpClaimable} (${lpFormatted}), Token: ${tokenClaimable} (${tokenFormatted}), BNB: ${bnbClaimable} (${bnbFormatted})`);
                             
                             // 优先显示BNB，然后是LP，然后是Token
                             let displayClaimable = '0.0000';
@@ -908,13 +926,14 @@
                             
                             document.getElementById('unclaimedDividend').textContent = displayClaimable;
                         } catch (e) {
-                            console.error('[FENHONG] Failed to load user dividend from DMLP:', e.message);
+                            console.error('[FENHONG] Failed to load claimable dividends from DMLP:', e.message);
                             // 回退：尝试旧版合约
                             if (dividendManager) {
                                 try {
                                     const userDivWei = await dividendManager.methods.getClaimableDividend(account).call();
-                                    console.log('[FENHONG] Fallback claimable dividend:', _formatTokenAmount(userDivWei));
-                                    document.getElementById('unclaimedDividend').textContent = _formatTokenAmount(userDivWei);
+                                    const formatted = _formatTokenAmount(userDivWei?.toString ? userDivWei.toString() : userDivWei);
+                                    console.log('[FENHONG] Fallback claimable dividend:', formatted);
+                                    document.getElementById('unclaimedDividend').textContent = formatted;
                                 } catch (e2) {
                                     console.error('[FENHONG] Fallback also failed:', e2.message);
                                 }
