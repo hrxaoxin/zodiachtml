@@ -443,7 +443,10 @@
                             <span class="flex items-center">
                                 <span class="mr-2">🏆</span> 排行榜
                             </span>
-                            <span id="leaderboardStats" class="text-xs text-gray-400"></span>
+                            <div class="flex items-center gap-2">
+                                <span id="seasonBadge" class="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full border border-blue-500/30">赛季 #1</span>
+                                <span id="leaderboardStats" class="text-xs text-gray-400"></span>
+                            </div>
                         </h3>
                         <div id="leaderboard" class="space-y-2 max-h-80 overflow-y-auto pr-1">
                             <div class="text-center text-gray-400 py-4">加载中...</div>
@@ -461,7 +464,10 @@
                                 下一页 <i class="fas fa-chevron-right ml-1 text-xs"></i>
                             </button>
                         </div>
-                        <div class="mt-3 flex justify-center">
+                        <div class="mt-3 flex justify-center items-center gap-2">
+                            <select id="seasonSelect" class="px-3 py-1.5 text-sm bg-gray-700/50 text-gray-300 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500">
+                                <option value="0">当前赛季</option>
+                            </select>
                             <select id="pageSizeSelect" class="px-3 py-1.5 text-sm bg-gray-700/50 text-gray-300 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500">
                                 <option value="10">10 条/页</option>
                                 <option value="20">20 条/页</option>
@@ -500,20 +506,20 @@
 
                     <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-6">
                         <h3 class="text-white font-semibold mb-4 flex items-center">
-                            <span class="mr-2">🎁</span> <span id="rewardSectionTitle">LP奖励领取</span>
+                            <span class="mr-2">🎁</span> 赛季奖励
                         </h3>
                         <div class="p-3 bg-purple-500/20 rounded-lg mb-4">
-                            <p class="text-xs text-purple-300" id="rewardTipText">💡 LP奖励领取后会自动兑换为代币和WBNB发送到您的钱包</p>
+                            <p class="text-xs text-purple-300" id="rewardTipText">💡 三种奖励类型独立累计，可分别领取</p>
                         </div>
                         <div id="rewardsSection">
                             <div class="mb-4">
-                                <h4 class="text-gray-300 text-sm mb-2" id="unclaimedRewardTitle">可领取LP奖励</h4>
+                                <h4 class="text-gray-300 text-sm mb-2">待领取奖励</h4>
                                 <div id="unclaimedRewards" class="space-y-2">
                                     <div class="text-center text-gray-500 py-2">加载中...</div>
                                 </div>
                             </div>
                             <div>
-                                <h4 class="text-gray-300 text-sm mb-2" id="claimedRewardTitle">已领取LP奖励</h4>
+                                <h4 class="text-gray-300 text-sm mb-2">已领取历史</h4>
                                 <div id="claimedRewards" class="space-y-2">
                                     <div class="text-center text-gray-500 py-2">加载中...</div>
                                 </div>
@@ -2607,13 +2613,13 @@
                 if (arenaRankingQueryContract && accounts[0]) {
                     try {
                         console.log('[ARENA] Trying getPlayerRank with account:', accounts[0]);
-                        const rankIndex = await withTimeout(
+                        // getPlayerRank已返回1-based排名，无需再加1
+                        userRank = await withTimeout(
                             arenaRankingQueryContract.methods.getPlayerRank(accounts[0]).call(),
                             5000,
                             '0'
                         );
-                        userRank = parseInt(rankIndex) + 1;
-                        console.log('[ARENA] getPlayerRank result (index):', rankIndex, '-> rank:', userRank);
+                        console.log('[ARENA] getPlayerRank result:', userRank);
                     } catch (e1) {
                         console.warn('[ARENA] getPlayerRank failed:', e1.message);
                         try {
@@ -3152,75 +3158,97 @@
                 const tokenAmount = web3.utils.fromWei(String(tokenPending), 'ether');
                 const bnbAmount = web3.utils.fromWei(String(bnbPending), 'ether');
 
-                if (seasonIsActive) {
-                    let playerScore = '0';
-                    if (arenaBattleContract) {
-                        try {
-                            const playerRecord = await withTimeout(
-                                arenaBattleContract.methods.players(currentSeasonId, accounts[0]).call(),
-                                5000,
-                                { score: '0', wins: '0', losses: '0' }
-                            );
-                            playerScore = playerRecord.score || playerRecord[0] || '0';
-                        } catch (e) {
-                            console.warn('获取玩家记录失败:', e);
-                        }
+                // 获取玩家积分用于预估
+                let playerScore = '0';
+                if (arenaBattleContract) {
+                    try {
+                        const playerRecord = await withTimeout(
+                            arenaBattleContract.methods.players(currentSeasonId, accounts[0]).call(),
+                            5000,
+                            { score: '0', wins: '0', losses: '0' }
+                        );
+                        playerScore = playerRecord.score || playerRecord[0] || '0';
+                    } catch (e) {
+                        console.warn('获取玩家记录失败:', e);
                     }
+                }
 
-                    let estHtml = `<div class="text-gray-300 text-xs mt-1">当前积分: ${playerScore || '0'}</div>`;
-                    if (parseFloat(lpAmount) > 0 || parseFloat(tokenAmount) > 0 || parseFloat(bnbAmount) > 0) {
-                        estHtml += '<div class="text-gray-300 text-xs mt-1">预估奖励：</div>';
-                        if (parseFloat(lpAmount) > 0) estHtml += `<div class="text-gray-300 text-xs">LP: ${_formatTokenAmount(lpPending)} LP</div>`;
-                        if (parseFloat(tokenAmount) > 0) estHtml += `<div class="text-gray-300 text-xs">代币: ${_formatTokenAmount(tokenPending)} TOKEN</div>`;
-                        if (parseFloat(bnbAmount) > 0) estHtml += `<div class="text-gray-300 text-xs">BNB: ${_formatTokenAmount(bnbPending)} BNB</div>`;
-                    }
-                    estHtml += '<div class="text-gray-500 text-xs mt-1">赛季结束后可领取奖励</div>';
+                // 构建三类型奖励显示
+                const rewardTypes = [
+                    { enum: 0, amount: lpAmount, rawWei: lpPending, unit: 'LP', name: 'LP奖励', icon: '💎', color: 'purple', desc: '领取后自动兑换为代币+WBNB' },
+                    { enum: 1, amount: tokenAmount, rawWei: tokenPending, unit: 'TOKEN', name: '代币奖励', icon: '🪙', color: 'yellow', desc: '直接发放至钱包' },
+                    { enum: 2, amount: bnbAmount, rawWei: bnbPending, unit: 'BNB', name: 'BNB奖励', icon: '💵', color: 'blue', desc: '直接发放至钱包' }
+                ];
 
-                    unclaimedDiv.innerHTML = `
-                        <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
-                            <div class="text-yellow-400 text-sm font-medium">赛季进行中</div>
-                            ${estHtml}
-                        </div>
-                    `;
-
-                    await loadClaimedRewards(claimedDiv, currentSeasonId);
-                } else {
-                    // 赛季已结束，显示三种类型的可领取奖励，每种类型可独立领取
-                    const rewardTypes = [
-                        { enum: 0, amount: lpAmount, rawWei: lpPending, unit: 'LP', name: 'LP奖励', desc: '领取后自动兑换为代币+WBNB' },
-                        { enum: 1, amount: tokenAmount, rawWei: tokenPending, unit: 'TOKEN', name: '代币奖励', desc: '直接发放至钱包' },
-                        { enum: 2, amount: bnbAmount, rawWei: bnbPending, unit: 'BNB', name: 'BNB奖励', desc: '直接发放至钱包' }
-                    ];
-
-                    let claimHtml = '';
-                    let hasAnyReward = false;
-                    for (const t of rewardTypes) {
-                        if (parseFloat(t.amount) > 0) {
-                            hasAnyReward = true;
-                            claimHtml += `
-                                <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-2">
-                                    <div class="flex justify-between items-center">
+                let rewardsHtml = '';
+                let hasAnyReward = false;
+                
+                for (const t of rewardTypes) {
+                    const amount = parseFloat(t.amount);
+                    if (amount > 0) {
+                        hasAnyReward = true;
+                        const colorClasses = {
+                            purple: 'bg-purple-500/10 border-purple-500/30 text-purple-400',
+                            yellow: 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400',
+                            blue: 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                        };
+                        const btnClasses = {
+                            purple: 'bg-purple-500 hover:bg-purple-600',
+                            yellow: 'bg-yellow-500 hover:bg-yellow-600',
+                            blue: 'bg-blue-500 hover:bg-blue-600'
+                        };
+                        rewardsHtml += `
+                            <div class="${colorClasses[t.color].split(' ').slice(0, 2).join(' ')} border ${colorClasses[t.color].split(' ')[2]} rounded-lg p-3 mb-2">
+                                <div class="flex justify-between items-center">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-lg">${t.icon}</span>
                                         <div>
-                                            <div class="text-blue-400 text-sm font-medium">${t.name}</div>
-                                            <div class="text-white text-xs mt-1">${_formatTokenAmount(t.rawWei)} ${t.unit}</div>
+                                            <div class="${colorClasses[t.color].split(' ')[3]} text-sm font-medium">${t.name}</div>
+                                            <div class="text-white font-bold text-sm">${_formatTokenAmount(t.rawWei)} <span class="text-xs text-gray-400">${t.unit}</span></div>
                                             <div class="text-gray-500 text-xs">${t.desc}</div>
                                         </div>
-                                        <button onclick="claimSeasonRewardByType(${currentSeasonId}, ${t.enum})" class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg transition-colors">
-                                            领取
-                                        </button>
                                     </div>
+                                    ${seasonIsActive ? 
+                                        '<div class="text-gray-500 text-xs">赛季结束后可领</div>' :
+                                        `<button onclick="claimSeasonRewardByType(${currentSeasonId}, ${t.enum})" class="px-3 py-1.5 ${btnClasses[t.color]} text-white text-xs rounded-lg transition-colors font-medium">领取</button>`
+                                    }
                                 </div>
-                            `;
-                        }
+                            </div>
+                        `;
                     }
-
-                    if (hasAnyReward) {
-                        unclaimedDiv.innerHTML = claimHtml;
-                    } else {
-                        unclaimedDiv.innerHTML = '<div class="text-center text-gray-500 py-2">赛季结束，无奖励可领取或已全部领取</div>';
-                    }
-                    await loadClaimedRewards(claimedDiv, currentSeasonId);
                 }
+
+                if (seasonIsActive) {
+                    // 赛季进行中：显示预估奖励
+                    let seasonInfoHtml = `
+                        <div class="bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/30 rounded-lg p-3 mb-3">
+                            <div class="flex justify-between items-center">
+                                <div class="text-green-400 text-sm font-medium">⚡ 赛季进行中</div>
+                                <div class="text-gray-400 text-xs">当前积分: ${playerScore || '0'}</div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    if (hasAnyReward) {
+                        unclaimedDiv.innerHTML = seasonInfoHtml + rewardsHtml + '<div class="text-gray-500 text-xs text-center mt-2">赛季结束后奖励可领取</div>';
+                    } else {
+                        unclaimedDiv.innerHTML = seasonInfoHtml + '<div class="text-center text-gray-500 py-2">暂无预估奖励，快去参加战斗吧！</div>';
+                    }
+                } else {
+                    // 赛季已结束：显示可领取奖励
+                    if (hasAnyReward) {
+                        unclaimedDiv.innerHTML = rewardsHtml;
+                    } else {
+                        unclaimedDiv.innerHTML = `
+                            <div class="bg-gray-500/10 border border-gray-500/30 rounded-lg p-3 text-center">
+                                <div class="text-gray-400 text-sm">✅ 赛季已结算</div>
+                                <div class="text-gray-500 text-xs mt-1">无奖励可领取或已全部领取</div>
+                            </div>
+                        `;
+                    }
+                }
+
+                await loadClaimedRewards(claimedDiv, currentSeasonId);
                 
                 console.log(`loadRewards completed - seasonIsActive: ${seasonIsActive}, rewardType: ${rewardType}`);
             } catch (error) {
@@ -3262,8 +3290,107 @@
         let totalPages = 1;
         let totalPlayers = 0;
         let pageSize = 10;
+        let currentSeasonId = 1;
 
-        async function loadLeaderboard(page = 1, size = pageSize) {
+        // 更新赛季显示
+        async function updateSeasonDisplay(seasonId) {
+            const seasonBadge = document.getElementById('seasonBadge');
+            if (!seasonBadge) return;
+            
+            try {
+                if (arenaRankingQueryContract) {
+                    const seasonInfo = await withTimeout(
+                        arenaRankingQueryContract.methods.getSeasonInfo(seasonId).call(),
+                        3000,
+                        null
+                    );
+                    
+                    if (seasonInfo) {
+                        const startTimestamp = parseInt(seasonInfo.startTime || seasonInfo[1] || '0');
+                        const endTimestamp = parseInt(seasonInfo.endTime || seasonInfo[2] || '0');
+                        const isActive = seasonInfo.isActive || seasonInfo[3];
+                        const isSettled = seasonInfo.isSettled || seasonInfo[4];
+                        
+                        let statusText = '';
+                        if (isSettled) {
+                            statusText = '已结算';
+                            seasonBadge.className = 'px-2 py-1 bg-gray-500/20 text-gray-400 text-xs rounded-full border border-gray-500/30';
+                        } else if (isActive) {
+                            statusText = '进行中';
+                            seasonBadge.className = 'px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full border border-green-500/30';
+                        } else {
+                            statusText = '待开始';
+                            seasonBadge.className = 'px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded-full border border-yellow-500/30';
+                        }
+                        
+                        seasonBadge.textContent = `赛季 #${seasonId} · ${statusText}`;
+                        
+                        // 如果有时间信息，显示倒计时
+                        if (endTimestamp > 0 && isActive) {
+                            const timeLeft = endTimestamp - Math.floor(Date.now() / 1000);
+                            if (timeLeft > 0) {
+                                const days = Math.floor(timeLeft / 86400);
+                                const hours = Math.floor((timeLeft % 86400) / 3600);
+                                seasonBadge.textContent += ` · ${days}天${hours}时`;
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('[ARENA] Failed to update season display:', e.message);
+                seasonBadge.textContent = `赛季 #${seasonId}`;
+            }
+        }
+
+        // 更新赛季选择器
+        async function updateSeasonSelect(currentSeason) {
+            const seasonSelect = document.getElementById('seasonSelect');
+            if (!seasonSelect) return;
+            
+            try {
+                if (arenaRankingQueryContract) {
+                    const options = ['<option value="0">当前赛季</option>'];
+                    
+                    for (let i = currentSeason; i >= 1; i--) {
+                        try {
+                            const seasonInfo = await withTimeout(
+                                arenaRankingQueryContract.methods.getSeasonInfo(i).call(),
+                                2000,
+                                null
+                            );
+                            if (seasonInfo) {
+                                const isSettled = seasonInfo.isSettled || seasonInfo[4];
+                                const label = isSettled ? `赛季 #${i} (已结算)` : `赛季 #${i} (进行中)`;
+                                options.push(`<option value="${i}" ${i === currentSeason ? 'selected' : ''}>${label}</option>`);
+                            }
+                        } catch(e) {
+                            // 忽略获取失败的赛季
+                        }
+                    }
+                    
+                    if (options.length === 1) {
+                        options.push(`<option value="1">赛季 #1</option>`);
+                    }
+                    
+                    seasonSelect.innerHTML = options.join('');
+                    
+                    // 绑定切换事件
+                    seasonSelect.onchange = function() {
+                        const selectedSeason = parseInt(this.value);
+                        if (selectedSeason > 0) {
+                            loadLeaderboard(1, pageSize, selectedSeason);
+                        } else {
+                            loadLeaderboard(1, pageSize);
+                        }
+                    };
+                }
+            } catch (e) {
+                console.warn('[ARENA] Failed to update season select:', e.message);
+                seasonSelect.innerHTML = '<option value="0">当前赛季</option><option value="1">赛季 #1</option>';
+            }
+        }
+
+        async function loadLeaderboard(page = 1, size = pageSize, seasonId = null) {
             try {
                 const topPlayers = [];
                 const startRank = (page - 1) * size + 1;
@@ -3272,8 +3399,9 @@
                 currentPage = page;
                 
                 let paginationResult = null;
+                let targetSeasonId = seasonId;
                 
-                console.log(`[ARENA] loadLeaderboard called - page: ${page}, size: ${size}`);
+                console.log(`[ARENA] loadLeaderboard called - page: ${page}, size: ${size}, seasonId: ${seasonId}`);
                 
                 // 尝试获取arenaRankingQuery合约
                 if (!arenaRankingQueryContract) {
@@ -3290,21 +3418,29 @@
                 // 方案1：从arenaRankingQuery获取数据
                 if (arenaRankingQueryContract) {
                     try {
-                        let currentSeasonId = await withTimeout(
-                            arenaRankingQueryContract.methods.currentSeasonId().call(),
-                            5000,
-                            0
-                        );
-                        console.log('[ARENA] Current season ID from RankingQuery:', currentSeasonId);
-                        
-                        // 如果当前赛季ID为0，尝试获取所有赛季
-                        if (!currentSeasonId || parseInt(currentSeasonId) <= 0) {
-                            console.log('[ARENA] No active season, trying season 1');
-                            currentSeasonId = 1;
+                        if (!targetSeasonId) {
+                            targetSeasonId = await withTimeout(
+                                arenaRankingQueryContract.methods.currentSeasonId().call(),
+                                5000,
+                                0
+                            );
+                            console.log('[ARENA] Current season ID from RankingQuery:', targetSeasonId);
                         }
                         
+                        // 如果当前赛季ID为0，尝试获取所有赛季
+                        if (!targetSeasonId || parseInt(targetSeasonId) <= 0) {
+                            console.log('[ARENA] No active season, trying season 1');
+                            targetSeasonId = 1;
+                        }
+                        
+                        // 更新赛季显示
+                        updateSeasonDisplay(targetSeasonId);
+                        
+                        // 更新赛季选择器
+                        updateSeasonSelect(targetSeasonId);
+                        
                         paginationResult = await withTimeout(
-                            arenaRankingQueryContract.methods.getLeaderboardByPage(currentSeasonId, page - 1, size).call(),
+                            arenaRankingQueryContract.methods.getLeaderboardByPage(targetSeasonId, page - 1, size).call(),
                             5000,
                             null
                         );
@@ -3326,15 +3462,15 @@
                     try {
                         const arenaLeaderboardContract = await window.ZODIAC_WEB3.getContract('arenaLeaderboard', false);
                         if (arenaLeaderboardContract) {
-                            let fallbackSeasonId = 1;
+                            let fallbackSeasonId = targetSeasonId || 1;
                             try {
-                                const currentSeasonId = await withTimeout(
+                                const lbSeasonId = await withTimeout(
                                     arenaLeaderboardContract.methods.currentSeasonId ? arenaLeaderboardContract.methods.currentSeasonId().call() : Promise.resolve(1),
                                     3000,
                                     1
                                 );
-                                if (currentSeasonId && parseInt(currentSeasonId) > 0) {
-                                    fallbackSeasonId = parseInt(currentSeasonId);
+                                if (lbSeasonId && parseInt(lbSeasonId) > 0) {
+                                    fallbackSeasonId = parseInt(lbSeasonId);
                                 }
                             } catch(e) { console.warn('Failed to get season from Leaderboard'); }
                             
