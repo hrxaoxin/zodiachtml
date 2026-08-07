@@ -2489,6 +2489,36 @@ window.ZODIAC_WEB3 = (function() {
     }
 
     // --- NFT Info Methods ---
+    async function getOwnedNFTFullInfo(owner) {
+        try {
+            const nftDataContract = await getContract('nftData', false);
+            if (!nftDataContract) return [];
+            const result = await nftDataContract.methods.getOwnedNFTFullInfo(owner).call();
+            const tokenIds = result[0] || result.tokenIds;
+            const types = result[1] || result.types;
+            const levels = result[2] || result.levels;
+            const growths = result[3] || result.growths;
+            const attrTypes = result[4] || result.attrTypes;
+            const skillsFlat = result[5] || result.skillsFlat;
+            const n = tokenIds.length;
+            const list = new Array(n);
+            for (let i = 0; i < n; i++) {
+                list[i] = {
+                    tokenId: tokenIds[i].toString(),
+                    tokenType: parseInt(types[i]),
+                    level: parseInt(levels[i]),
+                    growth: parseInt(growths[i]),
+                    attrType: parseInt(attrTypes[i]),
+                    skills: [parseInt(skillsFlat[i * 2]), parseInt(skillsFlat[i * 2 + 1])]
+                };
+            }
+            return list;
+        } catch (e) {
+            console.warn('[ZODIAC_WEB3] getOwnedNFTFullInfo failed, fallback to old mode:', e && e.message ? e.message : e);
+            return null;
+        }
+    }
+
     async function getNFTFullInfo(tokenId) {
         try {
             const nftDataContract = await getContract('nftData', false);
@@ -2734,6 +2764,7 @@ window.ZODIAC_WEB3 = (function() {
         getBuybackConfig,
 
         // NFT Info
+        getOwnedNFTFullInfo,
         getNFTFullInfo,
         getNFTAttributes,
         getNFTSkillInfo,

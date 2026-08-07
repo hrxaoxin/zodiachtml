@@ -973,36 +973,57 @@
                 updateSaveButtons();
                 updateChallengeBtn();
                 
-                if (window.ZODIAC_WEB3 && typeof window.ZODIAC_WEB3.initWeb3 === 'function') {
+                // 自动连接钱包 - 页面加载后立即尝试
+                let walletConnected = false;
+                let autoConnected = false;
+                if (typeof window.ethereum !== 'undefined') {
                     try {
-                        await window.ZODIAC_WEB3.initWeb3();
-                        console.log('[ARENA] ZODIAC_WEB3.initWeb3 completed');
-                    } catch (e) {
-                        console.warn('[ARENA] ZODIAC_WEB3.initWeb3 failed (may be normal if no wallet):', e.message);
-                    }
-                }
-                
-                await initContracts(true);
-                await checkArenaLaunchState();
-                
-                const contractsReady = checkContractsReady();
-                console.log('[ARENA] Contracts ready status:', contractsReady);
-                
-                if (typeof window.ethereum !== 'undefined' && !accounts.length) {
-                    try {
+                        web3 = new Web3(window.ethereum);
                         const connectedAccounts = await window.ethereum.request({ method: 'eth_accounts' });
-                        if (connectedAccounts.length > 0) {
+                        if (connectedAccounts && connectedAccounts.length > 0) {
+                            console.log('[ARENA] 检测到已连接的钱包，正在自动连接...');
                             await connectWallet();
+                            walletConnected = true;
+                            autoConnected = true;
+                            console.log('[ARENA] 钱包自动连接成功');
+                        } else {
+                            console.log('[ARENA] 钱包未连接，等待用户手动连接');
+                            document.getElementById('connectionStatus').textContent = '请点击连接钱包按钮';
                         }
                     } catch (e) {
-                        console.warn('自动连接钱包失败:', e.message);
+                        console.warn('[ARENA] 检查钱包状态失败:', e.message);
                     }
+                } else {
+                    console.log('[ARENA] 未检测到以太坊钱包');
                 }
                 
-                await loadLeaderboard();
-                await loadRewardPool();
-                await loadMyStats();
-                await loadRewards();
+                if (!autoConnected) {
+                    // 只有在没有自动连接成功时才执行初始化
+                    if (window.ZODIAC_WEB3 && typeof window.ZODIAC_WEB3.initWeb3 === 'function') {
+                        try {
+                            if (walletConnected) {
+                                await window.ZODIAC_WEB3.initWeb3();
+                                console.log('[ARENA] ZODIAC_WEB3.initWeb3 completed');
+                            }
+                        } catch (e) {
+                            console.warn('[ARENA] ZODIAC_WEB3.initWeb3 failed:', e.message);
+                        }
+                    }
+                    
+                    await initContracts(walletConnected);
+                    await checkArenaLaunchState();
+                    
+                    const contractsReady = checkContractsReady();
+                    console.log('[ARENA] Contracts ready status:', contractsReady);
+                    
+                    await loadLeaderboard();
+                    await loadRewardPool();
+                    
+                    if (walletConnected) {
+                        await loadMyStats();
+                        await loadRewards();
+                    }
+                }
             } catch (e) {
                 console.error('init 函数执行失败:', e);
             }
@@ -3408,11 +3429,11 @@
                     leaderboardEl.dataset.leaderboardData = JSON.stringify(topPlayers);
                 }
                 
-                if (accounts.length > 0 && arenaRankingQueryContract && arenaBattleContract) {
+                if (accounts.length > 0 && arenaRankingQueryContract) {
                     try {
                         const [userRank, myStats] = await Promise.all([
                             arenaRankingQueryContract.methods.getPlayerRank(accounts[0]).call().catch(() => '0'),
-                            arenaBattleContract.methods.getPlayerRecord(accounts[0]).call().catch(() => ['0'])
+                            arenaRankingQueryContract.methods.getPlayerRecord(accounts[0]).call().catch(() => ['0'])
                         ]);
                         const userRankNum = parseInt(userRank) || 0;
                         const userPoints = parseInt(myStats[0] || '0');

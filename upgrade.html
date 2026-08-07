@@ -901,7 +901,37 @@
                     return;
                 }
 
-                const userNFTs = await loadNFTsParallel(tokenIds);
+                // 优先批量查询（1 RPC）获取所有 NFT 信息，失败则回退到并行逐张查询
+                let userNFTs = null;
+                try {
+                    if (window.ZODIAC_WEB3 && typeof window.ZODIAC_WEB3.getOwnedNFTFullInfo === 'function') {
+                        const batch = await window.ZODIAC_WEB3.getOwnedNFTFullInfo(account);
+                        if (batch && batch.length > 0) {
+                            userNFTs = batch.map(n => {
+                                const info = window.ZODIAC_UTILS.getNFTInfo(n.tokenType);
+                                const lvl = (typeof n.level === 'number' ? n.level : parseInt(n.level)).toString();
+                                const typ = (typeof n.tokenType === 'number' ? n.tokenType : parseInt(n.tokenType)).toString();
+                                const grw = (typeof n.growth === 'number' ? n.growth : parseInt(n.growth)).toString();
+                                return {
+                                    id: n.tokenId.toString(),
+                                    type: typ,
+                                    level: lvl,
+                                    growth: grw,
+                                    name: info.name,
+                                    image: info.imagePath,
+                                    gender: info.gender
+                                };
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.warn('批量加载NFT失败，使用并行模式回退:', e);
+                    userNFTs = null;
+                }
+
+                if (!userNFTs) {
+                    userNFTs = await loadNFTsParallel(tokenIds);
+                }
                 allUserNFTs = userNFTs;
                 renderNFTs(userNFTs);
             } catch (error) {

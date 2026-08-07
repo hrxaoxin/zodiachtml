@@ -855,51 +855,67 @@
             const eligibleNFTs = document.getElementById('eligibleNFTs');
 
             try {
-                const tokenIds = await nftContract.methods.getTokenIdsByOwner(account).call();
-                
                 let minLevel = 1;
                 try {
                     minLevel = parseInt(await stakingContract.methods.minStakingLevel().call());
                 } catch (e) {
                     console.warn('获取最低质押等级失败:', e);
                 }
-                
-                const nftPromises = tokenIds.map(tokenId => {
-                    return Promise.all([
-                        window.ZODIAC_WEB3.getNFTFullInfo(tokenId).catch(e => ({ tokenType: 0, level: 1, growth: 0 })),
-                        stakingContract.methods.getStakingInfo(tokenId).call().catch(() => ({ owner: '0x0000000000000000000000000000000000000000' }))
-                    ]).then(([nftInfo, stakeInfo]) => {
-                        if (!nftInfo || nftInfo.tokenType === 0) {
-                            return null;
-                        }
-                        
-                        return {
-                            tokenId: tokenId.toString(),
-                            level: nftInfo.level.toString(),
-                            type: nftInfo.tokenType.toString(),
-                            growth: nftInfo.growth,
-                            stakeInfo: stakeInfo
-                        };
-                    }).catch(e => {
-                        console.warn(`获取NFT ${tokenId} 详情失败:`, e);
-                        return null;
-                    });
-                });
 
-                const results = await Promise.all(nftPromises);
-                const nfts = results.filter(nft => nft !== null);
+                // 优先尝试批量查询（1 RPC），失败则回退到旧 N+1 模式
+                let allNftInfos = window.ZODIAC_WEB3 ? await window.ZODIAC_WEB3.getOwnedNFTFullInfo(account) : null;
+                let stakingInfoByToken = {};
+
+                if (allNftInfos && allNftInfos.length > 0) {
+                    // 批量查询质押信息（1 RPC 批量）
+                    try {
+                        const ids = allNftInfos.map(n => n.tokenId);
+                        const chunks = [];
+                        for (let i = 0; i < ids.length; i += 50) chunks.push(ids.slice(i, i + 50));
+                        for (const chunk of chunks) {
+                            const infos = await Promise.all(chunk.map(id =>
+                                stakingContract.methods.getStakingInfo(id).call().catch(() => ({ owner: '0x0000000000000000000000000000000000000000' }))
+                            ));
+                            chunk.forEach((id, j) => { stakingInfoByToken[id] = infos[j]; });
+                        }
+                    } catch (e) {
+                        console.warn('批量查询质押信息失败:', e);
+                    }
+                } else {
+                    // 回退：旧模式（逐张查）
+                    const tokenIds = await nftContract.methods.getTokenIdsByOwner(account).call();
+                    const nftPromises = tokenIds.map(tokenId =>
+                        Promise.all([
+                            window.ZODIAC_WEB3.getNFTFullInfo(tokenId).catch(e => ({ tokenType: 0, level: 1, growth: 0 })),
+                            stakingContract.methods.getStakingInfo(tokenId).call().catch(() => ({ owner: '0x0000000000000000000000000000000000000000' }))
+                        ])
+                    );
+                    const results = await Promise.all(nftPromises);
+                    allNftInfos = [];
+                    for (let i = 0; i < tokenIds.length; i++) {
+                        const [nftInfo, stakeInfo] = results[i];
+                        if (!nftInfo || nftInfo.tokenType === 0) continue;
+                        stakingInfoByToken[tokenIds[i].toString()] = stakeInfo;
+                        allNftInfos.push(nftInfo);
+                    }
+                }
 
                 const eligible = [];
-                for (const nft of nfts) {
-                    if (parseInt(nft.level) >= minLevel) {
-                        if (nft.stakeInfo.owner === '0x0000000000000000000000000000000000000000') {
-                            const nftInfo = getNFTInfo(nft.type);
-                            const isRare = isNFTRare(nft.type);
-                            const gender = parseInt(nft.type) % 2;
+                for (let i = 0; i < allNftInfos.length; i++) {
+                    const nft = allNftInfos[i];
+                    const nftLevel = typeof nft.level === 'number' ? nft.level : parseInt(nft.level);
+                    const nftType = typeof nft.type === 'number' ? nft.type : parseInt(nft.type);
+                    const tid = nft.tokenId.toString();
+                    if (nftLevel >= minLevel) {
+                        const sInfo = stakingInfoByToken[tid];
+                        if (!sInfo || sInfo.owner === '0x0000000000000000000000000000000000000000') {
+                            const nftInfo = getNFTInfo(String(nftType));
+                            const isRare = isNFTRare(nftType);
+                            const gender = nftType % 2;
                             eligible.push({
-                                id: nft.tokenId,
-                                type: nft.type,
-                                level: nft.level,
+                                id: tid,
+                                type: String(nftType),
+                                level: String(nftLevel),
                                 growth: nft.growth,
                                 image: nftInfo.imagePath,
                                 name: nftInfo.name,
@@ -1001,29 +1017,46 @@
                     console.warn('获取最小质押时间失败，使用默认30分钟:', e);
                 }
 
-                const stakePromises = tokenIds.map(tokenId => {
-                    return Promise.all([
-                        stakingContract.methods.getStakingInfo(tokenId).call(),
-                        window.ZODIAC_WEB3.getNFTFullInfo(tokenId).catch(e => ({ tokenType: 0, level: 1, growth: 0 }))
-                    ]).then(([stakeInfo, nftInfo]) => {
-                        if (!nftInfo || nftInfo.tokenType === 0) {
-                            return null;
-                        }
-                        return {
-                            tokenId: tokenId.toString(),
-                            stakeInfo: stakeInfo,
-                            type: nftInfo.tokenType.toString(),
-                            level: nftInfo.level.toString(),
-                            growth: nftInfo.growth
-                        };
-                    }).catch(e => {
-                        console.warn(`获取质押NFT ${tokenId} 详情失败:`, e);
-                        return null;
-                    });
-                });
+                // 先批量获取所有NFT信息（1 RPC），按 tokenId 建立索引
+                let nftInfoById = {};
+                try {
+                    const allNfts = window.ZODIAC_WEB3 ? await window.ZODIAC_WEB3.getOwnedNFTFullInfo(account) : null;
+                    if (allNfts && allNfts.length > 0) {
+                        for (const n of allNfts) nftInfoById[n.tokenId.toString()] = n;
+                    }
+                } catch (e) { /* ignore - fallback below */ }
 
-                const results = await Promise.all(stakePromises);
-                const stakes = results.filter(s => s !== null);
+                // 批量查询质押信息（分块 Promise.all）
+                const stakingInfoMap = {};
+                const idChunks = [];
+                for (let i = 0; i < tokenIds.length; i += 50) idChunks.push(tokenIds.slice(i, i + 50));
+                for (const chunk of idChunks) {
+                    const sInfos = await Promise.all(chunk.map(id =>
+                        stakingContract.methods.getStakingInfo(id).call().catch(() => null)
+                    ));
+                    chunk.forEach((id, j) => { if (sInfos[j]) stakingInfoMap[id.toString()] = sInfos[j]; });
+                }
+
+                const stakes = [];
+                for (let i = 0; i < tokenIds.length; i++) {
+                    const tid = tokenIds[i].toString();
+                    const stakeInfo = stakingInfoMap[tid];
+                    if (!stakeInfo) continue;
+                    let nftInfo = nftInfoById[tid];
+                    if (!nftInfo) {
+                        // 回退：单张查询（仅 batch 未覆盖时）
+                        try { nftInfo = await window.ZODIAC_WEB3.getNFTFullInfo(tid); }
+                        catch (e) { continue; }
+                        if (!nftInfo || nftInfo.tokenType === 0) continue;
+                    }
+                    stakes.push({
+                        tokenId: tid,
+                        stakeInfo: stakeInfo,
+                        type: (typeof nftInfo.tokenType !== 'string' ? String(nftInfo.tokenType) : nftInfo.tokenType).toString(),
+                        level: (typeof nftInfo.level !== 'string' ? String(nftInfo.level) : nftInfo.level).toString(),
+                        growth: nftInfo.growth
+                    });
+                }
 
                 const now = Math.floor(Date.now() / 1000);
                 let html = '';

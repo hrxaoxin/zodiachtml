@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -889,35 +889,56 @@
                 breedableNFTs = [];
                 const account = getAccount();
 
-                const tokenIds = await nftContract.methods.getTokenIdsByOwner(account).call();
-                
-                const nftPromises = tokenIds.map(tokenId => {
-                    return Promise.all([
-                        window.ZODIAC_WEB3.getNFTFullInfo(tokenId).catch(e => ({ tokenType: 0, level: 1 })),
-                        selfBreedingCoreContract ? selfBreedingCoreContract.methods.isInCooldown(tokenId).call().catch(() => false) : Promise.resolve(false),
-                        selfBreedingCoreContract ? selfBreedingCoreContract.methods.getCooldownEndTime(tokenId).call().catch(() => null) : Promise.resolve(null)
-                    ]).then(([nftInfo, isOnCooldown, cooldownEndTime]) => {
-                        if (!nftInfo || nftInfo.tokenType === 0) {
-                            return null;
-                        }
-                        return {
-                            id: tokenId ? tokenId.toString() : '0',
-                            type: nftInfo.tokenType.toString(),
-                            level: nftInfo.level.toString(),
-                            gender: nftInfo.tokenType % 2,
-                            image: getNFTImage(nftInfo.tokenType),
-                            name: getNFTName(nftInfo.tokenType),
-                            isOnCooldown: isOnCooldown,
-                            cooldownEndTime: cooldownEndTime
-                        };
-                    }).catch(e => {
-                        console.warn(`获取NFT ${tokenId} 详情失败:`, e);
-                        return null;
-                    });
-                });
+                // 优先批量获取所有 NFT 信息（1 RPC），失败则回退
+                let allNftInfos = window.ZODIAC_WEB3 ? await window.ZODIAC_WEB3.getOwnedNFTFullInfo(account) : null;
+                let allNftList;
+                if (allNftInfos && allNftInfos.length > 0) {
+                    allNftList = allNftInfos.map(n => ({
+                        tokenId: n.tokenId,
+                        tokenType: typeof n.tokenType === 'string' ? parseInt(n.tokenType) : n.tokenType,
+                        level: typeof n.level === 'string' ? parseInt(n.level) : n.level
+                    }));
+                } else {
+                    // 回退：逐张查询旧模式
+                    const tokenIds = await nftContract.methods.getTokenIdsByOwner(account).call();
+                    const raw = await Promise.all(tokenIds.map(id =>
+                        window.ZODIAC_WEB3.getNFTFullInfo(id).catch(e => ({ tokenType: 0, level: 1 }))
+                    ));
+                    allNftList = [];
+                    for (let i = 0; i < tokenIds.length; i++) {
+                        if (raw[i] && raw[i].tokenType > 0) allNftList.push({ tokenId: tokenIds[i].toString(), tokenType: raw[i].tokenType, level: raw[i].level });
+                    }
+                }
 
-                const results = await Promise.all(nftPromises);
-                const allNfts = results.filter(nft => nft !== null);
+                // 批量查询冷却信息（分块，1 组 50 个并发）
+                const coolByToken = {};
+                const cdByToken = {};
+                const ids = allNftList.map(x => x.tokenId);
+                const chunks = [];
+                for (let i = 0; i < ids.length; i += 50) chunks.push(ids.slice(i, i + 50));
+                for (const chunk of chunks) {
+                    const zips = await Promise.all(chunk.map(id => Promise.all([
+                        selfBreedingCoreContract ? selfBreedingCoreContract.methods.isInCooldown(id).call().catch(() => false) : Promise.resolve(false),
+                        selfBreedingCoreContract ? selfBreedingCoreContract.methods.getCooldownEndTime(id).call().catch(() => null) : Promise.resolve(null)
+                    ])));
+                    chunk.forEach((id, j) => { coolByToken[id] = zips[j][0]; cdByToken[id] = zips[j][1]; });
+                }
+
+                const allNfts = [];
+                for (let i = 0; i < allNftList.length; i++) {
+                    const nft = allNftList[i];
+                    const tid = nft.tokenId.toString();
+                    allNfts.push({
+                        id: tid,
+                        type: nft.tokenType.toString(),
+                        level: nft.level.toString(),
+                        gender: nft.tokenType % 2,
+                        image: getNFTImage(nft.tokenType),
+                        name: getNFTName(nft.tokenType),
+                        isOnCooldown: !!coolByToken[tid],
+                        cooldownEndTime: cdByToken[tid] || null
+                    });
+                }
 
                 for (const nftData of allNfts) {
                     if (isNFTLevelEligible(nftData.level)) {
