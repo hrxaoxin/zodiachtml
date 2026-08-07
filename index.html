@@ -792,22 +792,23 @@
                         console.log('[FENHONG] LP pool:', lpFormatted, 'Token pool:', tokenFormatted, 'BNB pool:', bnbFormatted);
                         
                         // 显示三种类型的总和作为总分红池
-                        // 使用BNB作为统一单位（因为BNB是原生代币）
-                        const totalPoolBNB = web3Instance.utils.fromWei(bnbWei, 'ether');
-                        const totalPoolFormatted = totalPoolBNB;
+                        // 显示所有类型的汇总（BNB + LP + Token）
+                        const bnbPoolNum = parseFloat(web3Instance.utils.fromWei(bnbWei, 'ether'));
+                        const lpPoolNum = parseFloat(lpFormatted);
+                        const tokenPoolNum = parseFloat(tokenFormatted);
                         
-                        // 如果BNB池为0但其他池有余额，显示汇总信息
-                        if (parseFloat(totalPoolBNB) > 0 || parseFloat(lpFormatted) > 0 || parseFloat(tokenFormatted) > 0) {
-                            // 显示主要的BNB余额，如果为0则显示LP或Token余额
+                        if (bnbPoolNum > 0 || lpPoolNum > 0 || tokenPoolNum > 0) {
                             let displayAmount = '0.0000';
-                            if (parseFloat(totalPoolBNB) > 0) {
-                                displayAmount = totalPoolBNB;
-                            } else if (parseFloat(bnbFormatted) > 0) {
+                            if (bnbPoolNum > 0) {
                                 displayAmount = bnbFormatted;
-                            } else if (parseFloat(lpFormatted) > 0) {
-                                displayAmount = lpFormatted;
-                            } else if (parseFloat(tokenFormatted) > 0) {
-                                displayAmount = tokenFormatted;
+                                if (lpPoolNum > 0 || tokenPoolNum > 0) {
+                                    displayAmount += ` + ${lpFormatted} LP + ${tokenFormatted} TOKEN`;
+                                }
+                            } else if (lpPoolNum > 0) {
+                                displayAmount = lpFormatted + ' LP';
+                                if (tokenPoolNum > 0) displayAmount += ` + ${tokenFormatted} TOKEN`;
+                            } else if (tokenPoolNum > 0) {
+                                displayAmount = tokenFormatted + ' TOKEN';
                             }
                             document.getElementById('totalPool').textContent = displayAmount;
                         } else {
@@ -854,17 +855,25 @@
                     }
                 }
 
-                // 加载已分配金额（从 rewardManager 合约获取）
-                if (rewardManager) {
+                // 加载已领取金额（从 DividendManagerLP 合约获取）
+                if (dividendManagerLP) {
                     try {
-                        const distributedWei = await rewardManager.methods.totalDistributed().call();
-                        console.log('[FENHONG] Total distributed:', _formatTokenAmount(distributedWei));
+                        const distributedWei = await dividendManagerLP.methods.totalDistributed().call();
+                        console.log('[FENHONG] Total distributed from DMLP:', _formatTokenAmount(distributedWei));
                         document.getElementById('distributed').textContent = _formatTokenAmount(distributedWei);
                     } catch (e) {
-                        console.error('[FENHONG] Failed to load totalDistributed:', e.message);
+                        console.error('[FENHONG] Failed to load totalDistributed from DMLP:', e.message);
+                        // 回退：尝试从 rewardManager 获取
+                        if (rewardManager) {
+                            try {
+                                const distributedWei = await rewardManager.methods.totalDistributed().call();
+                                console.log('[FENHONG] Fallback total distributed:', _formatTokenAmount(distributedWei));
+                                document.getElementById('distributed').textContent = _formatTokenAmount(distributedWei);
+                            } catch (e2) {
+                                console.error('[FENHONG] Fallback also failed:', e2.message);
+                            }
+                        }
                     }
-                } else {
-                    console.warn('[FENHONG] RewardManager not available for distributed amount');
                 }
 
                 // 如果已连接钱包，加载用户个人数据
