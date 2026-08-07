@@ -2955,8 +2955,22 @@
 
                         const fmt = (wei) => _formatTokenAmount(wei);
 
-                        const allDisplay = `LP: ${fmt(lpPool)} | 代币: ${fmt(tokenPool)} | BNB: ${fmt(bnbPool)}`;
-                        rewardPoolWei = bnbPool; // 保留用于后续兜底逻辑
+                        // 只显示当前奖励类型的奖励池
+                        let currentPool = '0';
+                        let currentLabel = 'BNB';
+                        
+                        if (rewardType === 0) {
+                            currentPool = lpPool;
+                            currentLabel = 'LP';
+                        } else if (rewardType === 1) {
+                            currentPool = tokenPool;
+                            currentLabel = '代币';
+                        } else {
+                            currentPool = bnbPool;
+                            currentLabel = 'BNB';
+                        }
+
+                        rewardPoolWei = currentPool;
 
                         const rewardPoolAmountEl = document.getElementById('rewardPoolAmount');
                         const rewardPoolLabelEl = document.getElementById('rewardPoolLabel');
@@ -2966,18 +2980,18 @@
                         const claimedRewardTitleEl = document.getElementById('claimedRewardTitle');
                         const rewardTipTextEl = document.getElementById('rewardTipText');
 
-                        if (rewardPoolAmountEl) rewardPoolAmountEl.textContent = allDisplay;
-                        if (rewardPoolLabelEl) rewardPoolLabelEl.textContent = '三类型总奖励池';
-                        if (rewardRateInfoEl) rewardRateInfoEl.textContent = 'LP/代币/BNB 三类型独立累计';
+                        if (rewardPoolAmountEl) rewardPoolAmountEl.textContent = fmt(currentPool);
+                        if (rewardPoolLabelEl) rewardPoolLabelEl.textContent = `${currentLabel}奖励池`;
+                        if (rewardRateInfoEl) rewardRateInfoEl.textContent = `当前奖励类型：${currentLabel}`;
                         if (rewardSectionTitleEl) rewardSectionTitleEl.textContent = '奖励领取';
                         if (unclaimedRewardTitleEl) unclaimedRewardTitleEl.textContent = '可领取奖励';
                         if (claimedRewardTitleEl) claimedRewardTitleEl.textContent = '已领取奖励';
 
                         if (rewardTipTextEl) {
-                            rewardTipTextEl.textContent = '💡 三种奖励类型独立累计，可随时分别领取LP/代币/BNB';
+                            rewardTipTextEl.textContent = `💡 当前为${currentLabel}奖励模式，赛季结束后按排名发放`;
                         }
 
-                        console.log(`Reward Pool: ${allDisplay}`);
+                        console.log(`Reward Pool (${currentLabel}): ${fmt(currentPool)}`);
                         return;
                     } catch (e) {
                         console.warn('调用getPoolBalances失败:', e.message);
@@ -3620,14 +3634,14 @@
                 }
                 
                 let rewards = [];
-                let rewardTypeLabel = 'Token';
+                let rewardTypeLabel = 'BNB';
+                let allTypeRewards = {};
                 
                 try {
                     if (window.ZODIAC_WEB3 && web3) {
                         const arenaRewardLPContract = await window.ZODIAC_WEB3.getContract('arenaRewardLP', false);
                         if (arenaRewardLPContract) {
                             const rewardType = await arenaRewardLPContract.methods.rewardType().call().catch(() => '2');
-                            let rewardPoolBalance = '0';
                             
                             if (rewardType === '0') {
                                 rewardTypeLabel = 'LP';
@@ -3637,24 +3651,56 @@
                                 rewardTypeLabel = 'BNB';
                             }
                             
+                            const currentEpoch = await arenaRewardLPContract.methods.epoch().call().catch(() => '1');
+                            let currentSeasonId = 1;
+                            
                             try {
                                 if (arenaRankingQueryContract) {
                                     const seasonInfo = await arenaRankingQueryContract.methods.getCurrentSeasonInfo().call();
-                                    rewardPoolBalance = seasonInfo.rewardPool !== undefined ? seasonInfo.rewardPool : (seasonInfo[5] || '0');
+                                    currentSeasonId = parseInt(seasonInfo.seasonId !== undefined ? seasonInfo.seasonId : (seasonInfo[0] || '1'));
                                 }
                             } catch (e) {
-                                console.warn('获取奖励池余额失败:', e);
+                                console.warn('获取赛季信息失败:', e);
                             }
                             
-                            const balanceNum = parseFloat(web3.utils.fromWei(rewardPoolBalance, 'ether'));
                             const totalPlayers = topPlayers.length;
                             
-                            if (balanceNum > 0 && totalPlayers > 0) {
+                            // 获取三种奖励池余额
+                            const pools = [0, 1, 2].map(async (typeIdx) => {
+                                try {
+                                    const pool = await arenaRewardLPContract.methods.seasonPoolByType(currentEpoch, currentSeasonId, typeIdx).call();
+                                    return parseFloat(web3.utils.fromWei(pool, 'ether'));
+                                } catch (e) {
+                                    return 0;
+                                }
+                            });
+                            const [lpPool, tokenPool, bnbPool] = await Promise.all(pools);
+                            
+                            allTypeRewards = { lpPool, tokenPool, bnbPool };
+                            
+                            if (totalPlayers > 0) {
+                                // 计算当前奖励类型的奖励
+                                const activePool = rewardType === '0' ? lpPool : (rewardType === '1' ? tokenPool : bnbPool);
+                                
                                 rewards = topPlayers.map(player => {
-                                    return String(calculateRankReward(player.rank, balanceNum, totalPlayers));
+                                    const lpR = calculateRankReward(player.rank, lpPool, totalPlayers);
+                                    const tokenR = calculateRankReward(player.rank, tokenPool, totalPlayers);
+                                    const bnbR = calculateRankReward(player.rank, bnbPool, totalPlayers);
+                                    
+                                    // 保存所有类型的奖励用于显示
+                                    player._lpReward = lpR;
+                                    player._tokenReward = tokenR;
+                                    player._bnbReward = bnbR;
+                                    
+                                    return String(calculateRankReward(player.rank, activePool, totalPlayers));
                                 });
                             } else {
                                 rewards = topPlayers.map(() => '0');
+                                topPlayers.forEach(player => {
+                                    player._lpReward = 0;
+                                    player._tokenReward = 0;
+                                    player._bnbReward = 0;
+                                });
                             }
                         }
                     }
@@ -3740,13 +3786,20 @@
                                                    player.rank === 2 ? 'bg-gradient-to-br from-gray-300 to-gray-500' :
                                                    player.rank === 3 ? 'bg-gradient-to-br from-amber-600 to-amber-800' :
                                                    'bg-gray-700';
-                            const rankTextColor = player.rank <= 3 ? 'text-yellow-400' : 'text-gray-400';
-                            const rewardAmount = parseFloat(rewards[index] || '0');
+                            
+                            // 获取当前奖励类型对应的奖励值
+                            const currentReward = rewards[index] || '0';
+                            const rewardAmount = parseFloat(currentReward);
+                            
                             let rewardDisplay = '--';
                             if (rewardAmount > 0) {
-                                const fixed8 = rewardAmount.toFixed(8);
-                                rewardDisplay = `${fixed8 === '0.00000000' ? rewardAmount.toFixed(12) : fixed8} <span class="text-xs text-yellow-600">${rewardTypeLabel}</span>`;
+                                const fixed = rewardAmount.toFixed(8);
+                                const displayVal = fixed === '0.00000000' ? rewardAmount.toFixed(12) : fixed;
+                                rewardDisplay = `<div class="text-yellow-400 text-sm font-bold">${parseFloat(displayVal).toFixed(4)} <span class="text-xs text-yellow-600">${rewardTypeLabel}</span></div>`;
+                            } else {
+                                rewardDisplay = '<div class="text-gray-600 text-sm">暂无奖励</div>';
                             }
+                            
                             const canChallenge = currentUserRank <= 0 || player.rank < currentUserRank;
                             const rowStyle = canChallenge 
                                 ? 'cursor-pointer hover:bg-white/10 border border-transparent hover:border-blue-500/30'
@@ -3769,8 +3822,8 @@
                                         `).join('') : '<span class="text-gray-500 text-xs">暂无战队</span>'}
                                     </div>
                                 </div>
-                                <div class="text-right ml-3 flex-shrink-0">
-                                    <div class="text-yellow-400 text-sm font-bold">${rewardDisplay}</div>
+                                <div class="text-right ml-3 flex-shrink-0 min-w-[100px]">
+                                    ${rewardDisplay}
                                     ${!canChallenge ? '<div class="text-gray-500 text-xs mt-1">排名不低于你</div>' : ''}
                                 </div>
                             </div>
