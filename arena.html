@@ -3267,59 +3267,96 @@
             try {
                 const topPlayers = [];
                 const startRank = (page - 1) * size + 1;
-                const startIndex = (page - 1) * size;
                 
                 pageSize = size;
                 currentPage = page;
                 
                 let paginationResult = null;
                 
-                console.log(`[ARENA] loadLeaderboard called - page: ${page}, size: ${size}, arenaRankingQueryContract: ${!!arenaRankingQueryContract}`);
+                console.log(`[ARENA] loadLeaderboard called - page: ${page}, size: ${size}`);
                 
+                // 尝试获取arenaRankingQuery合约
                 if (!arenaRankingQueryContract) {
                     try {
                         if (window.ZODIAC_WEB3) {
                             arenaRankingQueryContract = await window.ZODIAC_WEB3.getContract('arenaRankingQuery', false);
-                            console.log('arenaRankingQueryContract initialized for read-only access:', arenaRankingQueryContract ? arenaRankingQueryContract.options.address : null);
+                            console.log('arenaRankingQueryContract:', arenaRankingQueryContract ? arenaRankingQueryContract.options.address : 'null');
                         }
                     } catch (e) {
                         console.warn('Failed to get arenaRankingQuery contract:', e.message);
                     }
                 }
                 
-                if (!arenaRankingQueryContract) {
-                    console.log('[ARENA] arenaRankingQueryContract not available');
-                } else {
+                // 方案1：从arenaRankingQuery获取数据
+                if (arenaRankingQueryContract) {
                     try {
-                        const currentSeasonId = await withTimeout(
+                        let currentSeasonId = await withTimeout(
                             arenaRankingQueryContract.methods.currentSeasonId().call(),
                             5000,
-                            1
+                            0
                         );
-                        console.log('[ARENA] Current season ID:', currentSeasonId);
+                        console.log('[ARENA] Current season ID from RankingQuery:', currentSeasonId);
+                        
+                        // 如果当前赛季ID为0，尝试获取所有赛季
+                        if (!currentSeasonId || parseInt(currentSeasonId) <= 0) {
+                            console.log('[ARENA] No active season, trying season 1');
+                            currentSeasonId = 1;
+                        }
                         
                         paginationResult = await withTimeout(
                             arenaRankingQueryContract.methods.getLeaderboardByPage(currentSeasonId, page - 1, size).call(),
                             5000,
                             null
                         );
-                        console.log('[ARENA] paginationResult:', paginationResult);
-                        console.log('[ARENA] paginationResult type:', typeof paginationResult, 'isArray:', Array.isArray(paginationResult));
-                        if (paginationResult && typeof paginationResult === 'object') {
-                            console.log('[ARENA] paginationResult keys:', Object.keys(paginationResult));
-                            if (Array.isArray(paginationResult)) {
-                                console.log('[ARENA] paginationResult[0] type:', typeof paginationResult[0], 'length:', Array.isArray(paginationResult[0]) ? paginationResult[0].length : 'N/A');
-                            }
-                        }
+                        console.log('[ARENA] paginationResult from RankingQuery:', paginationResult);
                         
                         if (paginationResult) {
                             totalPages = parseInt(paginationResult.totalPages) || parseInt(paginationResult[1]) || 1;
                             totalPlayers = parseInt(paginationResult.totalPlayers) || parseInt(paginationResult[2]) || 0;
-                            
                             console.log('[ARENA] totalPages:', totalPages, 'totalPlayers:', totalPlayers);
                         }
                     } catch (e) {
-                        console.log('获取排行榜失败:', e);
+                        console.warn('获取排行榜失败(RankingQuery):', e);
+                    }
+                }
+                
+                // 方案2：如果方案1失败，尝试直接从arenaLeaderboard获取
+                if ((!paginationResult || !paginationResult.entries || paginationResult.entries.length === 0) && window.ZODIAC_WEB3) {
+                    console.log('[ARENA] Trying fallback: arenaLeaderboard contract');
+                    try {
+                        const arenaLeaderboardContract = await window.ZODIAC_WEB3.getContract('arenaLeaderboard', false);
+                        if (arenaLeaderboardContract) {
+                            let fallbackSeasonId = 1;
+                            try {
+                                const currentSeasonId = await withTimeout(
+                                    arenaLeaderboardContract.methods.currentSeasonId ? arenaLeaderboardContract.methods.currentSeasonId().call() : Promise.resolve(1),
+                                    3000,
+                                    1
+                                );
+                                if (currentSeasonId && parseInt(currentSeasonId) > 0) {
+                                    fallbackSeasonId = parseInt(currentSeasonId);
+                                }
+                            } catch(e) { console.warn('Failed to get season from Leaderboard'); }
+                            
+                            const fallbackResult = await withTimeout(
+                                arenaLeaderboardContract.methods.getLeaderboardByPage(fallbackSeasonId, page - 1, size).call(),
+                                5000,
+                                null
+                            );
+                            console.log('[ARENA] Fallback result from Leaderboard:', fallbackResult);
+                            
+                            if (fallbackResult && Array.isArray(fallbackResult)) {
+                                paginationResult = {
+                                    entries: fallbackResult[0] || [],
+                                    totalPages: fallbackResult[1] || 1,
+                                    totalPlayers: fallbackResult[2] || 0
+                                };
+                                totalPages = parseInt(paginationResult.totalPages) || 1;
+                                totalPlayers = parseInt(paginationResult.totalPlayers) || 0;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Fallback leaderboard also failed:', e);
                     }
                 }
                 
