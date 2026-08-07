@@ -776,82 +776,57 @@
                     console.warn('[FENHONG] Failed to get dividend contracts:', e.message);
                 }
 
-                // 加载总池金额（从 DividendManagerLP 获取三类型池余额，显示总和）
+                // 加载总分红池：显示 ArenaRewardLP 合约中当前奖励类型对应的余额
                 let totalPoolLoaded = false;
-                if (dividendManagerLP) {
+                try {
+                    const arenaRewardLP = await ZODIAC_WEB3.getContract('arenaRewardLP', false);
+                    if (arenaRewardLP) {
+                        const rewardType = await arenaRewardLP.methods.rewardType().call();
+                        const balances = await arenaRewardLP.methods.getPoolBalances().call();
+                        const typeIdx = Number(rewardType); // 0=LP, 1=TOKEN, 2=BNB
+                        const labels = ['LP', 'TOKEN', 'BNB'];
+                        const weiVals = [
+                            balances[0]?.toString() || balances.lp?.toString() || '0',
+                            balances[1]?.toString() || balances.token?.toString() || '0',
+                            balances[2]?.toString() || balances.bnb?.toString() || '0'
+                        ];
+                        const targetWei = weiVals[typeIdx];
+                        const formatted = _formatTokenAmount(targetWei);
+                        const label = labels[typeIdx] || '?';
+                        console.log(`[FENHONG] ArenaRewardLP rewardType=${typeIdx} (${label}), balance=${targetWei} (${formatted})`);
+                        document.getElementById('totalPool').textContent = `${formatted} ${label}`;
+                        totalPoolLoaded = true;
+                    }
+                } catch (e) {
+                    console.warn('[FENHONG] Failed to load total pool from ArenaRewardLP:', e.message);
+                }
+
+                // 回退：如果ArenaRewardLP获取失败，尝试从DividendManagerLP获取三类型总和
+                if (!totalPoolLoaded && dividendManagerLP) {
                     try {
                         const balances = await dividendManagerLP.methods.getPoolBalances().call();
-                        console.log('[FENHONG] Pool balances raw:', balances);
                         const lpWei = balances[0]?.toString() || balances.lp?.toString() || '0';
                         const tokenWei = balances[1]?.toString() || balances.token?.toString() || '0';
                         const bnbWei = balances[2]?.toString() || balances.bnb?.toString() || '0';
-                        
-                        const lpFormatted = _formatTokenAmount(lpWei);
-                        const tokenFormatted = _formatTokenAmount(tokenWei);
-                        const bnbFormatted = _formatTokenAmount(bnbWei);
-                        console.log(`[FENHONG] Pool balances - LP: ${lpWei} (${lpFormatted}), Token: ${tokenWei} (${tokenFormatted}), BNB: ${bnbWei} (${bnbFormatted})`);
-                        
-                        // 显示所有类型的汇总
                         const bnbPoolNum = parseFloat(web3Instance.utils.fromWei(bnbWei, 'ether'));
                         const lpPoolNum = parseFloat(web3Instance.utils.fromWei(lpWei, 'ether'));
                         const tokenPoolNum = parseFloat(web3Instance.utils.fromWei(tokenWei, 'ether'));
-                        
-                        console.log(`[FENHONG] Pool numeric values - BNB: ${bnbPoolNum}, LP: ${lpPoolNum}, Token: ${tokenPoolNum}`);
-                        
                         if (bnbPoolNum > 0 || lpPoolNum > 0 || tokenPoolNum > 0) {
                             let displayAmount = '';
                             if (bnbPoolNum > 0) {
-                                displayAmount = bnbFormatted + ' BNB';
-                                if (lpPoolNum > 0) displayAmount += ` + ${lpFormatted} LP`;
-                                if (tokenPoolNum > 0) displayAmount += ` + ${tokenFormatted} TOKEN`;
+                                displayAmount = _formatTokenAmount(bnbWei) + ' BNB';
+                                if (lpPoolNum > 0) displayAmount += ` + ${_formatTokenAmount(lpWei)} LP`;
+                                if (tokenPoolNum > 0) displayAmount += ` + ${_formatTokenAmount(tokenWei)} TOKEN`;
                             } else if (lpPoolNum > 0) {
-                                displayAmount = lpFormatted + ' LP';
-                                if (tokenPoolNum > 0) displayAmount += ` + ${tokenFormatted} TOKEN`;
-                            } else if (tokenPoolNum > 0) {
-                                displayAmount = tokenFormatted + ' TOKEN';
+                                displayAmount = _formatTokenAmount(lpWei) + ' LP';
+                                if (tokenPoolNum > 0) displayAmount += ` + ${_formatTokenAmount(tokenWei)} TOKEN`;
+                            } else {
+                                displayAmount = _formatTokenAmount(tokenWei) + ' TOKEN';
                             }
                             document.getElementById('totalPool').textContent = displayAmount;
-                        } else {
-                            document.getElementById('totalPool').textContent = '0.0000';
-                        }
-                        totalPoolLoaded = true;
-                    } catch (e) {
-                        console.error('[FENHONG] Failed to load total pool from DMLP:', e.message);
-                    }
-                } else {
-                    console.warn('[FENHONG] DividendManagerLP contract not available');
-                }
-
-                // 回退：如果DividendManagerLP获取失败，尝试从RewardManager获取总BNB余额
-                if (!totalPoolLoaded && rewardManager) {
-                    try {
-                        const rmBalance = await web3Instance.eth.getBalance(rewardManager.options.address);
-                        const formatted = _formatTokenAmount(rmBalance);
-                        if (formatted !== '0.0000') {
-                            console.log('[FENHONG] Fallback: Using RewardManager balance as totalPool:', formatted);
-                            document.getElementById('totalPool').textContent = formatted;
-                            totalPoolLoaded = true;
                         }
                     } catch (e) {
-                        console.warn('[FENHONG] Fallback pool loading also failed:', e.message);
-                    }
-                }
-
-                // 如果总池还是0，尝试直接获取DividendManagerLP合约的BNB余额
-                if (!totalPoolLoaded || document.getElementById('totalPool').textContent === '0.0000') {
-                    try {
-                        const dmlpAddress = dividendManagerLP ? dividendManagerLP.options.address : 
-                            await ZODIAC_WEB3.getContractAddress('dividendManagerLP');
-                        if (dmlpAddress && dmlpAddress !== '0x0000000000000000000000000000000000000000') {
-                            const dmlpBalance = await web3Instance.eth.getBalance(dmlpAddress);
-                            const formatted = _formatTokenAmount(dmlpBalance);
-                            console.log('[FENHONG] Direct DMLP BNB balance:', formatted);
-                            if (formatted !== '0.0000') {
-                                document.getElementById('totalPool').textContent = formatted;
-                            }
-                        }
-                    } catch (e) {
-                        console.warn('[FENHONG] Failed to get direct DMLP balance:', e.message);
+                        console.warn('[FENHONG] Fallback DMLP pool loading failed:', e.message);
                     }
                 }
 
