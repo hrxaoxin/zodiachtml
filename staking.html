@@ -904,7 +904,7 @@
                 for (let i = 0; i < allNftInfos.length; i++) {
                     const nft = allNftInfos[i];
                     const nftLevel = typeof nft.level === 'number' ? nft.level : parseInt(nft.level);
-                    const nftType = typeof nft.type === 'number' ? nft.type : parseInt(nft.type);
+                    const nftType = typeof nft.tokenType === 'number' ? nft.tokenType : parseInt(nft.tokenType);
                     const tid = nft.tokenId.toString();
                     if (nftLevel >= minLevel) {
                         const sInfo = stakingInfoByToken[tid];
