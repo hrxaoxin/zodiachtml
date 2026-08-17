@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>符文系统 - 十二生肖NFT</title>
+    <meta name="description" content="铸造符文NFT，随机绑定十二生肖，装备对应生肖获得属性加成">
+    <link rel="icon" href="images/fu-cards/shuishu_1.jpg" type="image/jpg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.7.3/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="config.js"></script>
+    <script src="components.js"></script>
+    <script src="utils.js"></script>
+    <script src="web3-utils.js"></script>
+    <script src="ui-utils.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap');
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #f5f5f5;
+            background-image: linear-gradient(135deg, #f5f5f5 0%, #ede9fe 100%);
+            overflow-x: hidden;
+        }
+
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+
+        .navbar {
+            background-color: #ffffff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .desktop-nav {
+            background-color: #ffffff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, #7c3aed 0%, #4338ca 100%);
+            border-radius: 20px;
+            color: white;
+            box-shadow: 0 10px 25px rgba(124, 58, 237, 0.3);
+            animation: heroFadeIn 1s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @keyframes heroFadeIn {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .btn-primary {
+            background-color: #7c3aed;
+            color: white;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: #6d28d9;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background-color: white;
+            color: #7c3aed;
+            border: 1px solid #7c3aed;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background-color: #f8f9fa;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary:disabled {
+            color: #aaa;
+            border-color: #ddd;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .wallet-button {
+            background: linear-gradient(135deg, #7c3aed 0%, #4338ca 100%);
+            color: white;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .wallet-button:hover {
+            background: linear-gradient(135deg, #6d28d9 0%, #3730a3 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+        }
+
+        .nav-item:hover {
+            transform: scale(1.1);
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+        }
+
+        .footer {
+            animation: footerFadeIn 1.5s ease-out;
+        }
+
+        @keyframes footerFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #7c3aed 0%, #4338ca 100%); border-radius: 10px; }
+
+        /* 主标签切换 */
+        .main-tab {
+            padding: 12px 28px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            white-space: nowrap;
+            background-color: #ede9fe;
+            color: #4338ca;
+            border: 1px solid transparent;
+        }
+        .main-tab:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+        }
+        .main-tab.active {
+            background: linear-gradient(135deg, #7c3aed 0%, #4338ca 100%);
+            color: white;
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+        }
+
+        /* 生肖筛选标签 */
+        .zodiac-tab {
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            white-space: nowrap;
+            background-color: #ede9fe;
+            color: #4338ca;
+            border: 1px solid transparent;
+        }
+        .zodiac-tab:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+        }
+        .zodiac-tab.active {
+            background: linear-gradient(135deg, #7c3aed 0%, #4338ca 100%);
+            color: white;
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+        }
+        .zodiac-tab.tab-all {
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+        .zodiac-tab.tab-all.active {
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+            color: white;
+        }
+
+        /* 符文卡片 */
+        .rune-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            background: white;
+            border-width: 3px;
+            border-style: solid;
+        }
+        .rune-card:hover {
+            transform: scale(1.05) translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+        }
+        .rune-card.selected {
+            box-shadow: 0 0 0 3px #7c3aed, 0 15px 30px rgba(124, 58, 237, 0.3);
+        }
+
+        /* 品质边框颜色 */
+        .rarity-common { border-color: #d1d5db; }
+        .rarity-rare { border-color: #3b82f6; box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2); }
+        .rarity-hero { border-color: #a855f7; box-shadow: 0 4px 16px rgba(168, 85, 247, 0.3); }
+        .rarity-legend { border-color: #f59e0b; box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4); }
+
+        .rarity-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 700;
+            color: white;
+        }
+        .rarity-badge.rarity-common { background-color: #9ca3af; }
+        .rarity-badge.rarity-rare { background-color: #3b82f6; }
+        .rarity-badge.rarity-hero { background-color: #a855f7; }
+        .rarity-badge.rarity-legend { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+
+        .position-badge {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: linear-gradient(135deg, #7c3aed 0%, #4338ca 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .level-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .upgrade-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        .upgrade-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .rune-icon-large {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 8px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+            box-shadow: inset 0 2px 8px rgba(124, 58, 237, 0.2);
+        }
+
+        /* 加载遮罩 */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        .loading-overlay.loading-active { display: flex; }
+        .loading-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 60px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+        .loading-spinner {
+            width: 56px;
+            height: 56px;
+            border: 4px solid #ede9fe;
+            border-top-color: #7c3aed;
+            border-right-color: #4338ca;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-text {
+            margin-top: 20px;
+            color: #333;
+            font-weight: 600;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        /* Toast 通知 */
+        .toast {
+            position: fixed;
+            bottom: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1001;
+            opacity: 0;
+            transition: all 0.3s ease;
+            max-width: 90%;
+            text-align: center;
+        }
+        .toast.toast-active {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-10px);
+        }
+        .toast.toast-success { background-color: #4CAF50; }
+        .toast.toast-error { background-color: #dc3545; }
+        .toast.toast-warning { background-color: #ff9800; }
+        .toast.toast-info { background-color: #7c3aed; }
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+
+    <div id="mobileNavbarContainer"></div>
+    <div id="mobileMenuContainer"></div>
+    <div id="desktopSidebarContainer"></div>
+
+    <div class="min-h-screen pb-20 md:pb-0">
+        <header class="px-4 py-6 title-section md:pl-28">
+            <div class="flex flex-col md:flex-row items-start justify-between gap-4">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center mr-3">
+                        <span class="text-white text-xl font-bold">符文</span>
+                    </div>
+                    <h1 class="text-2xl font-bold text-gray-800">符文系统</h1>
+                </div>
+                <button id="walletBtn" class="wallet-button mt-2 md:mt-0">连接钱包</button>
+            </div>
+        </header>
+
+        <main class="px-4 pt-6 pb-24 md:pl-28">
+            <!-- Hero 区块 -->
+            <div class="hero-section p-6 md:p-8 mb-8">
+                <h2 class="text-3xl md:text-4xl font-bold mb-3">符文系统</h2>
+                <p class="text-base md:text-lg opacity-90">铸造符文NFT，随机绑定十二生肖，装备对应生肖获得属性加成</p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3 text-center">
+                        <div class="text-xs opacity-80">符文位置</div>
+                        <div class="text-lg font-bold">6 个</div>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3 text-center">
+                        <div class="text-xs opacity-80">绑定生肖</div>
+                        <div class="text-lg font-bold">12 种</div>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3 text-center">
+                        <div class="text-xs opacity-80">最高等级</div>
+                        <div class="text-lg font-bold">10 级</div>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3 text-center">
+                        <div class="text-xs opacity-80">品质</div>
+                        <div class="text-lg font-bold">4 阶</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 钱包信息 -->
+            <div class="bg-white rounded-xl p-6 shadow-md mb-8">
+                <div class="flex items-center mb-6">
+                    <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mr-4">
+                        <i class="text-purple-500 text-xl">💰</i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-gray-800">钱包信息</h3>
+                        <p class="text-sm text-gray-500" id="walletAddress">未连接钱包</p>
+                        <p class="text-xs text-gray-400" id="connectionStatus">请点击连接钱包按钮</p>
+                    </div>
+                    <button id="connectWalletBtnDesktop" class="btn-primary text-sm"><i class="fas fa-plug mr-1"></i> 连接</button>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">主代币余额</span>
+                        <span class="text-lg font-semibold text-gray-800" id="tokenBalance">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 主标签切换 -->
+            <div class="flex gap-3 mb-8 overflow-x-auto pb-2">
+                <button class="main-tab active" data-tab="mint" onclick="switchMainTab('mint')">
+                    <i class="fas fa-magic mr-2"></i>铸造符文
+                </button>
+                <button class="main-tab" data-tab="upgrade" onclick="switchMainTab('upgrade')">
+                    <i class="fas fa-arrow-up mr-2"></i>符文升级
+                </button>
+            </div>
+
+            <!-- ============ Tab 1: 铸造符文 ============ -->
+            <div id="mintTab" class="tab-content">
+                <!-- 铸造操作 -->
+                <div class="bg-white rounded-xl p-6 shadow-md mb-8">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-hammer mr-2 text-purple-500"></i>铸造符文
+                    </h3>
+                    <p class="text-gray-600 mb-6">消耗主代币铸造符文NFT，十连铸造享9折优惠。符文将随机绑定十二生肖之一。</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div class="p-4 bg-purple-50 rounded-lg">
+                            <div class="text-sm text-gray-500 mb-1">单次铸造费用</div>
+                            <div class="text-2xl font-bold text-purple-600" id="mintCostDisplay">- 代币</div>
+                            <p class="text-xs text-gray-400 mt-1">铸造 1 个符文</p>
+                        </div>
+                        <div class="p-4 bg-indigo-50 rounded-lg">
+                            <div class="text-sm text-gray-500 mb-1">十连铸造费用（9折）</div>
+                            <div class="text-2xl font-bold text-indigo-600" id="mintCost10xDisplay">- 代币</div>
+                            <p class="text-xs text-gray-400 mt-1">铸造 10 个符文</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                            <span class="text-gray-600"><i class="fas fa-key mr-2 text-gray-500"></i>主代币授权状态</span>
+                            <span class="font-semibold text-gray-800" id="tokenApprovalStatus">未授权</span>
+                        </div>
+                        <button class="btn-secondary w-full py-4 text-lg font-bold" id="approveTokenBtn">
+                            <i class="fas fa-key mr-2"></i>授权主代币
+                        </button>
+                        <button class="btn-primary w-full py-4 text-lg font-bold" id="mintBtn" disabled>
+                            <i class="fas fa-magic mr-2"></i>单次铸造
+                        </button>
+                        <button class="btn-primary w-full py-4 text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600" id="mint10xBtn" disabled>
+                            <i class="fas fa-layer-group mr-2"></i>十连铸造
+                        </button>
+                    </div>
+
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mt-6" id="mintStatus">
+                        <p class="text-yellow-700">请先连接钱包并授权主代币</p>
+                    </div>
+                </div>
+
+                <!-- 我的符文 -->
+                <div class="mb-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-2xl font-bold text-gray-800">我的符文</h3>
+                        <span class="text-sm text-gray-500" id="runeCount">共 0 个</span>
+                    </div>
+                    <div id="runeGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        <div class="col-span-full text-center py-12 text-gray-400">请先连接钱包</div>
+                    </div>
+                </div>
+
+                <!-- 温馨提示 -->
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8">
+                    <h3 class="text-lg font-bold text-yellow-800 mb-2">温馨提示</h3>
+                    <ul class="space-y-2 text-yellow-700">
+                        <li>• 符文共 6 个位置（1-6号位），每个位置主属性类型不同</li>
+                        <li>• 铸造时随机绑定十二生肖之一，只能装备在对应生肖的NFT上</li>
+                        <li>• 品质分为：普通（白）/ 稀有（蓝）/ 英雄（紫）/ 传说（金）</li>
+                        <li>• 首次铸造需要授权主代币，之后无需重复授权</li>
+                        <li>• 十连铸造享 9 折优惠</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- ============ Tab 2: 符文升级 ============ -->
+            <div id="upgradeTab" class="tab-content hidden">
+                <!-- 升级说明 -->
+                <div class="bg-white rounded-xl p-6 shadow-md mb-8">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-arrow-up mr-2 text-purple-500"></i>符文升级
+                    </h3>
+                    <p class="text-gray-600 mb-4">消耗对应生肖的子代币升级符文，最高可升至10级。每次升级提升符文属性数值。</p>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div class="bg-purple-50 rounded-lg p-3 text-center">
+                            <div class="text-xs text-gray-500">升级费用</div>
+                            <div class="text-lg font-bold text-purple-600">等级 × 1万</div>
+                        </div>
+                        <div class="bg-blue-50 rounded-lg p-3 text-center">
+                            <div class="text-xs text-gray-500">子代币类型</div>
+                            <div class="text-lg font-bold text-blue-600">按绑定生肖</div>
+                        </div>
+                        <div class="bg-green-50 rounded-lg p-3 text-center">
+                            <div class="text-xs text-gray-500">等级上限</div>
+                            <div class="text-lg font-bold text-green-600">10 级</div>
+                        </div>
+                        <div class="bg-orange-50 rounded-lg p-3 text-center">
+                            <div class="text-xs text-gray-500">升级范围</div>
+                            <div class="text-lg font-bold text-orange-600">1-9 级</div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-3">💡 升级费用 = 当前等级 × 10000 子代币（例如 3级→4级 消耗 30000 个对应生肖子代币）</p>
+                </div>
+
+                <!-- 可升级符文列表 -->
+                <div class="mb-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-2xl font-bold text-gray-800">我的可升级符文</h3>
+                        <span class="text-sm text-gray-500" id="upgradeRuneCount">共 0 个</span>
+                    </div>
+                    <div class="mb-6">
+                        <h4 class="text-sm font-bold text-gray-600 mb-3">筛选绑定生肖</h4>
+                        <div id="zodiacTabs" class="flex gap-2 overflow-x-auto pb-2"></div>
+                    </div>
+                    <div id="upgradeRuneGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        <div class="col-span-full text-center py-12 text-gray-400">请先连接钱包</div>
+                    </div>
+                </div>
+
+                <!-- 升级操作区 -->
+                <div id="upgradeSection" class="hidden mb-12">
+                    <div class="upgrade-card">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">升级操作</h3>
+                        <div id="selectedRuneInfo" class="mb-6"></div>
+                        <div class="grid grid-cols-1 gap-4">
+                            <button id="upgradeRuneBtn" class="btn-primary w-full" disabled>升级符文</button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-3 text-center">⚠ 升级前会自动请求对应生肖子代币授权，请在钱包中确认</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="text-center py-8 text-black/70 footer md:ml-28 md:mr-4">
+            <p>© 2026 十二生肖NFT系列 · Twelve Zodiacs Collection</p>
+            <p class="mt-2">祝你心想事成，生肖大旺 🐾✨</p>
+        </footer>
+    </div>
+
+    <!-- 铸造结果弹窗 -->
+    <div id="mintResultModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden overflow-y-auto">
+        <div class="bg-white rounded-xl p-6 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="text-center mb-4">
+                <div class="text-6xl mb-4">🎊</div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-2">铸造成功！</h3>
+                <p class="text-gray-600 mb-6" id="mintResultText">恭喜您获得了符文NFT</p>
+            </div>
+            <div id="mintedRunesGrid" class="mb-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"></div>
+            <div class="flex space-x-4">
+                <button class="btn-secondary flex-1" id="closeMintModal">关闭</button>
+                <button class="btn-primary flex-1" id="viewRunesBtn">查看我的符文</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============= 全局状态 =============
+        let web3;
+        let account;
+        let tokenContract;
+        let runeMintContract;
+        let runeUpdateContract;
+        let runeMintAddress;
+        let runeUpdateAddress;
+        let MINT_COST = 0n;
+        let MINT_COST_10X = 0n;
+        let allUserRunes = [];          // 全部符文（铸造Tab展示）
+        let allUpgradeRunes = [];       // 可升级符文（升级Tab展示，level < 10）
+        let currentZodiacFilter = 'all';
+        let selectedRune = null;
+        let subTokenContracts = {};     // zodiacIndex -> { contract, address, decimals, symbol, balanceWei }
+
+        // ============= 常量 =============
+        const ZODIAC_NAMES = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
+        const ZODIAC_ICONS = ['🐭', '🐮', '🐯', '🐰', '🐲', '🐍', '🐴', '🐑', '🐵', '🐔', '🐶', '🐷'];
+        const ZODIAC_COLORS = ['#9ca3af', '#a3a3a3', '#f59e0b', '#fbbf24', '#3b82f6', '#10b981', '#ef4444', '#a855f7', '#f97316', '#eab308', '#8b5cf6', '#ec4899'];
+        const SUB_TOKEN_AUTH_NAMES = [
+            'subTokenShu', 'subTokenNiu', 'subTokenHu', 'subTokenTu', 'subTokenLong',
+            'subTokenShe', 'subTokenMa', 'subTokenYang', 'subTokenHou', 'subTokenJi',
+            'subTokenGou', 'subTokenZhu'
+        ];
+
+        // 属性类型
+        const STAT_NAMES = ['攻击力', '防御力', '生命值', '速度', '暴击率', '暴击伤害', '命中率', '抗性'];
+        const STAT_ICONS = ['⚔️', '🛡️', '❤️', '💨', '🎯', '💥', '🏹', '✨'];
+        // 是否为百分比属性（暴击率/暴击伤害/命中率/抗性）
+        function isPercentStat(statType) {
+            const s = parseInt(statType, 10);
+            return s === 4 || s === 5 || s === 6 || s === 7;
+        }
+
+        // 品质
+        const RARITY_NAMES = ['普通', '稀有', '英雄', '传说'];
+        const RARITY_CLASSES = ['rarity-common', 'rarity-rare', 'rarity-hero', 'rarity-legend'];
+
+        // ============= 最小内联 ABI =============
+        // RuneMintCore ABI
+        const RUNE_MINT_ABI = [
+            { "inputs": [{ "internalType": "address", "name": "to", "type": "address" }], "name": "mintRune", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "nonpayable", "type": "function" },
+            { "inputs": [{ "internalType": "address", "name": "to", "type": "address" }], "name": "mintRune10x", "outputs": [{ "internalType": "uint256[]", "name": "", "type": "uint256[]" }], "stateMutability": "nonpayable", "type": "function" },
+            { "inputs": [], "name": "mintCost", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
+            { "inputs": [], "name": "mintCost10x", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
+            { "inputs": [{ "internalType": "uint256", "name": "runeId", "type": "uint256" }], "name": "getRuneDetail", "outputs": [{ "internalType": "struct RuneDataType.RuneDetail", "name": "", "type": "tuple", "components": [
+                { "internalType": "uint8", "name": "position", "type": "uint8" },
+                { "internalType": "enum RuneDataType.StatType", "name": "mainStat", "type": "uint8" },
+                { "internalType": "uint256", "name": "mainStatValue", "type": "uint256" },
+                { "internalType": "enum RuneDataType.StatType", "name": "subStat", "type": "uint8" },
+                { "internalType": "uint256", "name": "subStatValue", "type": "uint256" },
+                { "internalType": "uint8", "name": "boundZodiac", "type": "uint8" },
+                { "internalType": "uint8", "name": "level", "type": "uint8" },
+                { "internalType": "enum RuneDataType.Rarity", "name": "rarity", "type": "uint8" },
+                { "internalType": "uint256", "name": "mintTime", "type": "uint256" }
+            ]}], "stateMutability": "view", "type": "function" },
+            { "inputs": [{ "internalType": "address", "name": "owner", "type": "address" }], "name": "getRuneIdsByOwner", "outputs": [{ "internalType": "uint256[]", "name": "", "type": "uint256[]" }], "stateMutability": "view", "type": "function" },
+            { "inputs": [{ "internalType": "uint256", "name": "runeId", "type": "uint256" }], "name": "tokenURI", "outputs": [{ "internalType": "string", "name": "", "type": "string" }], "stateMutability": "view", "type": "function" },
+            { "inputs": [], "name": "paused", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "view", "type": "function" },
+            { "inputs": [{ "internalType": "uint256", "name": "runeId", "type": "uint256" }], "name": "ownerOf", "outputs": [{ "internalType": "address", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" },
+            { "anonymous": false, "inputs": [
+                { "indexed": true, "internalType": "address", "name": "to", "type": "address" },
+                { "indexed": true, "internalType": "uint256", "name": "runeId", "type": "uint256" },
+                { "indexed": false, "internalType": "uint8", "name": "position", "type": "uint8" },
+                { "indexed": false, "internalType": "uint8", "name": "boundZodiac", "type": "uint8" },
+                { "indexed": false, "internalType": "uint8", "name": "rarity", "type": "uint8" }
+            ], "name": "RuneMinted", "type": "event" },
+            { "anonymous": false, "inputs": [
+                { "indexed": true, "internalType": "address", "name": "to", "type": "address" },
+                { "indexed": false, "internalType": "uint256[]", "name": "runeIds", "type": "uint256[]" }
+            ], "name": "RuneBatchMinted", "type": "event" }
+        ];
+
+        // RuneUpdate ABI
+        const RUNE_UPDATE_ABI = [
+            { "inputs": [{ "internalType": "uint256", "name": "runeId", "type": "uint256" }], "name": "upgradeRune", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
+            { "inputs": [], "name": "paused", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "view", "type": "function" }
+        ];
+
+        // ERC20 ABI（主代币 + 子代币通用）
+        const ERC20_ABI = [
+            { "constant": true, "inputs": [{ "name": "owner", "type": "address" }], "name": "balanceOf", "outputs": [{ "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
+            { "constant": true, "inputs": [{ "name": "owner", "type": "address" }, { "name": "spender", "type": "address" }], "name": "allowance", "outputs": [{ "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
+            { "constant": false, "inputs": [{ "name": "spender", "type": "address" }, { "name": "amount", "type": "uint256" }], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "stateMutability": "nonpayable", "type": "function" },
+            { "constant": true, "inputs": [], "name": "decimals", "outputs": [{ "name": "", "type": "uint8" }], "stateMutability": "view", "type": "function" },
+            { "constant": true, "inputs": [], "name": "symbol", "outputs": [{ "name": "", "type": "string" }], "stateMutability": "view", "type": "function" }
+        ];
+
+        const MAX_UINT256 = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+
+        // ============= 初始化 =============
+        document.addEventListener('DOMContentLoaded', async function() {
+            particlesJS('particles-js', {
+                particles: {
+                    number: { value: 80, density: { enable: true, value_area: 800 } },
+                    color: { value: '#7c3aed' },
+                    shape: { type: 'circle', stroke: { width: 0, color: '#000000' } },
+                    opacity: { value: 0.5, random: true, anim: { enable: true, speed: 1, opacity_min: 0.1, sync: false } },
+                    size: { value: 5, random: true, anim: { enable: true, speed: 2, size_min: 0.1, sync: false } },
+                    line_linked: { enable: true, distance: 150, color: '#7c3aed', opacity: 0.4, width: 1 },
+                    move: { enable: true, speed: 1, direction: 'none', random: false, straight: false, out_mode: 'out', bounce: false }
+                },
+                interactivity: {
+                    detect_on: 'canvas',
+                    events: { onhover: { enable: true, mode: 'grab' }, onclick: { enable: true, mode: 'push' }, resize: true },
+                    modes: { grab: { distance: 140, line_linked: { opacity: 1 } }, push: { particles_nb: 4 } }
+                },
+                retina_detect: true
+            });
+
+            initWalletUI();
+            initEventListeners();
+            renderZodiacTabs();
+            ZODIAC_COMPONENTS.injectNavigation('runes');
+            await initWeb3();
+        });
+
+        function initWalletUI() {
+            ZODIAC_UI.initWalletButton('walletBtn', null, null);
+            ZODIAC_UI.initWalletButton('connectWalletBtnDesktop', 'walletAddress', 'connectionStatus');
+            ZODIAC_WEB3.on('connect', async () => {
+                await initContracts();
+                await loadAllData();
+            });
+            ZODIAC_WEB3.on('disconnect', () => {
+                resetUIOnDisconnect();
+            });
+        }
+
+        function initEventListeners() {
+            document.getElementById('approveTokenBtn').addEventListener('click', handleApproveToken);
+            document.getElementById('mintBtn').addEventListener('click', () => handleMint(false));
+            document.getElementById('mint10xBtn').addEventListener('click', () => handleMint(true));
+            document.getElementById('upgradeRuneBtn').addEventListener('click', handleUpgradeRune);
+            document.getElementById('closeMintModal').addEventListener('click', () => {
+                document.getElementById('mintResultModal').classList.add('hidden');
+            });
+            document.getElementById('viewRunesBtn').addEventListener('click', () => {
+                document.getElementById('mintResultModal').classList.add('hidden');
+                switchMainTab('mint');
+                loadUserRunes();
+            });
+        }
+
+        async function initWeb3() {
+            const connected = await window.ZODIAC_WEB3.initWeb3();
+            if (connected) {
+                account = window.ZODIAC_WEB3.getAccount();
+                web3 = window.ZODIAC_WEB3.getWeb3();
+                window.web3 = web3;
+                updateWalletButton();
+                await initContracts();
+                await loadAllData();
+            }
+        }
+
+        function updateWalletButton() {
+            const walletBtn = document.getElementById('walletBtn');
+            const walletBtnDesktop = document.getElementById('connectWalletBtnDesktop');
+            if (account) {
+                const shortAddress = account.substring(0, 4) + '...' + account.substring(account.length - 4);
+                walletBtn.textContent = shortAddress;
+                walletBtn.style.background = 'linear-gradient(135deg, #6d28d9 0%, #3730a3 100%)';
+                walletBtnDesktop.textContent = shortAddress;
+                walletBtnDesktop.disabled = true;
+                walletBtnDesktop.style.background = 'linear-gradient(135deg, #6d28d9 0%, #3730a3 100%)';
+            }
+        }
+
+        function resetUIOnDisconnect() {
+            account = null;
+            document.getElementById('tokenBalance').textContent = '0';
+            document.getElementById('tokenApprovalStatus').textContent = '未授权';
+            document.getElementById('tokenApprovalStatus').style.color = '';
+            document.getElementById('mintCostDisplay').textContent = '- 代币';
+            document.getElementById('mintCost10xDisplay').textContent = '- 代币';
+            document.getElementById('mintBtn').disabled = true;
+            document.getElementById('mint10xBtn').disabled = true;
+            document.getElementById('mintStatus').innerHTML = '<p class="text-yellow-700">请先连接钱包并授权主代币</p>';
+            document.getElementById('runeGrid').innerHTML = '<div class="col-span-full text-center py-12 text-gray-400">请先连接钱包</div>';
+            document.getElementById('upgradeRuneGrid').innerHTML = '<div class="col-span-full text-center py-12 text-gray-400">请先连接钱包</div>';
+            document.getElementById('runeCount').textContent = '共 0 个';
+            document.getElementById('upgradeRuneCount').textContent = '共 0 个';
+            allUserRunes = [];
+            allUpgradeRunes = [];
+        }
+
+        // ============= 合约初始化 =============
+        async function initContracts() {
+            try {
+                tokenContract = await window.ZODIAC_WEB3.getContract('tokenContract');
+
+                // 通过 Authorizer 获取 RuneMintCore 地址
+                const authorizer = await window.ZODIAC_WEB3.getContract('authorizer');
+                if (!authorizer || !web3) {
+                    ZODIAC_UI.showToast('Authorizer 合约未配置', 'warning');
+                    return;
+                }
+
+                runeMintAddress = await authorizer.methods.getAddressByName('runeMintCore').call();
+                runeUpdateAddress = await authorizer.methods.getAddressByName('runeUpdate').call();
+
+                if (!runeMintAddress || runeMintAddress === '0x0000000000000000000000000000000000000000') {
+                    ZODIAC_UI.showToast('RuneMintCore 合约未在 Authorizer 注册', 'warning');
+                    return;
+                }
+                runeMintContract = new web3.eth.Contract(RUNE_MINT_ABI, runeMintAddress);
+
+                if (runeUpdateAddress && runeUpdateAddress !== '0x0000000000000000000000000000000000000000') {
+                    runeUpdateContract = new web3.eth.Contract(RUNE_UPDATE_ABI, runeUpdateAddress);
+                } else {
+                    console.warn('[RUNE] RuneUpdate 地址未在 Authorizer 注册');
+                }
+
+                console.log('[RUNE] RuneMintCore:', runeMintAddress, 'RuneUpdate:', runeUpdateAddress);
+            } catch (error) {
+                console.error('[RUNE] initContracts failed:', error);
+                ZODIAC_UI.showToast('合约初始化失败: ' + (error.message || '未知错误'), 'error');
+            }
+        }
+
+        async function loadAllData() {
+            if (!account || !runeMintContract) return;
+            try {
+                await Promise.all([
+                    fetchMintCosts(),
+                    updateTokenBalance(),
+                    checkTokenApproval(),
+                    loadUserRunes()
+                ]);
+                await updateMintStatus();
+            } catch (error) {
+                console.error('[RUNE] loadAllData error:', error);
+            }
+        }
+
+        async function updateTokenBalance() {
+            if (!account || !tokenContract) {
+                document.getElementById('tokenBalance').textContent = '0';
+                return;
+            }
+            try {
+                const balance = await tokenContract.methods.balanceOf(account).call();
+                const balanceInTokens = web3.utils.fromWei(balance, 'ether');
+                document.getElementById('tokenBalance').textContent = formatNumber(parseFloat(balanceInTokens).toFixed(4));
+            } catch (error) {
+                console.error('[RUNE] 更新代币余额失败:', error);
+                document.getElementById('tokenBalance').textContent = '0';
+            }
+        }
+
+        async function fetchMintCosts() {
+            if (!runeMintContract) return;
+            try {
+                const [cost, cost10x] = await Promise.all([
+                    runeMintContract.methods.mintCost().call(),
+                    runeMintContract.methods.mintCost10x().call()
+                ]);
+                MINT_COST = BigInt(String(cost));
+                MINT_COST_10X = BigInt(String(cost10x));
+                document.getElementById('mintCostDisplay').textContent = formatTokenAmount(MINT_COST, 18) + ' 代币';
+                document.getElementById('mintCost10xDisplay').textContent = formatTokenAmount(MINT_COST_10X, 18) + ' 代币';
+                document.getElementById('mintBtn').innerHTML = `<i class="fas fa-magic mr-2"></i>单次铸造（${formatTokenAmount(MINT_COST, 18)} 代币）`;
+                document.getElementById('mint10xBtn').innerHTML = `<i class="fas fa-layer-group mr-2"></i>十连铸造（${formatTokenAmount(MINT_COST_10X, 18)} 代币）`;
+            } catch (error) {
+                console.error('[RUNE] 获取铸造费用失败:', error);
+            }
+        }
+
+        async function checkTokenApproval() {
+            if (!account || !tokenContract || !runeMintAddress) return;
+            try {
+                const allowance = await tokenContract.methods.allowance(account, runeMintAddress).call();
+                const allowanceWei = BigInt(String(allowance));
+                const el = document.getElementById('tokenApprovalStatus');
+                // 使用无限授权，授权额度极大时即视为已授权（避免与 mintCost 加载时序耦合）
+                const isInfinite = allowanceWei >= (BigInt(MAX_UINT256) >> 1n);
+                const isEnough = MINT_COST_10X > 0n && allowanceWei >= MINT_COST_10X;
+                if (isInfinite) {
+                    el.textContent = '已授权(无限)';
+                    el.style.color = '#4CAF50';
+                } else if (isEnough) {
+                    el.textContent = '已授权';
+                    el.style.color = '#4CAF50';
+                } else if (allowanceWei > 0n) {
+                    el.textContent = '授权不足';
+                    el.style.color = '#ff9800';
+                } else {
+                    el.textContent = '未授权';
+                    el.style.color = '#dc3545';
+                }
+            } catch (error) {
+                console.error('[RUNE] 检查授权状态失败:', error);
+            }
+        }
+
+        async function updateMintStatus() {
+            if (!account || !tokenContract || !runeMintAddress || MINT_COST === 0n) {
+                document.getElementById('mintBtn').disabled = true;
+                document.getElementById('mint10xBtn').disabled = true;
+                return;
+            }
+            try {
+                const balance = BigInt(await tokenContract.methods.balanceOf(account).call());
+                const allowance = BigInt(await tokenContract.methods.allowance(account, runeMintAddress).call());
+
+                const hasBalanceSingle = balance >= MINT_COST;
+                const hasBalance10x = balance >= MINT_COST_10X;
+                const hasApproval = allowance >= MINT_COST_10X;
+
+                document.getElementById('mintBtn').disabled = !(hasApproval && hasBalanceSingle);
+                document.getElementById('mint10xBtn').disabled = !(hasApproval && hasBalance10x);
+
+                const statusEl = document.getElementById('mintStatus');
+                const balanceDisplay = formatTokenAmount(balance, 18);
+                if (!hasBalanceSingle) {
+                    statusEl.innerHTML = `<p class="text-red-700">代币余额不足，当前余额 ${balanceDisplay} 枚，单次铸造需要 ${formatTokenAmount(MINT_COST, 18)} 枚</p>`;
+                } else if (!hasApproval) {
+                    statusEl.innerHTML = `<p class="text-yellow-700">请先授权主代币（授权后即可铸造符文）</p>`;
+                } else {
+                    statusEl.innerHTML = '<p class="text-green-700">✓ 已授权，可以铸造符文</p>';
+                }
+            } catch (error) {
+                console.error('[RUNE] updateMintStatus error:', error);
+            }
+        }
+
+        // ============= 主标签切换 =============
+        window.switchMainTab = function(tab) {
+            document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.main-tab[data-tab="${tab}"]`).classList.add('active');
+            document.getElementById('mintTab').classList.toggle('hidden', tab !== 'mint');
+            document.getElementById('upgradeTab').classList.toggle('hidden', tab !== 'upgrade');
+
+            if (tab === 'upgrade' && account && runeMintContract) {
+                loadUpgradeRunes();
+            }
+        }
+
+        // ============= 生肖筛选标签 =============
+        function renderZodiacTabs() {
+            const container = document.getElementById('zodiacTabs');
+            if (!container) return;
+            let html = `<button class="zodiac-tab tab-all active" data-zodiac="all" onclick="switchZodiac('all')">全部</button>`;
+            for (let i = 0; i < 12; i++) {
+                html += `<button class="zodiac-tab" data-zodiac="${i}" onclick="switchZodiac(${i})">${ZODIAC_ICONS[i]} ${ZODIAC_NAMES[i]}</button>`;
+            }
+            container.innerHTML = html;
+        }
+
+        window.switchZodiac = function(zodiac) {
+            currentZodiacFilter = zodiac;
+            document.querySelectorAll('.zodiac-tab').forEach(tab => tab.classList.remove('active'));
+            const target = document.querySelector(`.zodiac-tab[data-zodiac="${zodiac}"]`);
+            if (target) target.classList.add('active');
+
+            if (!allUpgradeRunes || allUpgradeRunes.length === 0) return;
+            if (zodiac === 'all') {
+                renderUpgradeRunes(allUpgradeRunes);
+            } else {
+                const z = parseInt(zodiac, 10);
+                const filtered = allUpgradeRunes.filter(r => parseInt(r.boundZodiac, 10) === z);
+                renderUpgradeRunes(filtered);
+            }
+        }
+
+        // ============= 加载用户符文 =============
+        async function loadUserRunes() {
+            if (!account || !runeMintContract) {
+                document.getElementById('runeGrid').innerHTML = '<div class="col-span-full text-center py-12 text-gray-400">请先连接钱包</div>';
+                document.getElementById('runeCount').textContent = '共 0 个';
+                return;
+            }
+            ZODIAC_UI.showLoading('加载符文中...');
+            try {
+                const tokenIds = await runeMintContract.methods.getRuneIdsByOwner(account).call();
+                if (!tokenIds || tokenIds.length === 0) {
+                    allUserRunes = [];
+                    document.getElementById('runeGrid').innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">你还没有符文，去铸造一个吧！</div>';
+                    document.getElementById('runeCount').textContent = '共 0 个';
+                    ZODIAC_UI.hideLoading();
+                    return;
+                }
+
+                allUserRunes = await loadRunesParallel(tokenIds);
+                renderRunes(allUserRunes);
+            } catch (error) {
+                console.error('[RUNE] 加载符文失败:', error);
+                document.getElementById('runeGrid').innerHTML = '<div class="col-span-full text-center py-12 text-red-500">加载失败，请重试</div>';
+                ZODIAC_UI.showToast('加载符文失败: ' + (error.message || '未知错误'), 'error');
+            }
+            ZODIAC_UI.hideLoading();
+        }
+
+        async function loadUpgradeRunes() {
+            if (!account || !runeMintContract) {
+                document.getElementById('upgradeRuneGrid').innerHTML = '<div class="col-span-full text-center py-12 text-gray-400">请先连接钱包</div>';
+                document.getElementById('upgradeRuneCount').textContent = '共 0 个';
+                return;
+            }
+            ZODIAC_UI.showLoading('加载可升级符文中...');
+            try {
+                const tokenIds = await runeMintContract.methods.getRuneIdsByOwner(account).call();
+                if (!tokenIds || tokenIds.length === 0) {
+                    allUpgradeRunes = [];
+                    document.getElementById('upgradeRuneGrid').innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">你还没有符文，去铸造一个吧！</div>';
+                    document.getElementById('upgradeRuneCount').textContent = '共 0 个';
+                    ZODIAC_UI.hideLoading();
+                    return;
+                }
+
+                const allRunes = await loadRunesParallel(tokenIds);
+                // 仅显示等级 < 10 的符文
+                allUpgradeRunes = allRunes.filter(r => parseInt(r.level, 10) < 10);
+
+                if (allUpgradeRunes.length === 0) {
+                    document.getElementById('upgradeRuneGrid').innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">暂无可升级符文（所有符文均已满级）</div>';
+                    document.getElementById('upgradeRuneCount').textContent = '共 0 个';
+                    ZODIAC_UI.hideLoading();
+                    return;
+                }
+                renderUpgradeRunes(allUpgradeRunes);
+            } catch (error) {
+                console.error('[RUNE] 加载可升级符文失败:', error);
+                document.getElementById('upgradeRuneGrid').innerHTML = '<div class="col-span-full text-center py-12 text-red-500">加载失败，请重试</div>';
+                ZODIAC_UI.showToast('加载可升级符文失败: ' + (error.message || '未知错误'), 'error');
+            }
+            ZODIAC_UI.hideLoading();
+        }
+
+        async function loadRunesParallel(tokenIds) {
+            const BATCH_SIZE = 10;
+            const batches = [];
+            for (let i = 0; i < tokenIds.length; i += BATCH_SIZE) {
+                const end = Math.min(i + BATCH_SIZE, tokenIds.length);
+                const batchPromises = [];
+                for (let j = i; j < end; j++) {
+                    batchPromises.push(loadSingleRune(tokenIds[j]));
+                }
+                batches.push(Promise.all(batchPromises));
+            }
+            const results = await Promise.all(batches);
+            return results.flat();
+        }
+
+        async function loadSingleRune(tokenId) {
+            try {
+                const detail = await runeMintContract.methods.getRuneDetail(tokenId).call();
+                return parseRuneDetail(tokenId, detail);
+            } catch (e) {
+                console.warn('[RUNE] 加载符文详情失败 token=' + tokenId + ':', e && e.message);
+                return {
+                    id: tokenId.toString(),
+                    position: 0, mainStat: 0, mainStatValue: '0',
+                    subStat: 0, subStatValue: '0',
+                    boundZodiac: 0, level: 1, rarity: 0, mintTime: '0'
+                };
+            }
+        }
+
+        function parseRuneDetail(tokenId, detail) {
+            // web3.js 返回结构体时既有命名属性也有数组形式，优先用命名属性
+            const position = detail.position !== undefined ? detail.position : detail[0];
+            const mainStat = detail.mainStat !== undefined ? detail.mainStat : detail[1];
+            const mainStatValue = detail.mainStatValue !== undefined ? detail.mainStatValue : detail[2];
+            const subStat = detail.subStat !== undefined ? detail.subStat : detail[3];
+            const subStatValue = detail.subStatValue !== undefined ? detail.subStatValue : detail[4];
+            const boundZodiac = detail.boundZodiac !== undefined ? detail.boundZodiac : detail[5];
+            const level = detail.level !== undefined ? detail.level : detail[6];
+            const rarity = detail.rarity !== undefined ? detail.rarity : detail[7];
+            const mintTime = detail.mintTime !== undefined ? detail.mintTime : detail[8];
+
+            return {
+                id: tokenId.toString(),
+                position: parseInt(position, 10),
+                mainStat: parseInt(mainStat, 10),
+                mainStatValue: String(mainStatValue),
+                subStat: parseInt(subStat, 10),
+                subStatValue: String(subStatValue),
+                boundZodiac: parseInt(boundZodiac, 10),
+                level: parseInt(level, 10),
+                rarity: parseInt(rarity, 10),
+                mintTime: String(mintTime)
+            };
+        }
+
+        // ============= 符文渲染 =============
+        function renderRunes(runes) {
+            const grid = document.getElementById('runeGrid');
+            document.getElementById('runeCount').textContent = `共 ${runes.length} 个`;
+            if (runes.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">你还没有符文，去铸造一个吧！</div>';
+                return;
+            }
+            grid.innerHTML = runes.map(r => renderRuneCard(r, false)).join('');
+        }
+
+        function renderUpgradeRunes(runes) {
+            const grid = document.getElementById('upgradeRuneGrid');
+            document.getElementById('upgradeRuneCount').textContent = `共 ${runes.length} 个`;
+            if (runes.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">当前筛选下没有可升级的符文</div>';
+                return;
+            }
+            grid.innerHTML = runes.map(r => renderRuneCard(r, true)).join('');
+        }
+
+        function renderRuneCard(rune, isUpgradeTab) {
+            const rarityClass = RARITY_CLASSES[rune.rarity] || 'rarity-common';
+            const rarityName = RARITY_NAMES[rune.rarity] || '普通';
+            const zodiacName = ZODIAC_NAMES[rune.boundZodiac] || '未知';
+            const zodiacIcon = ZODIAC_ICONS[rune.boundZodiac] || '❓';
+            const positionName = rune.position + '号位';
+            const mainStatName = STAT_NAMES[rune.mainStat] || '未知';
+            const mainStatIcon = STAT_ICONS[rune.mainStat] || '❓';
+            const subStatName = STAT_NAMES[rune.subStat] || '未知';
+            const subStatIcon = STAT_ICONS[rune.subStat] || '❓';
+            const mainStatValDisplay = formatStatValue(rune.mainStatValue, rune.mainStat);
+            const subStatValDisplay = formatStatValue(rune.subStatValue, rune.subStat);
+            const isSelected = selectedRune && selectedRune.id === rune.id;
+            const selectedClass = isSelected ? 'selected' : '';
+            const onclick = isUpgradeTab
+                ? `onclick='selectRuneForUpgrade(${JSON.stringify(rune)})'`
+                : '';
+
+            return `
+                <div class="rune-card ${rarityClass} ${selectedClass}" ${onclick}>
+                    <div class="position-badge">${positionName}</div>
+                    <div class="level-badge">Lv.${rune.level}</div>
+                    <div class="rune-icon-large">${zodiacIcon}</div>
+                    <div class="mb-2">
+                        <span class="rarity-badge ${rarityClass}">${rarityName}</span>
+                    </div>
+                    <div class="text-sm font-bold text-gray-800 mb-2">${zodiacIcon} ${zodiacName}符文</div>
+                    <div class="space-y-1 text-xs text-gray-600 text-left">
+                        <div class="flex justify-between items-center">
+                            <span><span class="mr-1">${mainStatIcon}</span>${mainStatName}</span>
+                            <span class="font-semibold text-gray-800">${mainStatValDisplay}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span><span class="mr-1">${subStatIcon}</span>${subStatName}</span>
+                            <span class="font-semibold text-gray-800">${subStatValDisplay}</span>
+                        </div>
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-gray-100">
+                        <p class="text-xs text-gray-400">ID: ${rune.id}</p>
+                    </div>
+                    ${isSelected ? '<div class="absolute bottom-2 right-2 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div>' : ''}
+                </div>
+            `;
+        }
+
+        function formatStatValue(value, statType) {
+            try {
+                const v = parseInt(String(value), 10);
+                if (isNaN(v)) return String(value);
+                return isPercentStat(statType) ? (v + '%') : v.toLocaleString();
+            } catch (e) {
+                return String(value);
+            }
+        }
+
+        // ============= 授权主代币 =============
+        async function handleApproveToken() {
+            if (!account) {
+                ZODIAC_UI.showToast('请先连接钱包', 'warning');
+                return;
+            }
+            if (!tokenContract || !runeMintAddress) {
+                ZODIAC_UI.showToast('合约未初始化', 'error');
+                return;
+            }
+            const btn = document.getElementById('approveTokenBtn');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>授权中...';
+
+            try {
+                const confirmed = await ZODIAC_UI.showConfirmModal(
+                    '确认授权',
+                    '即将授权符文铸造合约使用主代币（无限授权），此操作需要支付少量Gas费用。'
+                );
+                if (!confirmed) return;
+
+                await tokenContract.methods.approve(runeMintAddress, MAX_UINT256).send({ from: account, gas: 100000 });
+                await new Promise(r => setTimeout(r, 1000));
+                await checkTokenApproval();
+                await updateMintStatus();
+                ZODIAC_UI.showToast('主代币授权成功！', 'success');
+            } catch (error) {
+                let msg = '授权失败';
+                if (error && (error.code === 4001 || (error.message && error.message.includes('User denied')))) {
+                    msg = '用户取消了授权';
+                } else if (error.message) {
+                    msg += ': ' + error.message;
+                }
+                ZODIAC_UI.showToast(msg, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        // ============= 铸造符文 =============
+        async function handleMint(isTenX) {
+            if (!account) {
+                ZODIAC_UI.showToast('请先连接钱包', 'error');
+                return;
+            }
+            if (!runeMintContract) {
+                ZODIAC_UI.showToast('合约未初始化', 'error');
+                return;
+            }
+            const btn = document.getElementById(isTenX ? 'mint10xBtn' : 'mintBtn');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>铸造中...';
+
+            try {
+                // 检查暂停状态
+                try {
+                    const isPaused = await runeMintContract.methods.paused().call();
+                    if (isPaused) {
+                        ZODIAC_UI.showToast('符文铸造合约已暂停', 'error');
+                        return;
+                    }
+                } catch (e) {
+                    console.warn('[RUNE] 检查暂停状态失败:', e && e.message);
+                }
+
+                const cost = isTenX ? MINT_COST_10X : MINT_COST;
+                const costDisplay = formatTokenAmount(cost, 18);
+                const mintName = isTenX ? '十连铸造' : '单次铸造';
+
+                const confirmed = await ZODIAC_UI.showConfirmModal(
+                    '确认铸造',
+                    `将消耗 ${costDisplay} 枚主代币进行${mintName}，确定继续？`
+                );
+                if (!confirmed) return;
+
+                ZODIAC_UI.showLoading('铸造中，请确认钱包交易...');
+
+                const method = isTenX ? 'mintRune10x' : 'mintRune';
+                const tx = await runeMintContract.methods[method](account).send({ from: account, gas: 4000000 });
+
+                // 从事件中提取铸造的 runeId 列表
+                let mintedIds = [];
+                if (tx.events) {
+                    if (tx.events.RuneBatchMinted && tx.events.RuneBatchMinted.returnValues) {
+                        const ids = tx.events.RuneBatchMinted.returnValues.runeIds || tx.events.RuneBatchMinted.returnValues[1];
+                        if (ids) mintedIds = ids.map(id => id.toString());
+                    } else if (tx.events.RuneMinted) {
+                        const evs = Array.isArray(tx.events.RuneMinted) ? tx.events.RuneMinted : [tx.events.RuneMinted];
+                        evs.forEach(ev => {
+                            const id = (ev.returnValues.runeId || ev.returnValues[1]);
+                            if (id) mintedIds.push(id.toString());
+                        });
+                    }
+                }
+
+                // 兜底：如果事件未捕获，从返回值或最新ID推断
+                if (mintedIds.length === 0) {
+                    try {
+                        const result = isTenX
+                            ? await runeMintContract.methods.mintRune10x(account).call({ from: account })
+                            : await runeMintContract.methods.mintRune(account).call({ from: account });
+                        if (isTenX && Array.isArray(result)) {
+                            mintedIds = result.map(id => id.toString());
+                        } else if (!isTenX) {
+                            mintedIds = [result.toString()];
+                        }
+                    } catch (e) {
+                        console.warn('[RUNE] 兜底获取runeId失败:', e && e.message);
+                    }
+                }
+
+                ZODIAC_UI.hideLoading();
+                ZODIAC_UI.showToast(`${mintName}成功！${mintedIds.length > 0 ? '获得 ' + mintedIds.length + ' 个符文' : ''}`, 'success');
+
+                // 显示铸造结果
+                await showMintResult(mintedIds);
+
+                // 刷新数据
+                await updateTokenBalance();
+                await checkTokenApproval();
+                await updateMintStatus();
+                await loadUserRunes();
+            } catch (error) {
+                ZODIAC_UI.hideLoading();
+                let msg = '铸造失败';
+                if (error && (error.code === 4001 || (error.message && (error.message.includes('User denied') || error.message.includes('user rejected'))))) {
+                    msg = '用户取消了交易';
+                } else if (error.message) {
+                    msg += ': ' + error.message;
+                }
+                ZODIAC_UI.showToast(msg, 'error');
+                console.error('[RUNE] 铸造失败:', error);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                await fetchMintCosts();
+                await updateMintStatus();
+            }
+        }
+
+        async function showMintResult(mintedIds) {
+            const modal = document.getElementById('mintResultModal');
+            const grid = document.getElementById('mintedRunesGrid');
+            const textEl = document.getElementById('mintResultText');
+
+            if (!mintedIds || mintedIds.length === 0) {
+                textEl.textContent = '铸造成功，但无法获取符文详情，请在"我的符文"中查看';
+                grid.innerHTML = '';
+                modal.classList.remove('hidden');
+                return;
+            }
+
+            textEl.textContent = `恭喜您获得了 ${mintedIds.length} 个符文NFT`;
+
+            // 加载符文详情
+            ZODIAC_UI.showLoading('加载符文详情...');
+            const runes = [];
+            for (const id of mintedIds) {
+                const r = await loadSingleRune(id);
+                runes.push(r);
+            }
+            ZODIAC_UI.hideLoading();
+
+            grid.innerHTML = runes.map(r => renderRuneCard(r, false)).join('');
+            modal.classList.remove('hidden');
+        }
+
+        // ============= 选择符文升级 =============
+        window.selectRuneForUpgrade = async function(rune) {
+            selectedRune = rune;
+            // 重新渲染当前列表以更新选中状态
+            if (currentZodiacFilter === 'all') {
+                renderUpgradeRunes(allUpgradeRunes);
+            } else {
+                const z = parseInt(currentZodiacFilter, 10);
+                const filtered = allUpgradeRunes.filter(r => parseInt(r.boundZodiac, 10) === z);
+                renderUpgradeRunes(filtered);
+            }
+
+            const levelNum = parseInt(rune.level, 10);
+            const zodiacIndex = parseInt(rune.boundZodiac, 10);
+            const zodiacName = ZODIAC_NAMES[zodiacIndex] || '未知';
+            const zodiacIcon = ZODIAC_ICONS[zodiacIndex] || '❓';
+            const rarityName = RARITY_NAMES[rune.rarity] || '普通';
+            const rarityClass = RARITY_CLASSES[rune.rarity] || 'rarity-common';
+
+            // 升级费用 = 当前等级 × 10000 子代币（18位精度）
+            const upgradeCostWei = BigInt(levelNum) * 10000n * (10n ** 18n);
+
+            // 加载子代币合约 + 余额
+            await loadSubTokenContract(zodiacIndex);
+            await refreshSubTokenBalance(zodiacIndex);
+
+            const subEntry = subTokenContracts[zodiacIndex];
+            const costDisplay = subEntry ? formatTokenAmount(upgradeCostWei, subEntry.decimals) : formatTokenAmount(upgradeCostWei, 18);
+            const balanceWei = subEntry ? subEntry.balanceWei : 0n;
+            const balanceDisplay = subEntry ? formatTokenAmount(balanceWei, subEntry.decimals) : '0';
+            const subTokenSymbol = subEntry ? subEntry.symbol : (zodiacName + '子代币');
+            const subTokenAddrShort = subEntry ? shortenAddress(subEntry.address) : '未配置';
+            const hasEnough = balanceWei >= upgradeCostWei;
+            const canUpgrade = levelNum < 10 && !!subEntry && hasEnough && !!runeUpdateContract;
+
+            const mainStatName = STAT_NAMES[rune.mainStat] || '未知';
+            const mainStatIcon = STAT_ICONS[rune.mainStat] || '❓';
+            const subStatName = STAT_NAMES[rune.subStat] || '未知';
+            const subStatIcon = STAT_ICONS[rune.subStat] || '❓';
+            const mainStatValDisplay = formatStatValue(rune.mainStatValue, rune.mainStat);
+            const subStatValDisplay = formatStatValue(rune.subStatValue, rune.subStat);
+
+            const infoEl = document.getElementById('selectedRuneInfo');
+            const upgradeBtn = document.getElementById('upgradeRuneBtn');
+
+            infoEl.innerHTML = `
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="rune-icon-large" style="width:64px;height:64px;font-size:32px;">${zodiacIcon}</div>
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <h4 class="text-lg font-bold">${zodiacIcon} ${zodiacName}符文</h4>
+                            <span class="rarity-badge ${rarityClass}">${rarityName}</span>
+                        </div>
+                        <p class="text-gray-600 text-sm">${rune.position}号位 · ID: ${rune.id}</p>
+                        <div class="flex gap-4 mt-2 text-sm text-gray-700">
+                            <span><span class="mr-1">${mainStatIcon}</span>${mainStatName}: ${mainStatValDisplay}</span>
+                            <span><span class="mr-1">${subStatIcon}</span>${subStatName}: ${subStatValDisplay}</span>
+                        </div>
+                        <div class="flex gap-4 mt-1 text-sm">
+                            <span class="text-gray-700">当前等级: <strong>${levelNum}</strong></span>
+                            <span class="text-purple-600 font-medium">升级后: ${levelNum + 1} 级</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div class="p-3 bg-purple-50 rounded-lg">
+                        <div class="text-xs text-gray-500 mb-1">升级所需子代币</div>
+                        <div class="font-bold text-purple-600">${costDisplay} ${subTokenSymbol}</div>
+                        <p class="text-xs text-gray-400 mt-1">${levelNum} → ${levelNum + 1} 级</p>
+                    </div>
+                    <div class="p-3 bg-green-50 rounded-lg">
+                        <div class="text-xs text-gray-500 mb-1">我的${zodiacName}子代币余额</div>
+                        <div class="font-bold ${hasEnough ? 'text-green-600' : 'text-red-600'}">${balanceDisplay} ${subTokenSymbol}</div>
+                        <p class="text-xs ${hasEnough ? 'text-green-500' : 'text-red-500'} mt-1">${hasEnough ? '✅ 余额充足' : '❌ 余额不足'}</p>
+                    </div>
+                    <div class="p-3 bg-blue-50 rounded-lg">
+                        <div class="text-xs text-gray-500 mb-1">子代币合约</div>
+                        <div class="font-bold text-blue-600 text-sm">${subTokenAddrShort}</div>
+                        <p class="text-xs text-gray-400 mt-1 break-all">${subEntry ? subEntry.address : '未在Authorizer注册'}</p>
+                    </div>
+                </div>
+
+                ${levelNum >= 10 ? `<div class="p-3 bg-red-50 rounded-lg text-sm text-red-700">该符文已达10级，无法继续升级</div>` : ''}
+                ${levelNum < 10 && !subEntry ? `<div class="p-3 bg-orange-50 rounded-lg text-sm text-orange-700">⚠ 未找到 ${zodiacName} 的子代币合约（Authorizer 中未注册 "${SUB_TOKEN_AUTH_NAMES[zodiacIndex]}"），请联系管理员</div>` : ''}
+                ${!runeUpdateContract ? `<div class="p-3 bg-orange-50 rounded-lg text-sm text-orange-700">⚠ RuneUpdate 合约未配置，无法升级</div>` : ''}
+            `;
+
+            // 设置按钮状态
+            if (levelNum >= 10) {
+                upgradeBtn.disabled = true;
+                upgradeBtn.textContent = '已达最高等级';
+            } else if (!canUpgrade) {
+                upgradeBtn.disabled = true;
+                upgradeBtn.textContent = hasEnough ? '暂不可升级' : '子代币余额不足';
+            } else {
+                upgradeBtn.disabled = false;
+                upgradeBtn.textContent = `消耗 ${costDisplay} ${subTokenSymbol} 升级到 ${levelNum + 1} 级`;
+            }
+
+            document.getElementById('upgradeSection').classList.remove('hidden');
+        }
+
+        // ============= 子代币合约加载 =============
+        async function loadSubTokenContract(zodiacIndex) {
+            if (subTokenContracts[zodiacIndex]) return subTokenContracts[zodiacIndex];
+            if (!web3) return null;
+            try {
+                const authorizer = await window.ZODIAC_WEB3.getContract('authorizer');
+                if (!authorizer) {
+                    console.warn('[RUNE] Authorizer not available');
+                    return null;
+                }
+                const name = SUB_TOKEN_AUTH_NAMES[zodiacIndex];
+                const addr = await authorizer.methods.getAddressByName(name).call();
+                if (!addr || addr === '0x0000000000000000000000000000000000000000') {
+                    console.warn(`[RUNE] Sub-token for ${ZODIAC_NAMES[zodiacIndex]} (${name}) not registered`);
+                    return null;
+                }
+                const contract = new web3.eth.Contract(ERC20_ABI, addr);
+                let decimals = 18;
+                let symbol = ZODIAC_NAMES[zodiacIndex] + '子代币';
+                try { decimals = parseInt(await contract.methods.decimals().call()); } catch (e) {}
+                try { symbol = await contract.methods.symbol().call(); } catch (e) {}
+
+                subTokenContracts[zodiacIndex] = { contract, address: addr, decimals, symbol, balanceWei: 0n };
+                console.log(`[RUNE] SubToken ${ZODIAC_NAMES[zodiacIndex]} (${name}) loaded at ${addr}, decimals=${decimals}, symbol=${symbol}`);
+                return subTokenContracts[zodiacIndex];
+            } catch (e) {
+                console.warn(`[RUNE] Failed to load sub-token for ${ZODIAC_NAMES[zodiacIndex]}:`, e && e.message);
+                return null;
+            }
+        }
+
+        async function refreshSubTokenBalance(zodiacIndex) {
+            const entry = subTokenContracts[zodiacIndex];
+            if (!entry || !account) return 0n;
+            try {
+                const bal = await entry.contract.methods.balanceOf(account).call();
+                entry.balanceWei = BigInt(String(bal));
+                return entry.balanceWei;
+            } catch (e) {
+                console.warn(`[RUNE] Failed to get balance for ${ZODIAC_NAMES[zodiacIndex]} sub-token:`, e && e.message);
+                entry.balanceWei = 0n;
+                return 0n;
+            }
+        }
+
+        // ============= 升级符文 =============
+        async function handleUpgradeRune() {
+            if (!selectedRune) {
+                ZODIAC_UI.showToast('请先选择一个符文', 'error');
+                return;
+            }
+            const levelNum = parseInt(selectedRune.level, 10);
+            if (levelNum >= 10) {
+                ZODIAC_UI.showToast('该符文已达最高等级', 'error');
+                return;
+            }
+            if (!runeUpdateContract || !runeUpdateAddress || !account || !web3) {
+                ZODIAC_UI.showToast('RuneUpdate 合约未初始化', 'error');
+                return;
+            }
+
+            const zodiacIndex = parseInt(selectedRune.boundZodiac, 10);
+            const zodiacName = ZODIAC_NAMES[zodiacIndex] || '未知';
+            const runeId = selectedRune.id;
+
+            // 检查合约是否暂停
+            try {
+                const isPaused = await runeUpdateContract.methods.paused().call();
+                if (isPaused) {
+                    ZODIAC_UI.showToast('RuneUpdate 合约已暂停', 'error');
+                    return;
+                }
+            } catch (e) {
+                console.warn('[RUNE] 检查合约暂停状态失败:', e && e.message);
+            }
+
+            // 确保子代币合约已加载
+            await loadSubTokenContract(zodiacIndex);
+            const subEntry = subTokenContracts[zodiacIndex];
+            if (!subEntry) {
+                ZODIAC_UI.showToast(`${zodiacName} 的子代币合约未配置，无法升级`, 'error');
+                return;
+            }
+
+            // 升级费用 = 当前等级 × 10000 子代币
+            const requiredCostWei = BigInt(levelNum) * 10000n * (10n ** 18n);
+            const balanceWei = await refreshSubTokenBalance(zodiacIndex);
+            if (balanceWei < requiredCostWei) {
+                const need = formatTokenAmount(requiredCostWei, subEntry.decimals);
+                const have = formatTokenAmount(balanceWei, subEntry.decimals);
+                ZODIAC_UI.showToast(`${zodiacName}子代币余额不足！需要 ${need}，当前 ${have}`, 'error');
+                return;
+            }
+
+            const requiredDisplay = formatTokenAmount(requiredCostWei, subEntry.decimals);
+
+            const confirmed = await ZODIAC_UI.showConfirmModal(
+                '符文升级确认',
+                `确认对以下符文进行升级？\n\n符文 ID: ${runeId}\n绑定生肖: ${zodiacName}\n当前等级: ${levelNum} → ${levelNum + 1} 级\n\n将消耗 ${requiredDisplay} ${subEntry.symbol}\n（${zodiacName}子代币将被销毁）`,
+                { confirmText: '确认升级' }
+            );
+            if (!confirmed) return;
+
+            try {
+                ZODIAC_UI.showLoading('检查子代币授权...');
+
+                // 检查 allowance
+                let allowance = 0n;
+                try {
+                    const alw = await subEntry.contract.methods.allowance(account, runeUpdateAddress).call();
+                    allowance = BigInt(String(alw));
+                } catch (e) {
+                    console.warn('[RUNE] 查询 allowance 失败:', e && e.message);
+                }
+
+                if (allowance < requiredCostWei) {
+                    ZODIAC_UI.showLoading('请求子代币授权...');
+                    try {
+                        await subEntry.contract.methods.approve(runeUpdateAddress, MAX_UINT256)
+                            .send({ from: account, gas: 100000 });
+                        await new Promise(r => setTimeout(r, 1000));
+                    } catch (approveErr) {
+                        ZODIAC_UI.hideLoading();
+                        const msg = approveErr.message || approveErr.toString();
+                        if (msg.includes('User denied') || msg.includes('user rejected')) {
+                            ZODIAC_UI.showToast('用户取消了授权', 'info');
+                        } else {
+                            ZODIAC_UI.showToast('子代币授权失败: ' + msg, 'error');
+                        }
+                        return;
+                    }
+
+                    // 复核 allowance
+                    try {
+                        const alw2 = await subEntry.contract.methods.allowance(account, runeUpdateAddress).call();
+                        allowance = BigInt(String(alw2));
+                        if (allowance < requiredCostWei) {
+                            ZODIAC_UI.hideLoading();
+                            ZODIAC_UI.showToast('子代币授权未生效，请重试', 'error');
+                            return;
+                        }
+                    } catch (e) {
+                        console.warn('[RUNE] 复核 allowance 失败:', e && e.message);
+                    }
+                }
+
+                // 估算 Gas，提前检测可行性
+                ZODIAC_UI.showLoading('检查交易可行性...');
+                try {
+                    await runeUpdateContract.methods.upgradeRune(runeId).call({ from: account });
+                } catch (callError) {
+                    ZODIAC_UI.hideLoading();
+                    const errMsg = callError.message || callError.toString();
+                    let userMsg = '升级可能失败，请检查条件后重试';
+                    if (errMsg.includes('Not owner')) userMsg = '错误：您不是该符文的所有者';
+                    else if (errMsg.includes('Max level')) userMsg = '错误：符文已达到最高等级';
+                    else if (errMsg.includes('Paused')) userMsg = '错误：合约已暂停';
+                    else if (errMsg.includes('SubToken not set')) userMsg = '错误：子代币合约未配置';
+                    else if (errMsg.includes('Insufficient balance')) userMsg = '错误：子代币余额不足';
+                    else if (errMsg.includes('Insufficient allowance')) userMsg = '错误：子代币授权不足';
+                    ZODIAC_UI.showToast(userMsg, 'error');
+                    return;
+                }
+
+                ZODIAC_UI.showLoading('升级中，请确认钱包交易...');
+                await runeUpdateContract.methods.upgradeRune(runeId).send({ from: account, gas: 4000000 });
+
+                ZODIAC_UI.hideLoading();
+                ZODIAC_UI.showToast(`升级成功！符文 ID ${runeId} 已升级到 ${levelNum + 1} 级`, 'success');
+
+                // 重置选中状态并刷新
+                selectedRune = null;
+                document.getElementById('upgradeSection').classList.add('hidden');
+                await loadUpgradeRunes();
+                await loadUserRunes();
+            } catch (error) {
+                ZODIAC_UI.hideLoading();
+                console.error('[RUNE] 升级失败:', error);
+                let errorMsg = error.message || error.toString();
+                if (errorMsg.includes('User denied') || errorMsg.includes('user rejected')) {
+                    errorMsg = '用户取消了交易';
+                } else if (errorMsg.includes('insufficient funds')) {
+                    errorMsg = '余额不足，无法支付Gas费用';
+                }
+                ZODIAC_UI.showToast('升级失败: ' + errorMsg, 'error');
+            }
+        }
+
+        // ============= 工具函数 =============
+        function formatTokenAmount(wei, decimals) {
+            try {
+                const d = parseInt(decimals, 10) || 18;
+                const v = BigInt(String(wei));
+                if (d === 18) {
+                    if (web3 && web3.utils) {
+                        const s = web3.utils.fromWei(v.toString(), 'ether');
+                        return formatNumber(s);
+                    }
+                }
+                const divisor = 10n ** BigInt(d);
+                const intPart = v / divisor;
+                const fracPart = v % divisor;
+                let intStr = intPart.toString();
+                if (fracPart > 0n) {
+                    let fracStr = fracPart.toString().padStart(d, '0').replace(/0+$/, '');
+                    if (fracStr) intStr += '.' + fracStr.slice(0, 4);
+                }
+                return formatNumber(intStr);
+            } catch (e) {
+                return String(wei);
+            }
+        }
+
+        function formatNumber(s) {
+            try {
+                const parts = String(s).split('.');
+                parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                return parts.join('.');
+            } catch (e) {
+                return s;
+            }
+        }
+
+        function shortenAddress(addr) {
+            if (!addr || addr.length < 10) return addr || '';
+            return addr.substring(0, 6) + '...' + addr.substring(addr.length - 4);
+        }
+    </script>
+</body>
+</html>

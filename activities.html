@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>十二生肖活动 - Activities Hub</title>
+    <meta name="description" content="质押对应生肖NFT，参与专属活动，赢取丰厚奖励">
+    <link rel="icon" href="images/fu-cards/shuishu_1.jpg" type="image/jpg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.7.3/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="config.js"></script>
+    <script src="components.js"></script>
+    <script src="utils.js"></script>
+    <script src="web3-utils.js"></script>
+    <script src="ui-utils.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap');
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #f5f5f5;
+            background-image: linear-gradient(135deg, #f5f5f5 0%, #e8f5e8 100%);
+            overflow-x: hidden;
+        }
+
+        .title-font {
+            font-family: 'Ma Shan Zheng', cursive;
+        }
+
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+
+        .navbar {
+            background: linear-gradient(to top, rgba(255, 255, 255, 0.95), rgba(249, 250, 251, 0.95), rgba(243, 244, 246, 0.95));
+            backdrop-filter: blur(12px);
+            border-top: 2px solid rgba(59, 130, 246, 0.5);
+            box-shadow: 0 -4px 20px rgba(59, 130, 246, 0.2);
+            animation: navbarSlideUp 0.8s ease-out;
+        }
+
+        @keyframes navbarSlideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .desktop-nav {
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(249, 250, 251, 0.95), rgba(243, 244, 246, 0.95));
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(59, 130, 246, 0.5);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            animation: desktopNavSlideIn 0.8s ease-out;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+
+        @keyframes desktopNavSlideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            padding: 60px 20px;
+            border-radius: 20px;
+            color: white;
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+            animation: heroFadeIn 1s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            animation: heroRotate 20s linear infinite;
+        }
+
+        @keyframes heroFadeIn {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes heroRotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-secondary {
+            background-color: white;
+            color: #3b82f6;
+            border: 1px solid #3b82f6;
+            border-radius: 8px;
+            padding: 12px 32px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background-color: #f0f9ff;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
+        }
+
+        .wallet-button {
+            background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+            color: white;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .wallet-button:hover {
+            background: linear-gradient(135deg, #4338ca 0%, #3730a3 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
+        }
+
+        .nav-item:hover {
+            transform: scale(1.1);
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+        }
+
+        .footer {
+            animation: footerFadeIn 1.5s ease-out;
+        }
+
+        @keyframes footerFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 10px; }
+
+        /* ===== 活动卡片样式 ===== */
+        .activity-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 20px;
+            padding: 28px 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            color: white;
+        }
+
+        .activity-card::before {
+            content: '';
+            position: absolute;
+            top: -60%;
+            right: -60%;
+            width: 180%;
+            height: 180%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, transparent 65%);
+            animation: cardShine 8s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes cardShine {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .activity-card:hover {
+            transform: scale(1.05) translateY(-6px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+
+        .activity-card .zodiac-icon {
+            font-size: 56px;
+            line-height: 1;
+            margin-bottom: 12px;
+            display: inline-block;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.25));
+            animation: iconFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes iconFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+
+        .activity-card h3 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+        }
+
+        .activity-card .activity-desc {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.92);
+            margin-bottom: 16px;
+            min-height: 56px;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        .activity-card .activity-join-btn {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            font-weight: 600;
+            padding: 8px 20px;
+            border-radius: 999px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .activity-card:hover .activity-join-btn {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.05);
+        }
+
+        .status-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 999px;
+            backdrop-filter: blur(6px);
+            z-index: 2;
+        }
+
+        .status-active { background: rgba(34, 197, 94, 0.95); color: white; box-shadow: 0 2px 8px rgba(34, 197, 94, 0.4); }
+        .status-inactive { background: rgba(100, 116, 139, 0.9); color: white; }
+        .status-loading { background: rgba(245, 158, 11, 0.9); color: white; }
+        .status-paused { background: rgba(239, 68, 68, 0.9); color: white; }
+
+        .zodiac-num {
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            font-size: 28px;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.25);
+            font-family: 'Ma Shan Zheng', cursive;
+        }
+
+        /* 元素渐变色 */
+        .grad-water { background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%); }
+        .grad-fire { background: linear-gradient(135deg, #f97316 0%, #b91c1c 100%); }
+        .grad-wind { background: linear-gradient(135deg, #22c55e 0%, #15803d 100%); }
+        .grad-dark { background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); }
+        .grad-light { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+
+        /* ===== 模态框 ===== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 16px;
+        }
+
+        .modal-overlay.modal-active {
+            display: flex;
+            animation: modalFadeIn 0.3s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-box {
+            background: white;
+            border-radius: 20px;
+            max-width: 640px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+            animation: modalSlideUp 0.4s ease-out;
+        }
+
+        @keyframes modalSlideUp {
+            from { transform: translateY(40px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            border-radius: 20px 20px 0 0;
+            padding: 24px;
+            color: white;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(255, 255, 255, 0.25);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover { background: rgba(255, 255, 255, 0.45); transform: rotate(90deg); }
+
+        .nft-mini-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: white;
+        }
+
+        .nft-mini-card:hover { border-color: #3b82f6; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2); }
+        .nft-mini-card.selected { border-color: #3b82f6; background: #eff6ff; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+        .nft-mini-card.staked { border-color: #22c55e; background: #f0fdf4; }
+
+        .nft-mini-card img { width: 60px; height: 60px; object-fit: contain; margin: 0 auto 4px; }
+
+        .reward-box {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 2px solid #f59e0b;
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        /* ===== 兼容 ui-utils.js 实际生成的 class 名 ===== */
+        .loading-overlay.loading-active { display: flex; }
+        .loading-content { display: flex; flex-direction: column; align-items: center; padding: 40px 60px; background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+        .loading-spinner { width: 56px; height: 56px; border: 3px solid #f0f0f0; border-top-color: #3b82f6; border-right-color: #1d4ed8; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-text { margin-top: 16px; color: #374151; font-weight: 600; }
+
+        .toast.toast-active { opacity: 1; transform: translateX(-50%) translateY(-10px); }
+        .toast.toast-success { background-color: #16a34a; }
+        .toast.toast-error { background-color: #dc2626; }
+        .toast.toast-warning { background-color: #d97706; }
+        .toast.toast-info { background-color: #2563eb; }
+
+        .empty-state {
+            text-align: center;
+            padding: 32px 16px;
+            color: #9ca3af;
+        }
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+
+    <div class="min-h-screen pb-20 md:pb-0">
+        <header class="container mx-auto px-4 py-6 title-section md:pl-24">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 rounded-full mr-4 overflow-hidden border-2 border-blue-500">
+                        <img src="images/fu-cards/shiershengxiao.jpg" alt="十二生肖" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='images/fu-cards/shui_1.jpg';">
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800">十二生肖</h1>
+                        <p class="text-sm text-gray-500">Twelve Zodiacs Collection</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button id="menuBtn" class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-bars text-xl text-gray-700"></i>
+                    </button>
+                    <button id="walletBtn" class="wallet-button">连接钱包</button>
+                </div>
+            </div>
+        </header>
+
+        <div id="desktopSidebarContainer"></div>
+        <div id="mobileNavbarContainer"></div>
+        <div id="mobileMenuContainer"></div>
+
+        <main class="container mx-auto px-4 pt-4 pb-36 md:pt-0 md:pb-0 md:pl-24">
+            <!-- Hero 区 -->
+            <section class="hero-section mb-12">
+                <div class="text-center mb-6 relative z-10">
+                    <div class="text-6xl mb-4">🏮</div>
+                    <h1 class="text-4xl md:text-5xl font-bold mb-4 title-font">十二生肖活动</h1>
+                    <p class="text-xl text-white/90">质押对应生肖NFT，参与专属活动，赢取丰厚奖励</p>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 relative z-10 max-w-3xl mx-auto">
+                    <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 text-center">
+                        <div class="text-2xl font-bold text-yellow-300">12</div>
+                        <div class="text-sm text-white/80 mt-1">专属活动</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 text-center">
+                        <div class="text-2xl font-bold text-green-300" id="activeCount">--</div>
+                        <div class="text-sm text-white/80 mt-1">进行中</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 text-center">
+                        <div class="text-2xl font-bold text-blue-300" id="myStakedCount">0</div>
+                        <div class="text-sm text-white/80 mt-1">我的质押</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 text-center">
+                        <div class="text-2xl font-bold text-orange-300" id="myPendingTotal">0.0000</div>
+                        <div class="text-sm text-white/80 mt-1">待领取奖励</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 活动网格 -->
+            <section class="mb-12">
+                <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+                    <h2 class="text-2xl font-bold text-gray-800">🎯 生肖活动大厅</h2>
+                    <button id="refreshBtn" class="btn-secondary text-sm" style="padding:8px 18px;">
+                        <i class="fas fa-sync-alt mr-1"></i> 刷新状态
+                    </button>
+                </div>
+                <div id="activityGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
+            </section>
+
+            <footer class="text-center py-8 text-gray-700 footer">
+                <p>© 2026 十二生肖NFT系列 · Twelve Zodiacs Collection</p>
+                <p class="mt-2">祝你心想事成，生肖大旺 🐾✨</p>
+                <div class="mt-6 flex flex-col md:flex-row justify-center items-center gap-6">
+                    <a href="https://x.com/UPNRt3WZ2A11248" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-4 py-2 bg-white/80 rounded-full shadow-md hover:shadow-lg transition-all duration-300 hover:bg-white hover:scale-105">
+                        <i class="fab fa-twitter text-blue-500 text-xl"></i>
+                        <span class="font-medium">X</span>
+                    </a>
+                    <a href="https://t.me/zodiac12bsc" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-4 py-2 bg-white/80 rounded-full shadow-md hover:shadow-lg transition-all duration-300 hover:bg-white hover:scale-105">
+                        <i class="fab fa-telegram-plane text-blue-400 text-xl"></i>
+                        <span class="font-medium">Telegram</span>
+                    </a>
+                    <a href="https://qm.qq.com/q/1085413522" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-4 py-2 bg-white/80 rounded-full shadow-md hover:shadow-lg transition-all duration-300 hover:bg-white hover:scale-105">
+                        <i class="fab fa-qq text-green-500 text-xl"></i>
+                        <span class="font-medium">QQ群</span>
+                    </a>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <!-- 活动详情模态框 -->
+    <div id="activityModal" class="modal-overlay">
+        <div class="modal-box">
+            <div id="modalHeader" class="modal-header grad-water">
+                <button class="modal-close" onclick="closeActivityModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="flex items-center gap-4">
+                    <div id="modalIcon" class="text-5xl">🐭</div>
+                    <div>
+                        <h3 id="modalTitle" class="text-2xl font-bold">活动名称</h3>
+                        <p id="modalSubtitle" class="text-sm text-white/90 mt-1">生肖 · 活动类型</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 space-y-6">
+                <!-- 描述与规则 -->
+                <div>
+                    <p id="modalDesc" class="text-gray-600 text-sm mb-3"></p>
+                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                        <h4 class="font-semibold text-blue-700 mb-2 text-sm"><i class="fas fa-book-open mr-1"></i> 活动规则</h4>
+                        <ul id="modalRules" class="text-sm text-gray-600 space-y-1 list-disc list-inside"></ul>
+                    </div>
+                </div>
+
+                <!-- 奖励信息 -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="reward-box">
+                        <div class="text-xs text-amber-700 mb-1">待领取奖励</div>
+                        <div class="text-2xl font-bold text-amber-700" id="modalPending">0.0000</div>
+                        <button id="claimBtn" class="mt-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors">
+                            <i class="fas fa-gift mr-1"></i> 领取奖励
+                        </button>
+                    </div>
+                    <div class="bg-gradient-to-br from-indigo-50 to-blue-100 border border-indigo-200 rounded-2xl p-4 text-center">
+                        <div class="text-xs text-indigo-700 mb-1">已质押 NFT</div>
+                        <div class="text-2xl font-bold text-indigo-700" id="modalStakedCount">0</div>
+                        <div class="text-xs text-indigo-500 mt-1" id="modalRewardType">奖励类型: --</div>
+                    </div>
+                </div>
+
+                <!-- 活动专属交互区 -->
+                <div id="modalInteraction" class="border-2 border-dashed border-gray-200 rounded-xl p-4">
+                    <h4 class="font-semibold text-gray-700 mb-3 text-sm"><i class="fas fa-gamepad mr-1"></i> 活动交互</h4>
+                    <div id="modalInteractionBody"></div>
+                </div>
+
+                <!-- 已质押 NFT 列表 -->
+                <div>
+                    <h4 class="font-semibold text-gray-700 mb-3 text-sm"><i class="fas fa-lock mr-1"></i> 我已质押的 NFT</h4>
+                    <div id="modalStakedGrid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                        <div class="empty-state col-span-full">连接钱包后查看已质押NFT</div>
+                    </div>
+                </div>
+
+                <!-- 质押区：选择 NFT 质押 -->
+                <div>
+                    <h4 class="font-semibold text-gray-700 mb-3 text-sm"><i class="fas fa-wallet mr-1"></i> 选择 NFT 质押到本活动</h4>
+                    <div id="modalUserNFTs" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                        <div class="empty-state col-span-full">连接钱包后查看你的NFT</div>
+                    </div>
+                    <div class="flex gap-3 mt-4">
+                        <button id="stakeBtn" class="btn-primary flex-1" style="padding:10px 20px;">
+                            <i class="fas fa-lock mr-1"></i> 质押选中 NFT
+                        </button>
+                        <button id="unstakeBtn" class="btn-secondary flex-1" style="padding:10px 20px;">
+                            <i class="fas fa-lock-open mr-1"></i> 取回选中 NFT
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 合约地址 -->
+                <div class="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <div>
+                            <div class="text-xs text-gray-500 mb-1">活动合约地址</div>
+                            <span id="modalContractAddr" class="text-sm font-mono text-gray-700 break-all">--</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button id="copyAddrBtn" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1.5 rounded-lg transition-colors">
+                                <i class="fas fa-copy mr-1"></i> 复制
+                            </button>
+                            <a id="modalExplorerLink" href="#" target="_blank" rel="noopener noreferrer" class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-lg transition-colors">
+                                <i class="fas fa-external-link-alt mr-1"></i> 浏览器
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== 活动合约最小 ABI =====
+        const ACTIVITY_ABI = [
+            { "inputs": [{ "name": "tokenId", "type": "uint256" }], "name": "stakeNFT", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
+            { "inputs": [{ "name": "tokenId", "type": "uint256" }], "name": "unstakeNFT", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
+            { "inputs": [], "name": "claimRewards", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
+            { "inputs": [{ "name": "", "type": "address" }], "name": "pendingRewards", "outputs": [{ "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
+            { "inputs": [{ "name": "", "type": "address" }], "name": "stakedNFTs", "outputs": [{ "name": "", "type": "uint256[]" }], "stateMutability": "view", "type": "function" },
+            { "inputs": [], "name": "paused", "outputs": [{ "name": "", "type": "bool" }], "stateMutability": "view", "type": "function" },
+            { "inputs": [], "name": "rewardToken", "outputs": [{ "name": "", "type": "address" }], "stateMutability": "view", "type": "function" },
+            { "inputs": [], "name": "rewardType", "outputs": [{ "name": "", "type": "uint8" }], "stateMutability": "view", "type": "function" }
+        ];
+
+        // ===== 活动专属交互方法 ABI 片段（按实际合约方法名） =====
+        const ACTION_ABI_FRAGMENTS = {
+            activityWheel: [{ "inputs": [], "name": "spin", "outputs": [], "stateMutability": "nonpayable", "type": "function" }],
+            activityBlindbox: [{ "inputs": [], "name": "draw", "outputs": [], "stateMutability": "nonpayable", "type": "function" }],
+            activityBoss: [{ "inputs": [{ "name": "tokenId", "type": "uint256" }], "name": "challengeBoss", "outputs": [], "stateMutability": "nonpayable", "type": "function" }],
+            activityTower: [{ "inputs": [{ "name": "tokenId", "type": "uint256" }, { "name": "floor", "type": "uint8" }], "name": "challengeFloor", "outputs": [], "stateMutability": "nonpayable", "type": "function" }],
+            activityPredict: [{ "inputs": [{ "name": "dir", "type": "uint8" }], "name": "predict", "outputs": [], "stateMutability": "nonpayable", "type": "function" }],
+            activityRace: [{ "inputs": [{ "name": "tokenId", "type": "uint256" }], "name": "registerForRace", "outputs": [], "stateMutability": "nonpayable", "type": "function" }],
+            activityPuzzle: [{ "inputs": [{ "name": "tokenId", "type": "uint256" }, { "name": "cellIndex", "type": "uint256" }], "name": "lightCell", "outputs": [], "stateMutability": "nonpayable", "type": "function" }],
+            activityPinball: [{ "inputs": [], "name": "play", "outputs": [], "stateMutability": "nonpayable", "type": "function" }],
+            activityTimer: [{ "inputs": [{ "name": "hour", "type": "uint8" }], "name": "claimSlotReward", "outputs": [], "stateMutability": "nonpayable", "type": "function" }],
+            activityBattle: [{ "inputs": [{ "name": "tokenId", "type": "uint256" }], "name": "registerForBattle", "outputs": [], "stateMutability": "nonpayable", "type": "function" }],
+            activityLottery: [{ "inputs": [], "name": "drawLottery", "outputs": [], "stateMutability": "nonpayable", "type": "function" }]
+        };
+
+        // ===== 12 活动数据 =====
+        const ACTIVITIES = [
+            { idx: 0, zodiac: '鼠', name: '灵鼠转运盘', desc: '质押鼠NFT参与转盘抽奖，100%中奖', icon: '🐭', contract: 'activityWheel', element: 'water', rules: ['质押任意鼠属性NFT即可参与', '每日可转动转盘一次', '100%中奖，奖品随机分配', '奖励自动发放到钱包'] },
+            { idx: 1, zodiac: '牛', name: '金牛耕耘录', desc: '质押牛NFT获得权重，按权重分配分红', icon: '🐮', contract: 'activityFarm', element: 'water', rules: ['质押牛属性NFT获得活动权重', '按权重瓜分活动奖池', '权重越高分红越多', '可随时领取累计分红'] },
+            { idx: 2, zodiac: '虎', name: '猛虎登云梯', desc: '质押虎NFT挑战通天塔，按层数获得权重分红', icon: '🐯', contract: 'activityTower', element: 'fire', rules: ['质押虎属性NFT挑战通天塔', '选择层数发起挑战', '层数越高权重越高', '挑战失败不扣除NFT'] },
+            { idx: 3, zodiac: '兔', name: '玉兔奇缘匣', desc: '质押兔NFT参与盲盒抽奖，100%中奖', icon: '🐰', contract: 'activityBlindbox', element: 'wind', rules: ['质押兔属性NFT开启盲盒', '100%中奖，奖品随机', '盲盒奖品由奖池动态调整', '奖励自动到账'] },
+            { idx: 4, zodiac: '龙', name: '神龙斩将台', desc: '质押龙NFT挑战世界Boss，按贡献瓜分分红', icon: '🐲', contract: 'activityBoss', element: 'wind', rules: ['质押龙属性NFT挑战世界Boss', '按伤害贡献瓜分奖池', 'Boss被击败后重置并刷新', '贡献越高奖励越多'] },
+            { idx: 5, zodiac: '蛇', name: '青蛇观星台', desc: '质押蛇NFT猜测代币涨跌，胜利者瓜分分红', icon: '🐍', contract: 'activityPredict', element: 'fire', rules: ['质押蛇属性NFT获得预测资格', '选择看涨或看跌', '结算后胜利者瓜分奖池', '失败者不损失NFT'] },
+            { idx: 6, zodiac: '马', name: '赤兔奔腾赛', desc: '质押马NFT参与赛跑，按排名瓜分分红', icon: '🐴', contract: 'activityRace', element: 'fire', rules: ['质押马属性NFT报名赛跑', '按到达排名瓜分奖池', '排名越前奖励越高', '赛季结束后统一结算'] },
+            { idx: 7, zodiac: '羊', name: '吉羊聚福图', desc: '质押羊NFT参与拼图，按贡献瓜分奖池', icon: '🐑', contract: 'activityPuzzle', element: 'wind', rules: ['质押羊属性NFT参与拼图', '点亮拼图格子累积贡献', '按贡献比例瓜分奖池', '贡献越多奖励越多'] },
+            { idx: 8, zodiac: '猴', name: '灵猴戏珠台', desc: '质押猴NFT玩弹珠，按弹珠数瓜分奖励', icon: '🐵', contract: 'activityPinball', element: 'dark', rules: ['质押猴属性NFT获得弹珠次数', '弹珠数量越多奖励越多', '每日刷新弹珠次数', '奖励可随时领取'] },
+            { idx: 9, zodiac: '鸡', name: '金鸡报晓场', desc: '质押鸡NFT参与限时抽奖，守时者得奖', icon: '🐔', contract: 'activityTimer', element: 'dark', rules: ['将鸡属性NFT质押到指定时辰', '守时坚守到点可获得奖励', '不同时辰奖池不同', '可领取对应时辰奖励'] },
+            { idx: 10, zodiac: '狗', name: '忠犬争霸赛', desc: '质押狗NFT参与大乱斗，按排名瓜分奖励', icon: '🐶', contract: 'activityBattle', element: 'dark', rules: ['质押狗属性NFT报名大乱斗', '按战斗排名瓜分奖池', '冠军获得最高奖励', '赛季结束统一结算'] },
+            { idx: 11, zodiac: '猪', name: '金猪聚宝盆', desc: '质押猪NFT获得彩票，每日抽10名获奖者', icon: '🐷', contract: 'activityLottery', element: 'water', rules: ['质押猪属性NFT获得彩票', '每日抽取10名幸运获奖者', '质押越多彩票越多', '中奖奖励自动发放'] }
+        ];
+
+        const ELEMENT_GRADIENTS = {
+            water: 'grad-water',
+            fire: 'grad-fire',
+            wind: 'grad-wind',
+            dark: 'grad-dark',
+            light: 'grad-light'
+        };
+
+        const ZODIAC_TO_ELEMENT = {
+            '鼠': 'water', '牛': 'water', '猪': 'water',
+            '虎': 'fire', '蛇': 'fire', '马': 'fire',
+            '兔': 'wind', '龙': 'wind', '羊': 'wind',
+            '猴': 'dark', '鸡': 'dark', '狗': 'dark'
+        };
+
+        const REWARD_TYPE_LABELS = { 0: 'BNB', 1: '代币', 2: '子代币' };
+        const EXPLORER_URL = (window.ZODIAC_CONFIG && ZODIAC_CONFIG.NETWORK_CONFIG && ZODIAC_CONFIG.NETWORK_CONFIG.explorerUrl) || 'https://bscscan.com';
+        const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+
+        // ===== 全局状态 =====
+        let account = null;
+        let nftContract = null;
+        let activityStatusCache = {};      // { contractName: { deployed, paused, address } }
+        let activityContractCache = {};   // { contractName: contractInstance }
+        let currentActivity = null;        // 当前打开的活动对象
+        let selectedStakeTokenId = null;   // 模态框选中的待质押NFT
+        let selectedUnstakeTokenId = null; // 模态框选中的待取回NFT
+        let dataRefreshTimer = null;
+
+        // ===== 工具函数 =====
+        function safeAddr(addr) {
+            if (!addr) return null;
+            const s = typeof addr.toString === 'function' ? addr.toString() : String(addr);
+            return (s && s !== ZERO_ADDRESS) ? s : null;
+        }
+
+        function formatAmount(rawValue) {
+            try {
+                let strVal = String(rawValue || '0');
+                if (strVal === '0' || strVal === 'undefined' || strVal === 'null') return '0.0000';
+                if (typeof strVal === 'string' && strVal.startsWith('0x')) {
+                    try { strVal = BigInt(strVal).toString(); } catch (e) { return '0.0000'; }
+                }
+                const w3 = (window.ZODIAC_WEB3 && ZODIAC_WEB3.getWeb3()) || (window.web3);
+                if (w3 && w3.utils && w3.utils.fromWei) {
+                    const num = parseFloat(w3.utils.fromWei(strVal, 'ether'));
+                    if (num === 0) return '0.0000';
+                    const fixed4 = num.toFixed(4);
+                    return fixed4 === '0.0000' ? num.toFixed(8) : fixed4;
+                }
+                const num = parseFloat(strVal) / 1e18;
+                if (num === 0) return '0.0000';
+                const fixed4 = num.toFixed(4);
+                return fixed4 === '0.0000' ? num.toFixed(8) : fixed4;
+            } catch (e) {
+                return '0.0000';
+            }
+        }
+
+        function getZodiacElement(zodiac) {
+            return ZODIAC_TO_ELEMENT[zodiac] || 'water';
+        }
+
+        // ===== 获取活动合约实例 =====
+        async function getActivityContract(contractName, requireAccount = false) {
+            if (activityContractCache[contractName]) return activityContractCache[contractName];
+
+            const web3Module = window.ZODIAC_WEB3;
+            if (!web3Module) return null;
+            const web3Instance = web3Module.getWeb3() || (window.web3);
+            if (!web3Instance) return null;
+
+            try {
+                const authorizer = await web3Module.getContract('authorizer', false);
+                if (!authorizer || typeof authorizer.methods.getAddressByName !== 'function') return null;
+                const addr = await authorizer.methods.getAddressByName(contractName).call();
+                const validAddr = safeAddr(addr);
+                if (!validAddr) return null;
+                const abi = ACTION_ABI_FRAGMENTS[contractName]
+                    ? ACTIVITY_ABI.concat(ACTION_ABI_FRAGMENTS[contractName])
+                    : ACTIVITY_ABI;
+                const contract = new web3Instance.eth.Contract(abi, validAddr);
+                activityContractCache[contractName] = contract;
+                return contract;
+            } catch (e) {
+                console.warn('[ACTIVITY] 获取活动合约失败 ' + contractName + ':', e.message);
+                return null;
+            }
+        }
+
+        // ===== 加载活动状态（部署/暂停） =====
+        async function loadActivityStatus(activity) {
+            if (activityStatusCache[activity.contract]) return activityStatusCache[activity.contract];
+            const web3Module = window.ZODIAC_WEB3;
+            if (!web3Module) return { deployed: false, paused: false, address: null };
+            try {
+                const authorizer = await web3Module.getContract('authorizer', false);
+                if (!authorizer) return { deployed: false, paused: false, address: null };
+                const addr = await authorizer.methods.getAddressByName(activity.contract).call();
+                const validAddr = safeAddr(addr);
+                if (!validAddr) {
+                    activityStatusCache[activity.contract] = { deployed: false, paused: false, address: null };
+                    return activityStatusCache[activity.contract];
+                }
+                let paused = false;
+                try {
+                    const contract = await getActivityContract(activity.contract, false);
+                    if (contract && contract.methods.paused) {
+                        paused = await contract.methods.paused().call();
+                    }
+                } catch (e) { paused = false; }
+                const status = { deployed: true, paused: !!paused, address: validAddr };
+                activityStatusCache[activity.contract] = status;
+                return status;
+            } catch (e) {
+                console.warn('[ACTIVITY] 加载状态失败 ' + activity.contract + ':', e.message);
+                activityStatusCache[activity.contract] = { deployed: false, paused: false, address: null };
+                return activityStatusCache[activity.contract];
+            }
+        }
+
+        async function loadAllActivityStatuses() {
+            const grid = document.getElementById('activityGrid');
+            if (!grid.children.length) renderActivityCards(); // 先渲染骨架
+            await Promise.all(ACTIVITIES.map(async (act) => {
+                const status = await loadActivityStatus(act);
+                updateCardStatus(act, status);
+            }));
+            updateHeroStats();
+        }
+
+        function updateHeroStats() {
+            const activeCount = ACTIVITIES.filter(a => {
+                const s = activityStatusCache[a.contract];
+                return s && s.deployed && !s.paused;
+            }).length;
+            const el = document.getElementById('activeCount');
+            if (el) el.textContent = activeCount;
+        }
+
+        // ===== 渲染活动卡片 =====
+        function renderActivityCards() {
+            const grid = document.getElementById('activityGrid');
+            let html = '';
+            ACTIVITIES.forEach((act) => {
+                const grad = ELEMENT_GRADIENTS[getZodiacElement(act.zodiac)] || 'grad-water';
+                const num = (act.idx + 1).toString().padStart(2, '0');
+                html += `
+                    <div class="activity-card ${grad}" data-contract="${act.contract}" onclick="openActivityModal(${act.idx})">
+                        <span class="status-badge status-loading">检测中</span>
+                        <span class="zodiac-num">${num}</span>
+                        <div class="zodiac-icon">${act.icon}</div>
+                        <h3>${act.name}</h3>
+                        <p class="activity-desc">${act.desc}</p>
+                        <span class="activity-join-btn">
+                            <i class="fas fa-hand-pointer mr-1"></i> 参与活动
+                        </span>
+                    </div>
+                `;
+            });
+            grid.innerHTML = html;
+        }
+
+        function updateCardStatus(activity, status) {
+            const card = document.querySelector(`.activity-card[data-contract="${activity.contract}"] .status-badge`);
+            if (!card) return;
+            if (!status.deployed) {
+                card.textContent = '未开启';
+                card.className = 'status-badge status-inactive';
+            } else if (status.paused) {
+                card.textContent = '已暂停';
+                card.className = 'status-badge status-paused';
+            } else {
+                card.textContent = '进行中';
+                card.className = 'status-badge status-active';
+            }
+        }
+
+        // ===== 打开活动模态框 =====
+        async function openActivityModal(idx) {
+            const act = ACTIVITIES[idx];
+            if (!act) return;
+            currentActivity = act;
+            selectedStakeTokenId = null;
+            selectedUnstakeTokenId = null;
+
+            const grad = ELEMENT_GRADIENTS[getZodiacElement(act.zodiac)] || 'grad-water';
+            const header = document.getElementById('modalHeader');
+            header.className = 'modal-header ' + grad;
+
+            document.getElementById('modalIcon').textContent = act.icon;
+            document.getElementById('modalTitle').textContent = act.name;
+            document.getElementById('modalSubtitle').textContent = `${act.zodiac}属性 · 生肖专属活动`;
+            document.getElementById('modalDesc').textContent = act.desc;
+
+            const rulesEl = document.getElementById('modalRules');
+            rulesEl.innerHTML = act.rules.map(r => `<li>${r}</li>`).join('');
+
+            document.getElementById('modalPending').textContent = '0.0000';
+            document.getElementById('modalStakedCount').textContent = '0';
+            document.getElementById('modalRewardType').textContent = '奖励类型: --';
+            document.getElementById('modalContractAddr').textContent = '加载中...';
+            document.getElementById('modalExplorerLink').href = EXPLORER_URL;
+            renderInteractionArea(act, { deployed: false, paused: false });
+
+            // 显示模态框
+            document.getElementById('activityModal').classList.add('modal-active');
+            document.body.style.overflow = 'hidden';
+
+            // 加载状态
+            const status = await loadActivityStatus(act);
+            document.getElementById('modalContractAddr').textContent = status.address ? status.address : '未部署';
+            const link = document.getElementById('modalExplorerLink');
+            link.href = status.address ? `${EXPLORER_URL}/address/${status.address}` : EXPLORER_URL;
+            renderInteractionArea(act, status);
+
+            if (!account) {
+                document.getElementById('modalStakedGrid').innerHTML = '<div class="empty-state col-span-full">请先连接钱包</div>';
+                document.getElementById('modalUserNFTs').innerHTML = '<div class="empty-state col-span-full">请先连接钱包</div>';
+                return;
+            }
+
+            // 加载合约数据
+            await Promise.all([
+                loadStakedNFTs(act),
+                loadPendingRewards(act),
+                loadRewardType(act),
+                loadUserNFTsForModal(act)
+            ]);
+        }
+
+        function closeActivityModal() {
+            document.getElementById('activityModal').classList.remove('modal-active');
+            document.body.style.overflow = '';
+            currentActivity = null;
+        }
+
+        // ===== 渲染活动专属交互区 =====
+        function renderInteractionArea(activity, status) {
+            const body = document.getElementById('modalInteractionBody');
+            if (!status.deployed) {
+                body.innerHTML = '<div class="empty-state">该活动合约尚未部署，敬请期待</div>';
+                return;
+            }
+            if (status.paused) {
+                body.innerHTML = '<div class="empty-state">该活动已暂停，暂无法参与</div>';
+                return;
+            }
+            const key = activity.contract;
+            let html = '';
+            switch (key) {
+                case 'activityWheel':
+                    html = `<button class="btn-primary w-full" onclick="performActivityAction('spin', [])"><i class="fas fa-sync-alt mr-1"></i> 转动转盘</button>`;
+                    break;
+                case 'activityBlindbox':
+                    html = `<button class="btn-primary w-full" onclick="performActivityAction('draw', [])"><i class="fas fa-box-open mr-1"></i> 开启盲盒</button>`;
+                    break;
+                case 'activityPinball':
+                    html = `<button class="btn-primary w-full" onclick="performActivityAction('play', [])"><i class="fas fa-circle mr-1"></i> 玩弹珠</button>`;
+                    break;
+                case 'activityLottery':
+                    html = `<button class="btn-primary w-full" onclick="performActivityAction('drawLottery', [])"><i class="fas fa-dice mr-1"></i> 参与抽奖</button>`;
+                    break;
+                case 'activityPredict':
+                    html = `
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <button class="btn-primary flex-1" onclick="performActivityAction('predict', [0])"><i class="fas fa-arrow-up mr-1"></i> 看涨</button>
+                            <button class="btn-primary flex-1" style="background:linear-gradient(135deg,#ef4444 0%,#b91c1c 100%);" onclick="performActivityAction('predict', [1])"><i class="fas fa-arrow-down mr-1"></i> 看跌</button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2 text-center">结算后胜利者瓜分奖池</p>`;
+                    break;
+                case 'activityTimer':
+                    html = `
+                        <div class="flex flex-col sm:flex-row gap-3 items-center">
+                            <label class="text-sm text-gray-600 whitespace-nowrap">选择时辰：</label>
+                            <select id="timerHourSelect" class="border border-gray-300 rounded-lg px-3 py-2 text-sm flex-1">
+                                ${Array.from({ length: 24 }, (_, h) => `<option value="${h}">${h}时 (${['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][Math.floor(h/2)]})</option>`).join('')}
+                            </select>
+                            <button class="btn-primary" onclick="performTimerClaim()"><i class="fas fa-clock mr-1"></i> 领取时辰奖励</button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2 text-center">将鸡NFT质押到对应时辰，守时者得奖</p>`;
+                    break;
+                case 'activityBoss':
+                case 'activityRace':
+                case 'activityBattle':
+                    {
+                        const methodName = { activityBoss: 'challengeBoss', activityRace: 'registerForRace', activityBattle: 'registerForBattle' }[key];
+                        const label = { activityBoss: '挑战Boss', activityRace: '报名赛跑', activityBattle: '报名乱斗' }[key];
+                        html = `
+                            <div id="actionNFTPrompt" class="text-sm text-gray-500 mb-2">请先在下方"已质押NFT"中选择一张参战</div>
+                            <button class="btn-primary w-full" onclick="performActionWithSelectedNFT('${methodName}', '${label}')"><i class="fas fa-fist-raised mr-1"></i> ${label}</button>`;
+                    }
+                    break;
+                case 'activityTower':
+                    html = `
+                        <div id="actionNFTPrompt" class="text-sm text-gray-500 mb-2">请先在下方"已质押NFT"中选择一张登塔</div>
+                        <div class="flex gap-3 items-center">
+                            <label class="text-sm text-gray-600 whitespace-nowrap">挑战层数：</label>
+                            <input id="towerFloorInput" type="number" min="1" max="100" value="1" class="border border-gray-300 rounded-lg px-3 py-2 text-sm flex-1" />
+                            <button class="btn-primary" onclick="performTowerChallenge()"><i class="fas fa-layer-group mr-1"></i> 挑战登塔</button>
+                        </div>`;
+                    break;
+                case 'activityPuzzle':
+                    html = `
+                        <div id="actionNFTPrompt" class="text-sm text-gray-500 mb-2">请先在下方"已质押NFT"中选择一张拼图</div>
+                        <div class="flex gap-3 items-center">
+                            <label class="text-sm text-gray-600 whitespace-nowrap">格子编号：</label>
+                            <input id="puzzleCellInput" type="number" min="0" value="0" class="border border-gray-300 rounded-lg px-3 py-2 text-sm flex-1" />
+                            <button class="btn-primary" onclick="performPuzzleLight()"><i class="fas fa-th mr-1"></i> 点亮拼图</button>
+                        </div>`;
+                    break;
+                case 'activityFarm':
+                default:
+                    html = `<p class="text-sm text-gray-500 text-center">本活动为权重分红型，质押NFT后通过"领取奖励"按钮获取累计分红</p>`;
+                    break;
+            }
+            body.innerHTML = html;
+        }
+
+        // ===== 加载已质押 NFT =====
+        async function loadStakedNFTs(activity) {
+            const grid = document.getElementById('modalStakedGrid');
+            try {
+                const contract = await getActivityContract(activity.contract, false);
+                if (!contract || !account) {
+                    grid.innerHTML = '<div class="empty-state col-span-full">无法获取质押信息</div>';
+                    return;
+                }
+                const tokenIds = await contract.methods.stakedNFTs(account).call();
+                const arr = Array.isArray(tokenIds) ? tokenIds : [tokenIds];
+                document.getElementById('modalStakedCount').textContent = arr.length;
+                if (!arr.length) {
+                    grid.innerHTML = '<div class="empty-state col-span-full">暂未质押NFT</div>';
+                    return;
+                }
+                grid.innerHTML = arr.map(tid => buildNFTMiniCard(tid, true)).join('');
+                arr.forEach(tid => fillNFTCardInfo('#modalStakedGrid', tid));
+            } catch (e) {
+                console.warn('[ACTIVITY] 加载已质押NFT失败:', e.message);
+                grid.innerHTML = '<div class="empty-state col-span-full">加载失败</div>';
+            }
+        }
+
+        function buildNFTMiniCard(tokenId, isStaked) {
+            const id = (typeof tokenId.toString === 'function' ? tokenId.toString() : String(tokenId));
+            const cardClass = isStaked ? 'nft-mini-card staked' : 'nft-mini-card';
+            const action = isStaked ? `selectUnstakeNFT('${id}')` : `selectStakeNFT('${id}')`;
+            // 图片/名称由 fillNFTCardInfo 异步填充
+            return `
+                <div class="${cardClass}" data-tokenid="${id}" onclick="${action}" title="#${id}">
+                    <img src="" alt="NFT" onerror="this.style.display='none'">
+                    <div class="text-xs font-medium text-gray-700 truncate">加载中...</div>
+                    <div class="text-[10px] text-gray-400">#${id}</div>
+                </div>
+            `;
+        }
+
+        // 异步补全 NFT 卡片图片与名称
+        async function fillNFTCardInfo(gridSelector, tokenId) {
+            const id = (tokenId.toString ? tokenId.toString() : String(tokenId));
+            const card = document.querySelector(`${gridSelector} .nft-mini-card[data-tokenid="${id}"]`);
+            if (!card) return;
+            const data = await getNFTDataForToken(id);
+            const info = window.ZODIAC_UTILS.getNFTInfo(data ? data.tokenType : '0');
+            const img = card.querySelector('img');
+            if (img) { img.src = info.imagePath; img.alt = info.name; }
+            const nameDiv = card.querySelector('.text-xs.font-medium');
+            if (nameDiv) nameDiv.textContent = info.name;
+            card.title = info.name + ' #' + id;
+        }
+
+        // 缓存 tokenId -> NFT data
+        const nftDataCache = {};
+        async function getNFTDataForToken(tokenId) {
+            if (nftDataCache[tokenId]) return nftDataCache[tokenId];
+            if (!nftContract) return null;
+            try {
+                const [nftData, tokenGrowth] = await Promise.all([
+                    nftContract.methods.getNFTData(tokenId).call().catch(() => ({ tokenType_: '0', level: '1' })),
+                    nftContract.methods.tokenGrowth ? nftContract.methods.tokenGrowth(tokenId).call().catch(() => '0') : Promise.resolve('0')
+                ]);
+                const tokenType = nftData.tokenType_ !== undefined ? nftData.tokenType_ : (nftData[0] || '0');
+                const tokenLevel = nftData.level !== undefined ? nftData.level : (nftData[1] || '1');
+                const data = { tokenType: String(tokenType), level: String(tokenLevel), growth: String(tokenGrowth) };
+                nftDataCache[tokenId] = data;
+                return data;
+            } catch (e) {
+                return { tokenType: '0', level: '1', growth: '0' };
+            }
+        }
+
+        // ===== 加载用户全部NFT（用于质押选择） =====
+        async function loadUserNFTsForModal(activity) {
+            const grid = document.getElementById('modalUserNFTs');
+            try {
+                if (!nftContract || !account) {
+                    grid.innerHTML = '<div class="empty-state col-span-full">请先连接钱包</div>';
+                    return;
+                }
+                const tokenIds = await nftContract.methods.getTokenIdsByOwner(account).call();
+                const arr = Array.isArray(tokenIds) ? tokenIds : [tokenIds];
+                if (!arr.length) {
+                    grid.innerHTML = '<div class="empty-state col-span-full">你还没有NFT，去铸造页面创建一个吧！</div>';
+                    return;
+                }
+                // 过滤已质押到本活动的NFT（已质押的不可重复质押）
+                const staked = activityStatusCache[activity.contract];
+                let stakedIds = [];
+                try {
+                    const contract = await getActivityContract(activity.contract, false);
+                    if (contract && account) {
+                        const s = await contract.methods.stakedNFTs(account).call();
+                        stakedIds = (Array.isArray(s) ? s : [s]).map(x => (x.toString ? x.toString() : String(x)));
+                    }
+                } catch (e) { /* ignore */ }
+
+                const available = arr.filter(t => !stakedIds.includes(t.toString ? t.toString() : String(t)));
+                if (!available.length) {
+                    grid.innerHTML = '<div class="empty-state col-span-full">所有NFT已质押到本活动</div>';
+                    return;
+                }
+                // 渲染（图片异步填充）
+                grid.innerHTML = available.map(tid => buildNFTMiniCard(tid, false)).join('');
+                available.forEach(tid => fillNFTCardInfo('#modalUserNFTs', tid));
+            } catch (e) {
+                console.warn('[ACTIVITY] 加载用户NFT失败:', e.message);
+                grid.innerHTML = '<div class="empty-state col-span-full">加载失败</div>';
+            }
+        }
+
+        // ===== 加载待领取奖励 & 奖励类型 =====
+        async function loadPendingRewards(activity) {
+            try {
+                if (!account) return;
+                const contract = await getActivityContract(activity.contract, false);
+                if (!contract || !contract.methods.pendingRewards) return;
+                const pending = await contract.methods.pendingRewards(account).call();
+                const formatted = formatAmount(pending);
+                document.getElementById('modalPending').textContent = formatted;
+                // 更新hero区总数
+                refreshMyPendingTotal();
+            } catch (e) {
+                console.warn('[ACTIVITY] 加载待领取奖励失败:', e.message);
+            }
+        }
+
+        async function loadRewardType(activity) {
+            try {
+                const contract = await getActivityContract(activity.contract, false);
+                if (!contract) return;
+                let typeLabel = '--';
+                if (contract.methods.rewardType) {
+                    const rt = await contract.methods.rewardType().call();
+                    typeLabel = REWARD_TYPE_LABELS[Number(rt)] || ('类型' + rt);
+                }
+                document.getElementById('modalRewardType').textContent = '奖励类型: ' + typeLabel;
+            } catch (e) { /* ignore */ }
+        }
+
+        async function refreshMyPendingTotal() {
+            let total = BigInt(0);
+            for (const act of ACTIVITIES) {
+                try {
+                    const contract = await getActivityContract(act.contract, false);
+                    if (contract && contract.methods.pendingRewards && account) {
+                        const p = await contract.methods.pendingRewards(account).call();
+                        total += BigInt(p.toString ? p.toString() : p);
+                    }
+                } catch (e) { /* skip */ }
+            }
+            document.getElementById('myPendingTotal').textContent = formatAmount(total.toString());
+        }
+
+        async function refreshMyStakedCount() {
+            if (!account) { document.getElementById('myStakedCount').textContent = '0'; return; }
+            let total = 0;
+            for (const act of ACTIVITIES) {
+                try {
+                    const contract = await getActivityContract(act.contract, false);
+                    if (contract && contract.methods.stakedNFTs) {
+                        const s = await contract.methods.stakedNFTs(account).call();
+                        total += (Array.isArray(s) ? s.length : 1);
+                    }
+                } catch (e) { /* skip */ }
+            }
+            document.getElementById('myStakedCount').textContent = total;
+        }
+
+        // ===== 选中 NFT =====
+        function selectStakeNFT(tokenId) {
+            selectedStakeTokenId = tokenId;
+            document.querySelectorAll('#modalUserNFTs .nft-mini-card').forEach(c => c.classList.remove('selected'));
+            const card = document.querySelector(`#modalUserNFTs .nft-mini-card[data-tokenid="${tokenId}"]`);
+            if (card) card.classList.add('selected');
+        }
+
+        function selectUnstakeNFT(tokenId) {
+            selectedUnstakeTokenId = tokenId;
+            document.querySelectorAll('#modalStakedGrid .nft-mini-card').forEach(c => c.classList.remove('selected'));
+            const card = document.querySelector(`#modalStakedGrid .nft-mini-card[data-tokenid="${tokenId}"]`);
+            if (card) {
+                card.classList.remove('staked');
+                card.classList.add('selected');
+            }
+        }
+
+        // ===== 质押 / 取回 / 领取 =====
+        async function stakeSelectedNFT() {
+            if (!currentActivity) return;
+            if (!selectedStakeTokenId) { ZODIAC_UI.showToast('请先选择要质押的NFT', 'warning'); return; }
+            await ensureApprovalForAll(currentActivity);
+            await ZODIAC_UI.handleTransaction(
+                async () => {
+                    const contract = await getActivityContract(currentActivity.contract, true);
+                    if (!contract) throw new Error('活动合约不可用');
+                    return ZODIAC_WEB3.sendAndTrackTransaction(contract, 'stakeNFT', [selectedStakeTokenId]);
+                },
+                {
+                    actionName: '质押NFT',
+                    loadingMessage: '正在质押NFT...',
+                    successMessage: 'NFT质押成功！',
+                    onError: (e) => ZODIAC_UI.handleContractError(e, '质押NFT')
+                }
+            ).then(async () => {
+                selectedStakeTokenId = null;
+                await Promise.all([loadStakedNFTs(currentActivity), loadUserNFTsForModal(currentActivity), loadPendingRewards(currentActivity)]);
+                refreshMyStakedCount();
+            }).catch(() => {});
+        }
+
+        async function unstakeSelectedNFT() {
+            if (!currentActivity) return;
+            if (!selectedUnstakeTokenId) { ZODIAC_UI.showToast('请先选择要取回的NFT', 'warning'); return; }
+            await ZODIAC_UI.handleTransaction(
+                async () => {
+                    const contract = await getActivityContract(currentActivity.contract, true);
+                    if (!contract) throw new Error('活动合约不可用');
+                    return ZODIAC_WEB3.sendAndTrackTransaction(contract, 'unstakeNFT', [selectedUnstakeTokenId]);
+                },
+                {
+                    actionName: '取回NFT',
+                    loadingMessage: '正在取回NFT...',
+                    successMessage: 'NFT取回成功！',
+                    onError: (e) => ZODIAC_UI.handleContractError(e, '取回NFT')
+                }
+            ).then(async () => {
+                selectedUnstakeTokenId = null;
+                await Promise.all([loadStakedNFTs(currentActivity), loadUserNFTsForModal(currentActivity), loadPendingRewards(currentActivity)]);
+                refreshMyStakedCount();
+            }).catch(() => {});
+        }
+
+        async function claimRewards() {
+            if (!currentActivity) return;
+            await ZODIAC_UI.handleTransaction(
+                async () => {
+                    const contract = await getActivityContract(currentActivity.contract, true);
+                    if (!contract) throw new Error('活动合约不可用');
+                    return ZODIAC_WEB3.sendAndTrackTransaction(contract, 'claimRewards', []);
+                },
+                {
+                    actionName: '领取奖励',
+                    loadingMessage: '正在领取奖励...',
+                    successMessage: '奖励领取成功！',
+                    onError: (e) => ZODIAC_UI.handleContractError(e, '领取奖励')
+                }
+            ).then(async () => {
+                await loadPendingRewards(currentActivity);
+            }).catch(() => {});
+        }
+
+        // ===== 检查并设置 NFT 授权 =====
+        async function ensureApprovalForAll(activity) {
+            if (!nftContract || !account) return;
+            try {
+                const contract = await getActivityContract(activity.contract, true);
+                if (!contract) return;
+                const targetAddr = contract.options.address;
+                const approved = await nftContract.methods.isApprovedForAll(account, targetAddr).call();
+                if (approved) return;
+                ZODIAC_UI.showLoading('正在授权NFT...');
+                await nftContract.methods.setApprovalForAll(targetAddr, true).send({ from: account });
+                ZODIAC_UI.hideLoading();
+                ZODIAC_UI.showToast('NFT授权成功', 'success');
+            } catch (e) {
+                ZODIAC_UI.hideLoading();
+                console.warn('[ACTIVITY] 授权失败:', e.message);
+            }
+        }
+
+        // ===== 活动专属交互 =====
+        async function performActivityAction(methodName, args) {
+            if (!currentActivity) return;
+            await ZODIAC_UI.handleTransaction(
+                async () => {
+                    const contract = await getActivityContract(currentActivity.contract, true);
+                    if (!contract) throw new Error('活动合约不可用');
+                    if (!contract.methods[methodName]) throw new Error('活动方法不可用: ' + methodName);
+                    return ZODIAC_WEB3.sendAndTrackTransaction(contract, methodName, args);
+                },
+                {
+                    actionName: '活动操作',
+                    loadingMessage: '正在执行活动操作...',
+                    successMessage: '操作成功！',
+                    onError: (e) => ZODIAC_UI.handleContractError(e, '活动操作')
+                }
+            ).then(async () => {
+                await Promise.all([loadStakedNFTs(currentActivity), loadPendingRewards(currentActivity)]);
+            }).catch(() => {});
+        }
+
+        async function performActionWithSelectedNFT(methodName, label) {
+            if (!selectedUnstakeTokenId) { ZODIAC_UI.showToast('请先在"已质押NFT"中选择一张NFT', 'warning'); return; }
+            await performActivityAction(methodName, [selectedUnstakeTokenId]);
+        }
+
+        async function performTowerChallenge() {
+            const floorInput = document.getElementById('towerFloorInput');
+            const floor = floorInput ? parseInt(floorInput.value, 10) : 1;
+            if (!selectedUnstakeTokenId) { ZODIAC_UI.showToast('请先在"已质押NFT"中选择一张NFT', 'warning'); return; }
+            await performActivityAction('challengeFloor', [selectedUnstakeTokenId, floor]);
+        }
+
+        async function performPuzzleLight() {
+            const cellInput = document.getElementById('puzzleCellInput');
+            const cell = cellInput ? parseInt(cellInput.value, 10) : 0;
+            if (!selectedUnstakeTokenId) { ZODIAC_UI.showToast('请先在"已质押NFT"中选择一张NFT', 'warning'); return; }
+            await performActivityAction('lightCell', [selectedUnstakeTokenId, cell]);
+        }
+
+        async function performTimerClaim() {
+            const hourSelect = document.getElementById('timerHourSelect');
+            const hour = hourSelect ? parseInt(hourSelect.value, 10) : 0;
+            await performActivityAction('claimSlotReward', [hour]);
+        }
+
+        // ===== 钱包初始化 =====
+        async function initPageWeb3() {
+            const connected = await window.ZODIAC_WEB3.initWeb3();
+            if (connected) {
+                account = window.ZODIAC_WEB3.getAccount();
+                const web3 = window.ZODIAC_WEB3.getWeb3();
+                window.web3 = web3;
+                try {
+                    nftContract = await window.ZODIAC_WEB3.getContract('nftMint');
+                } catch (e) { console.warn('[ACTIVITY] NFT合约初始化失败:', e.message); }
+                updateWalletButton();
+                await refreshMyStakedCount();
+                await refreshMyPendingTotal();
+                if (currentActivity) {
+                    await Promise.all([
+                        loadStakedNFTs(currentActivity),
+                        loadPendingRewards(currentActivity),
+                        loadRewardType(currentActivity),
+                        loadUserNFTsForModal(currentActivity)
+                    ]);
+                }
+            }
+        }
+
+        function updateWalletButton() {
+            const btn = document.getElementById('walletBtn');
+            const btnDesktop = document.getElementById('connectWalletBtnDesktop');
+            if (account) {
+                const short = account.substring(0, 6) + '...' + account.substring(38);
+                btn.innerHTML = '<i class="fas fa-check-circle mr-1"></i> ' + short;
+                btn.classList.add('connected');
+                if (btnDesktop) {
+                    btnDesktop.innerHTML = '<i class="fas fa-check-circle mr-1"></i> ' + short;
+                    btnDesktop.disabled = true;
+                }
+            } else {
+                btn.innerHTML = '<i class="fas fa-plug mr-1"></i> 连接钱包';
+                btn.classList.remove('connected');
+            }
+        }
+
+        function handleConnectWallet() {
+            ZODIAC_UI.emitEvent('walletConnectRequested');
+            initPageWeb3();
+        }
+
+        function openMobileMenu() {
+            ZODIAC_COMPONENTS.openMobileMenu();
+        }
+
+        function cleanup() {
+            if (window.ZODIAC_WEB3) {
+                ZODIAC_WEB3.removeEventListeners();
+                ZODIAC_WEB3.clearAllEventListeners();
+            }
+        }
+
+        // ===== 初始化 =====
+        document.addEventListener('DOMContentLoaded', async function () {
+            ZODIAC_UI.initGlobalErrorHandler();
+
+            particlesJS('particles-js', {
+                particles: {
+                    number: { value: 80, density: { enable: true, value_area: 800 } },
+                    color: { value: '#3b82f6' },
+                    shape: { type: 'circle', stroke: { width: 0, color: '#000000' } },
+                    opacity: { value: 0.5, random: true, anim: { enable: true, speed: 1, opacity_min: 0.1, sync: false } },
+                    size: { value: 5, random: true, anim: { enable: true, speed: 2, size_min: 0.1, sync: false } },
+                    line_linked: { enable: true, distance: 150, color: '#3b82f6', opacity: 0.4, width: 1 },
+                    move: { enable: true, speed: 1, direction: 'none', random: false, straight: false, out_mode: 'out', bounce: false }
+                },
+                interactivity: {
+                    detect_on: 'canvas',
+                    events: { onhover: { enable: true, mode: 'grab' }, onclick: { enable: true, mode: 'push' }, resize: true },
+                    modes: { grab: { distance: 140, line_linked: { opacity: 1 } }, push: { particles_nb: 4 } }
+                },
+                retina_detect: true
+            });
+
+            renderActivityCards();
+            ZODIAC_COMPONENTS.injectNavigation('activities');
+            ZODIAC_UI.initWalletButton('walletBtn', null, null);
+
+            await window.ZODIAC_WEB3.initWeb3();
+            account = window.ZODIAC_WEB3.getAccount();
+            if (account) {
+                try { nftContract = await window.ZODIAC_WEB3.getContract('nftMint'); } catch (e) {}
+                updateWalletButton();
+                await refreshMyStakedCount();
+                await refreshMyPendingTotal();
+            }
+
+            // 加载所有活动状态（无需钱包，使用公共RPC）
+            await loadAllActivityStatuses();
+
+            // 钱包事件
+            ZODIAC_WEB3.on('connect', async () => {
+                account = ZODIAC_WEB3.getAccount();
+                const web3 = ZODIAC_WEB3.getWeb3();
+                window.web3 = web3;
+                try { nftContract = await window.ZODIAC_WEB3.getContract('nftMint'); } catch (e) {}
+                updateWalletButton();
+                await refreshMyStakedCount();
+                await refreshMyPendingTotal();
+                if (currentActivity) {
+                    await Promise.all([
+                        loadStakedNFTs(currentActivity),
+                        loadPendingRewards(currentActivity),
+                        loadRewardType(currentActivity),
+                        loadUserNFTsForModal(currentActivity)
+                    ]);
+                }
+                startDataRefresh();
+            });
+
+            ZODIAC_WEB3.on('disconnect', () => {
+                account = null;
+                nftContract = null;
+                userNFTList = [];
+                updateWalletButton();
+                document.getElementById('myStakedCount').textContent = '0';
+                document.getElementById('myPendingTotal').textContent = '0.0000';
+                stopDataRefresh();
+            });
+
+            document.getElementById('menuBtn').addEventListener('click', openMobileMenu);
+            document.getElementById('refreshBtn').addEventListener('click', async () => {
+                ZODIAC_UI.showToast('正在刷新活动状态...', 'info');
+                activityStatusCache = {};
+                activityContractCache = {};
+                await loadAllActivityStatuses();
+                if (account) {
+                    await refreshMyStakedCount();
+                    await refreshMyPendingTotal();
+                }
+                ZODIAC_UI.showToast('刷新完成', 'success');
+            });
+
+            document.getElementById('stakeBtn').addEventListener('click', stakeSelectedNFT);
+            document.getElementById('unstakeBtn').addEventListener('click', unstakeSelectedNFT);
+            document.getElementById('claimBtn').addEventListener('click', claimRewards);
+            document.getElementById('copyAddrBtn').addEventListener('click', () => {
+                const addr = document.getElementById('modalContractAddr').textContent;
+                if (addr && addr !== '加载中...' && addr !== '未部署') {
+                    ZODIAC_UI.copyToClipboard(addr);
+                }
+            });
+
+            // 点击遮罩关闭模态框
+            document.getElementById('activityModal').addEventListener('click', function (e) {
+                if (e.target === this) closeActivityModal();
+            });
+
+            // ESC 关闭
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') closeActivityModal();
+            });
+
+            startDataRefresh();
+        });
+
+        function startDataRefresh() {
+            stopDataRefresh();
+            dataRefreshTimer = setInterval(async () => {
+                if (account) {
+                    await refreshMyPendingTotal();
+                    await refreshMyStakedCount();
+                    if (currentActivity) {
+                        await loadPendingRewards(currentActivity);
+                    }
+                }
+            }, 30000);
+        }
+
+        function stopDataRefresh() {
+            if (dataRefreshTimer) { clearInterval(dataRefreshTimer); dataRefreshTimer = null; }
+        }
+
+        window.addEventListener('beforeunload', () => { cleanup(); stopDataRefresh(); });
+        window.addEventListener('pagehide', () => { cleanup(); stopDataRefresh(); });
+
+        // 暴露给 onclick
+        window.openActivityModal = openActivityModal;
+        window.closeActivityModal = closeActivityModal;
+        window.selectStakeNFT = selectStakeNFT;
+        window.selectUnstakeNFT = selectUnstakeNFT;
+        window.performActivityAction = performActivityAction;
+        window.performActionWithSelectedNFT = performActionWithSelectedNFT;
+        window.performTowerChallenge = performTowerChallenge;
+        window.performPuzzleLight = performPuzzleLight;
+        window.performTimerClaim = performTimerClaim;
+        window.handleConnectWallet = handleConnectWallet;
+        window.openMobileMenu = openMobileMenu;
+    </script>
+</body>
+</html>

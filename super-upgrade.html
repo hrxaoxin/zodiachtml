@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>超阶升阶 - Twelve Zodiacs Super Upgrade</title>
+    <meta name="description" content="满5级的NFT可在此界面消耗生肖子代币进行超阶升级，最高可达10级">
+    <link rel="icon" href="images/fu-cards/shuishu_1.jpg" type="image/jpg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.7.3/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="config.js"></script>
+    <script src="components.js"></script>
+    <script src="utils.js"></script>
+    <script src="web3-utils.js"></script>
+    <script src="ui-utils.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap');
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #f5f5f5;
+            background-image: linear-gradient(135deg, #f5f5f5 0%, #e8f5e8 100%);
+            overflow-x: hidden;
+        }
+
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+
+        .navbar {
+            background-color: #ffffff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .desktop-nav {
+            background-color: #ffffff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+            border-radius: 20px;
+            color: white;
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+            animation: heroFadeIn 1s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @keyframes heroFadeIn {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .btn-primary {
+            background-color: #ff6b6b;
+            color: white;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: #ee5a6f;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background-color: white;
+            color: #6366f1;
+            border: 1px solid #6366f1;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background-color: #f8f9fa;
+            transform: translateY(-2px);
+        }
+
+        .nft-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            background: white;
+        }
+
+        .nft-card:hover {
+            transform: scale(1.05) translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .nft-card img {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            margin: 0 auto 8px;
+        }
+
+        .nft-card h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .level-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .upgrade-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .upgrade-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .wallet-button {
+            background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+            color: white;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .wallet-button:hover {
+            background: linear-gradient(135deg, #4338ca 0%, #3730a3 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
+        }
+
+        .nav-item:hover {
+            transform: scale(1.1);
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+        }
+
+        .footer {
+            animation: footerFadeIn 1.5s ease-out;
+        }
+
+        @keyframes footerFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%); border-radius: 10px; }
+
+        /* 生肖筛选标签 */
+        .zodiac-tab {
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            white-space: nowrap;
+            background-color: #ede9fe;
+            color: #4338ca;
+            border: 1px solid transparent;
+        }
+
+        .zodiac-tab:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+
+        .zodiac-tab.active {
+            background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+            color: white;
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+
+        .zodiac-tab.tab-all {
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+
+        .zodiac-tab.tab-all.active {
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+            color: white;
+        }
+
+        /* 超阶等级图标 */
+        .super-level-badge {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 加载遮罩 */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .loading-overlay.loading-active {
+            display: flex;
+        }
+
+        .loading-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 60px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .loading-spinner {
+            width: 56px;
+            height: 56px;
+            border: 4px solid #ede9fe;
+            border-top-color: #6366f1;
+            border-right-color: #4338ca;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            color: #333;
+            font-weight: 600;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        /* Toast 通知 */
+        .toast {
+            position: fixed;
+            bottom: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1001;
+            opacity: 0;
+            transition: all 0.3s ease;
+            max-width: 90%;
+            text-align: center;
+        }
+
+        .toast.toast-active {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-10px);
+        }
+
+        .toast.toast-success { background-color: #4CAF50; }
+        .toast.toast-error { background-color: #dc3545; }
+        .toast.toast-warning { background-color: #ff9800; }
+        .toast.toast-info { background-color: #4f46e5; }
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+
+    <div id="mobileNavbarContainer"></div>
+    <div id="mobileMenuContainer"></div>
+    <div id="desktopSidebarContainer"></div>
+
+    <div class="min-h-screen pb-20 md:pb-0">
+        <header class="px-4 py-6 title-section md:pl-28">
+            <div class="flex flex-col md:flex-row items-start justify-between gap-4">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 rounded-full bg-indigo-500 flex items-center justify-center mr-3">
+                        <span class="text-white text-xl font-bold">超阶</span>
+                    </div>
+                    <h1 class="text-2xl font-bold text-gray-800">超阶升阶</h1>
+                </div>
+                <button id="walletBtn" class="wallet-button mt-2 md:mt-0">连接钱包</button>
+            </div>
+        </header>
+
+        <main class="px-4 pt-6 pb-24 md:pl-28">
+            <!-- Hero 区块 -->
+            <div class="hero-section p-6 md:p-8 mb-8">
+                <h2 class="text-3xl md:text-4xl font-bold mb-3">超阶升阶</h2>
+                <p class="text-base md:text-lg opacity-90 mb-4">满5级的NFT可在此界面消耗生肖子代币进行超阶升级，最高可达10级</p>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3 text-center">
+                        <div class="text-xs opacity-80">5 → 6</div>
+                        <div class="text-lg font-bold">10 万</div>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3 text-center">
+                        <div class="text-xs opacity-80">6 → 7</div>
+                        <div class="text-lg font-bold">20 万</div>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3 text-center">
+                        <div class="text-xs opacity-80">7 → 8</div>
+                        <div class="text-lg font-bold">30 万</div>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3 text-center">
+                        <div class="text-xs opacity-80">8 → 9</div>
+                        <div class="text-lg font-bold">40 万</div>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3 text-center">
+                        <div class="text-xs opacity-80">9 → 10</div>
+                        <div class="text-lg font-bold">50 万</div>
+                    </div>
+                </div>
+                <p class="text-xs opacity-75 mt-3">💡 每次超阶消耗对应生肖的子代币，子代币地址通过 Authorizer 动态获取</p>
+            </div>
+
+            <!-- 钱包信息 -->
+            <div class="bg-white rounded-xl p-6 shadow-md mb-8">
+                <div class="flex items-center mb-6">
+                    <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center mr-4">
+                        <i class="text-indigo-500 text-xl">💰</i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-gray-800">钱包信息</h3>
+                        <p class="text-sm text-gray-500" id="walletAddress">未连接钱包</p>
+                        <p class="text-xs text-gray-400" id="connectionStatus">请点击连接钱包按钮</p>
+                    </div>
+                    <button id="connectWalletBtnDesktop" class="btn-primary text-sm"><i class="fas fa-plug mr-1"></i> 连接</button>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">主代币余额</span>
+                        <span class="text-lg font-semibold text-gray-800" id="tokenBalance">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 可超阶NFT列表 -->
+            <div class="mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-2xl font-bold text-gray-800">我的可超阶NFT</h3>
+                    <span class="text-sm text-gray-500" id="nftCount">共 0 张</span>
+                </div>
+                <div class="mb-6">
+                    <h4 class="text-sm font-bold text-gray-600 mb-3">筛选生肖</h4>
+                    <div id="zodiacTabs" class="flex gap-2 overflow-x-auto pb-2"></div>
+                </div>
+                <div id="nftGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    <div class="col-span-full text-center py-12 text-gray-400">请先连接钱包</div>
+                </div>
+            </div>
+
+            <!-- 超阶操作区 -->
+            <div id="upgradeSection" class="hidden mb-12">
+                <div class="upgrade-card">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">超阶操作</h3>
+                    <div id="selectedNftInfo" class="mb-6"></div>
+                    <div class="grid grid-cols-1 gap-4">
+                        <button id="upgradeWithSubTokenBtn" class="btn-primary w-full">使用生肖子代币超阶</button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-3 text-center">⚠ 超阶前会自动请求子代币授权，请在钱包中确认</p>
+                </div>
+            </div>
+        </main>
+
+        <footer class="text-center py-8 text-black/70 footer md:ml-28 md:mr-4">
+            <p>© 2026 十二生肖NFT系列 · Twelve Zodiacs Collection</p>
+            <p class="mt-2">祝你心想事成，生肖大旺 🐾✨</p>
+        </footer>
+    </div>
+
+    <script>
+        // ============= 全局状态 =============
+        let web3;
+        let account;
+        let nftContract;
+        let tokenContract;
+        let nftUpdateContract;
+        let nftUpdateAddress;
+        let selectedNft = null;
+        let allUserNFTs = [];
+        let currentZodiacFilter = 'all';
+        let subTokenContracts = {};      // zodiacIndex -> { contract, address, decimals, symbol, balanceWei }
+        let subTokenUpgradeCosts = [0n, 0n, 0n, 0n, 0n]; // 5->6, 6->7, 7->8, 8->9, 9->10
+
+        // ============= 常量 =============
+        const ZODIAC_NAMES = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪'];
+        const ZODIAC_ICONS = ['🐭', '🐮', '🐯', '🐰', '🐲', '🐍', '🐴', '🐑', '🐵', '🐔', '🐶', '🐷'];
+        // 生肖索引 -> Authorizer 注册的子代币名称
+        const SUB_TOKEN_AUTH_NAMES = [
+            'subTokenShu', 'subTokenNiu', 'subTokenHu', 'subTokenTu', 'subTokenLong',
+            'subTokenShe', 'subTokenMa', 'subTokenYang', 'subTokenHou', 'subTokenJi',
+            'subTokenGou', 'subTokenZhu'
+        ];
+        // 默认超阶费用（万枚子代币），当合约读取失败时使用
+        const DEFAULT_SUB_COSTS_WAN = [10, 20, 30, 40, 50];
+
+        // ============= 最小内联 ABI =============
+        // NFTUpdate 的超阶相关 ABI（nftUpdate 完整 ABI 中未包含）
+        const NFT_UPDATE_SUB_ABI = [
+            {
+                "inputs": [{ "internalType": "uint256", "name": "tokenId", "type": "uint256" }],
+                "name": "upgradeWithSubToken",
+                "outputs": [{ "internalType": "uint8", "name": "", "type": "uint8" }],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "getAllSubTokenUpgradeCosts",
+                "outputs": [{ "internalType": "uint256[5]", "name": "", "type": "uint256[5]" }],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "paused",
+                "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "pauseReason",
+                "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        // ERC20 子代币 ABI
+        const SUB_TOKEN_ABI = [
+            {
+                "constant": true,
+                "inputs": [{ "name": "owner", "type": "address" }],
+                "name": "balanceOf",
+                "outputs": [{ "name": "", "type": "uint256" }],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "constant": true,
+                "inputs": [
+                    { "name": "owner", "type": "address" },
+                    { "name": "spender", "type": "address" }
+                ],
+                "name": "allowance",
+                "outputs": [{ "name": "", "type": "uint256" }],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "constant": false,
+                "inputs": [
+                    { "name": "spender", "type": "address" },
+                    { "name": "amount", "type": "uint256" }
+                ],
+                "name": "approve",
+                "outputs": [{ "name": "", "type": "bool" }],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "constant": true,
+                "inputs": [],
+                "name": "decimals",
+                "outputs": [{ "name": "", "type": "uint8" }],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "constant": true,
+                "inputs": [],
+                "name": "symbol",
+                "outputs": [{ "name": "", "type": "string" }],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        // ============= 初始化 =============
+        document.addEventListener('DOMContentLoaded', async function() {
+            particlesJS('particles-js', {
+                particles: {
+                    number: { value: 80, density: { enable: true, value_area: 800 } },
+                    color: { value: '#6366f1' },
+                    shape: { type: 'circle', stroke: { width: 0, color: '#000000' } },
+                    opacity: { value: 0.5, random: true, anim: { enable: true, speed: 1, opacity_min: 0.1, sync: false } },
+                    size: { value: 5, random: true, anim: { enable: true, speed: 2, size_min: 0.1, sync: false } },
+                    line_linked: { enable: true, distance: 150, color: '#6366f1', opacity: 0.4, width: 1 },
+                    move: { enable: true, speed: 1, direction: 'none', random: false, straight: false, out_mode: 'out', bounce: false }
+                },
+                interactivity: {
+                    detect_on: 'canvas',
+                    events: { onhover: { enable: true, mode: 'grab' }, onclick: { enable: true, mode: 'push' }, resize: true },
+                    modes: { grab: { distance: 140, line_linked: { opacity: 1 } }, push: { particles_nb: 4 } }
+                },
+                retina_detect: true
+            });
+
+            initWalletUI();
+            initEventListeners();
+            renderZodiacTabs();
+            ZODIAC_COMPONENTS.injectNavigation('upgrade');
+            await initWeb3();
+        });
+
+        function initWalletUI() {
+            ZODIAC_UI.initWalletButton('walletBtn', null, null);
+            ZODIAC_UI.initWalletButton('connectWalletBtnDesktop', 'walletAddress', 'connectionStatus');
+            ZODIAC_UI.on('walletConnected', async () => {
+                await initContracts();
+                await loadUserNFTs();
+                await updateWalletStatus();
+            });
+            // 监听 MetaMask 账户切换事件，自动刷新数据
+            ZODIAC_WEB3.on('connect', async () => {
+                await initContracts();
+                await loadUserNFTs();
+                await updateWalletStatus();
+            });
+        }
+
+        function initEventListeners() {
+            const btn = document.getElementById('upgradeWithSubTokenBtn');
+            if (btn) btn.addEventListener('click', handleUpgradeWithSubToken);
+        }
+
+        async function initWeb3() {
+            const connected = await window.ZODIAC_WEB3.initWeb3();
+            if (connected) {
+                account = window.ZODIAC_WEB3.getAccount();
+                web3 = window.ZODIAC_WEB3.getWeb3();
+                window.web3 = web3;
+                updateWalletButton();
+                await initContracts();
+                await loadUserNFTs();
+                await updateWalletStatus();
+            }
+        }
+
+        function updateWalletButton() {
+            const walletBtn = document.getElementById('walletBtn');
+            const walletBtnDesktop = document.getElementById('connectWalletBtnDesktop');
+            if (account) {
+                const shortAddress = account.substring(0, 4) + '...' + account.substring(account.length - 4);
+                walletBtn.textContent = shortAddress;
+                walletBtn.style.background = 'linear-gradient(135deg, #4338ca 0%, #3730a3 100%)';
+                walletBtnDesktop.textContent = shortAddress;
+                walletBtnDesktop.disabled = true;
+                walletBtnDesktop.style.background = 'linear-gradient(135deg, #4338ca 0%, #3730a3 100%)';
+            }
+        }
+
+        async function updateWalletStatus() {
+            if (!account || !tokenContract) return;
+            try {
+                const balance = await tokenContract.methods.balanceOf(account).call();
+                const balanceInTokens = web3.utils.fromWei(balance, 'ether');
+                const balanceFormatted = parseFloat(balanceInTokens).toFixed(4);
+                document.getElementById('tokenBalance').textContent = balanceFormatted;
+            } catch (error) {
+                console.error('更新代币余额失败:', error);
+                document.getElementById('tokenBalance').textContent = '0';
+            }
+        }
+
+        // ============= 合约初始化 =============
+        async function initContracts() {
+            try {
+                const [nft, token] = await Promise.all([
+                    window.ZODIAC_WEB3.getContract('nftMint'),
+                    window.ZODIAC_WEB3.getContract('tokenContract')
+                ]);
+
+                nftContract = nft;
+                tokenContract = token;
+
+                // 获取 NFTUpdate 地址，使用最小内联 ABI 创建实例（包含超阶相关方法）
+                nftUpdateAddress = await window.ZODIAC_WEB3.getContractAddress('nftUpdate');
+                if (nftUpdateAddress && web3) {
+                    nftUpdateContract = new web3.eth.Contract(NFT_UPDATE_SUB_ABI, nftUpdateAddress);
+                    console.log('[SUPER] NFTUpdate contract initialized at:', nftUpdateAddress);
+                } else {
+                    console.warn('[SUPER] NFTUpdate address not available');
+                }
+
+                // 并行：加载超阶费用 + 预加载所有子代币合约
+                await Promise.all([
+                    loadSubTokenUpgradeCosts(),
+                    preloadAllSubTokenContracts()
+                ]);
+            } catch (error) {
+                console.error('[SUPER] initContracts failed:', error);
+                ZODIAC_UI.showToast('合约初始化失败: ' + (error.message || '未知错误'), 'error');
+            }
+        }
+
+        // 加载超阶费用表
+        async function loadSubTokenUpgradeCosts() {
+            if (!nftUpdateContract) return;
+            try {
+                const costs = await nftUpdateContract.methods.getAllSubTokenUpgradeCosts().call();
+                if (Array.isArray(costs) && costs.length >= 5) {
+                    subTokenUpgradeCosts = costs.map(c => BigInt(String(c)));
+                    console.log('[SUPER] Sub-token upgrade costs loaded:', subTokenUpgradeCosts.map(c => c.toString()));
+                }
+            } catch (e) {
+                console.warn('[SUPER] Failed to load subToken upgrade costs, using defaults:', e && e.message);
+                // 使用默认值（18 位精度）
+                subTokenUpgradeCosts = DEFAULT_SUB_COSTS_WAN.map(w => BigInt(w) * 10n ** 18n);
+            }
+        }
+
+        // 预加载所有 12 个生肖的子代币合约
+        async function preloadAllSubTokenContracts() {
+            const tasks = [];
+            for (let i = 0; i < 12; i++) {
+                tasks.push(loadSubTokenContract(i));
+            }
+            await Promise.all(tasks);
+        }
+
+        // 通过 Authorizer 获取指定生肖的子代币合约
+        async function loadSubTokenContract(zodiacIndex) {
+            if (subTokenContracts[zodiacIndex]) return subTokenContracts[zodiacIndex];
+            if (!web3) return null;
+
+            try {
+                const authorizer = await window.ZODIAC_WEB3.getContract('authorizer');
+                if (!authorizer) {
+                    console.warn('[SUPER] Authorizer not available');
+                    return null;
+                }
+                const name = SUB_TOKEN_AUTH_NAMES[zodiacIndex];
+                const addr = await authorizer.methods.getAddressByName(name).call();
+                if (!addr || addr === '0x0000000000000000000000000000000000000000') {
+                    console.warn(`[SUPER] Sub-token for ${ZODIAC_NAMES[zodiacIndex]} (${name}) not registered`);
+                    return null;
+                }
+                const contract = new web3.eth.Contract(SUB_TOKEN_ABI, addr);
+                let decimals = 18;
+                let symbol = ZODIAC_NAMES[zodiacIndex] + '子代币';
+                try { decimals = parseInt(await contract.methods.decimals().call()); } catch (e) {}
+                try { symbol = await contract.methods.symbol().call(); } catch (e) {}
+
+                subTokenContracts[zodiacIndex] = {
+                    contract,
+                    address: addr,
+                    decimals,
+                    symbol,
+                    balanceWei: 0n
+                };
+                console.log(`[SUPER] SubToken ${ZODIAC_NAMES[zodiacIndex]} (${name}) loaded at ${addr}, decimals=${decimals}, symbol=${symbol}`);
+                return subTokenContracts[zodiacIndex];
+            } catch (e) {
+                console.warn(`[SUPER] Failed to load sub-token for ${ZODIAC_NAMES[zodiacIndex]}:`, e && e.message);
+                return null;
+            }
+        }
+
+        // 刷新指定生肖子代币余额
+        async function refreshSubTokenBalance(zodiacIndex) {
+            const entry = subTokenContracts[zodiacIndex];
+            if (!entry || !account) return 0n;
+            try {
+                const bal = await entry.contract.methods.balanceOf(account).call();
+                entry.balanceWei = BigInt(String(bal));
+                return entry.balanceWei;
+            } catch (e) {
+                console.warn(`[SUPER] Failed to get balance for ${ZODIAC_NAMES[zodiacIndex]} sub-token:`, e && e.message);
+                entry.balanceWei = 0n;
+                return 0n;
+            }
+        }
+
+        // ============= 生肖筛选标签 =============
+        function renderZodiacTabs() {
+            const container = document.getElementById('zodiacTabs');
+            if (!container) return;
+            let html = `<button class="zodiac-tab tab-all active" data-zodiac="all" onclick="switchZodiac('all')">全部</button>`;
+            for (let i = 0; i < 12; i++) {
+                html += `<button class="zodiac-tab" data-zodiac="${i}" onclick="switchZodiac(${i})">${ZODIAC_ICONS[i]} ${ZODIAC_NAMES[i]}</button>`;
+            }
+            container.innerHTML = html;
+        }
+
+        window.switchZodiac = function(zodiac) {
+            currentZodiacFilter = zodiac;
+            document.querySelectorAll('.zodiac-tab').forEach(tab => tab.classList.remove('active'));
+            const target = document.querySelector(`.zodiac-tab[data-zodiac="${zodiac}"]`);
+            if (target) target.classList.add('active');
+
+            if (!allUserNFTs || allUserNFTs.length === 0) return;
+            if (zodiac === 'all') {
+                renderNFTs(allUserNFTs);
+            } else {
+                const z = parseInt(zodiac, 10);
+                const filtered = allUserNFTs.filter(nft => {
+                    const t = parseInt(nft.type, 10);
+                    return Math.floor((t / 2) % 12) === z;
+                });
+                renderNFTs(filtered);
+            }
+        }
+
+        // ============= 加载用户 NFT =============
+        async function loadUserNFTs() {
+            ZODIAC_UI.showLoading('加载可超阶NFT中...');
+            const nftGrid = document.getElementById('nftGrid');
+
+            try {
+                if (!account || !nftContract) {
+                    nftGrid.innerHTML = '<div class="col-span-full text-center py-12">请先连接钱包</div>';
+                    updateNftCount(0);
+                    ZODIAC_UI.hideLoading();
+                    return;
+                }
+
+                const tokenIds = await nftContract.methods.getTokenIdsByOwner(account).call();
+                if (!tokenIds || tokenIds.length === 0) {
+                    allUserNFTs = [];
+                    nftGrid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">你还没有NFT，去铸造页面创建一个吧！</div>';
+                    updateNftCount(0);
+                    ZODIAC_UI.hideLoading();
+                    return;
+                }
+
+                // 优先批量加载
+                let userNFTs = null;
+                try {
+                    if (window.ZODIAC_WEB3 && typeof window.ZODIAC_WEB3.getOwnedNFTFullInfo === 'function') {
+                        const batch = await window.ZODIAC_WEB3.getOwnedNFTFullInfo(account);
+                        if (batch && batch.length > 0) {
+                            userNFTs = batch.map(n => {
+                                const info = window.ZODIAC_UTILS.getNFTInfo(n.tokenType);
+                                const lvl = (typeof n.level === 'number' ? n.level : parseInt(n.level));
+                                const typ = (typeof n.tokenType === 'number' ? n.tokenType : parseInt(n.tokenType));
+                                const grw = (typeof n.growth === 'number' ? n.growth : parseInt(n.growth));
+                                return {
+                                    id: n.tokenId.toString(),
+                                    type: typ.toString(),
+                                    level: lvl,
+                                    growth: grw,
+                                    name: info.name,
+                                    image: info.imagePath,
+                                    gender: info.gender,
+                                    zodiac: info.zodiac
+                                };
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[SUPER] 批量加载NFT失败，使用并行模式回退:', e && e.message);
+                    userNFTs = null;
+                }
+
+                if (!userNFTs) {
+                    userNFTs = await loadNFTsParallel(tokenIds);
+                }
+
+                // 过滤 level >= 5
+                allUserNFTs = userNFTs.filter(n => parseInt(n.level, 10) >= 5);
+
+                if (allUserNFTs.length === 0) {
+                    nftGrid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">暂无满足条件的NFT（需达到5阶及以上）</div>';
+                    updateNftCount(0);
+                    ZODIAC_UI.hideLoading();
+                    return;
+                }
+
+                // 默认渲染全部
+                renderNFTs(allUserNFTs);
+            } catch (error) {
+                console.error('[SUPER] 加载NFT失败:', error);
+                nftGrid.innerHTML = '<div class="col-span-full text-center py-12 text-red-500">加载失败，请重试</div>';
+                ZODIAC_UI.showToast('加载NFT失败: ' + (error.message || '未知错误'), 'error');
+            }
+            ZODIAC_UI.hideLoading();
+        }
+
+        async function loadNFTsParallel(tokenIds) {
+            const BATCH_SIZE = 10;
+            const batches = [];
+            for (let i = 0; i < tokenIds.length; i += BATCH_SIZE) {
+                const end = Math.min(i + BATCH_SIZE, tokenIds.length);
+                const batchPromises = [];
+                for (let j = i; j < end; j++) {
+                    batchPromises.push(loadSingleNFT(tokenIds[j]));
+                }
+                batches.push(Promise.all(batchPromises));
+            }
+            const results = await Promise.all(batches);
+            return results.flat();
+        }
+
+        async function loadSingleNFT(tokenId) {
+            const [nftData, tokenGrowth] = await Promise.all([
+                nftContract.methods.getNFTData(tokenId).call().catch(e => ({ tokenType_: '0', level: '1' })),
+                nftContract.methods.tokenGrowth(tokenId).call().catch(() => '0')
+            ]);
+            const tokenType = nftData.tokenType_ !== undefined ? nftData.tokenType_ : (nftData[0] || '0');
+            const tokenLevel = nftData.level !== undefined ? nftData.level : (nftData[1] || '1');
+            const nftInfo = window.ZODIAC_UTILS.getNFTInfo(tokenType);
+            return {
+                id: tokenId.toString(),
+                type: tokenType.toString(),
+                level: parseInt(tokenLevel, 10),
+                growth: tokenGrowth.toString(),
+                name: nftInfo.name,
+                image: nftInfo.imagePath,
+                gender: nftInfo.gender,
+                zodiac: nftInfo.zodiac
+            };
+        }
+
+        function updateNftCount(n) {
+            const el = document.getElementById('nftCount');
+            if (el) el.textContent = `共 ${n} 张`;
+        }
+
+        // ============= NFT 渲染 =============
+        function renderNFTs(nfts) {
+            const nftGrid = document.getElementById('nftGrid');
+            updateNftCount(nfts.length);
+            if (nfts.length === 0) {
+                nftGrid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500">当前筛选下没有满足条件的NFT</div>';
+                return;
+            }
+
+            let html = '';
+            nfts.forEach(nft => {
+                const isSelected = selectedNft && selectedNft.id === nft.id;
+                const selectedClass = isSelected ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-white bg-indigo-50' : '';
+                const genderText = nft.gender === 1 ? '<span class="text-blue-500">公</span>' : '<span class="text-pink-500">母</span>';
+                const levelNum = parseInt(nft.level, 10);
+                const isMax = levelNum >= 10;
+                const levelBadge = isMax
+                    ? '<div class="super-level-badge" style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);">满级</div>'
+                    : `<div class="super-level-badge">超阶 ${levelNum}</div>`;
+
+                html += `
+                    <div class="nft-card cursor-pointer transition-all duration-200 hover:shadow-lg ${selectedClass}" onclick='selectNFT(${JSON.stringify(nft)})'>
+                        ${levelBadge}
+                        <img src="${nft.image}" alt="${nft.name}" onerror="this.onerror=null;this.src='images/fu-cards/shuishu_1.jpg';">
+                        <h4>${nft.name} ${genderText}</h4>
+                        <p class="text-xs text-gray-500">等级: ${getStars(nft.level)} (${levelNum}阶)</p>
+                        <p class="text-xs text-gray-500">成长值: ${nft.growth}</p>
+                        ${isMax ? '<p class="text-xs text-red-500 mt-1">已达最高等级</p>' : `<p class="text-xs text-indigo-600 mt-1">可超阶至 ${levelNum + 1} 阶</p>`}
+                        ${isSelected ? '<div class="absolute top-2 right-2 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div>' : ''}
+                    </div>
+                `;
+            });
+            nftGrid.innerHTML = html;
+        }
+
+        function getStars(level) {
+            const lv = parseInt(level, 10);
+            if (isNaN(lv) || lv <= 0) return '';
+            return '⭐'.repeat(Math.min(lv, 5));
+        }
+
+        // ============= 选择 NFT =============
+        window.selectNFT = async function(nft) {
+            selectedNft = nft;
+            // 重新渲染当前列表以更新选中状态
+            if (currentZodiacFilter === 'all') {
+                renderNFTs(allUserNFTs);
+            } else {
+                const z = parseInt(currentZodiacFilter, 10);
+                const filtered = allUserNFTs.filter(item => {
+                    const t = parseInt(item.type, 10);
+                    return Math.floor((t / 2) % 12) === z;
+                });
+                renderNFTs(filtered);
+            }
+
+            const levelNum = parseInt(nft.level, 10);
+            const zodiacIndex = Math.floor((parseInt(nft.type, 10) / 2) % 12);
+            const zodiacName = ZODIAC_NAMES[zodiacIndex] || '未知';
+
+            // 加载子代币合约 + 余额
+            await loadSubTokenContract(zodiacIndex);
+            await refreshSubTokenBalance(zodiacIndex);
+
+            const subEntry = subTokenContracts[zodiacIndex];
+            const costIndex = levelNum - 5; // 5->6 = index 0
+            const requiredCostWei = (levelNum >= 5 && levelNum <= 9) ? subTokenUpgradeCosts[costIndex] : 0n;
+            const requiredCostDisplay = subTokenContracts && subEntry
+                ? formatTokenAmount(requiredCostWei, subEntry.decimals)
+                : '0';
+
+            const balanceWei = subEntry ? subEntry.balanceWei : 0n;
+            const balanceDisplay = subEntry ? formatTokenAmount(balanceWei, subEntry.decimals) : '0';
+            const subTokenSymbol = subEntry ? subEntry.symbol : `${zodiacName}子代币`;
+            const subTokenAddrShort = subEntry ? shortenAddress(subEntry.address) : '未配置';
+            const hasEnough = balanceWei >= requiredCostWei && requiredCostWei > 0n;
+            const canUpgrade = levelNum >= 5 && levelNum <= 9 && !!subEntry && hasEnough;
+
+            const selectedNftInfo = document.getElementById('selectedNftInfo');
+            const upgradeBtn = document.getElementById('upgradeWithSubTokenBtn');
+
+            selectedNftInfo.innerHTML = `
+                <div class="flex items-center gap-4 mb-4">
+                    <img src="${nft.image}" alt="${nft.name}" class="w-20 h-20 object-contain rounded-lg shadow-md" onerror="this.onerror=null;this.src='images/fu-cards/shuishu_1.jpg';">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <h4 class="text-lg font-bold">${nft.name}</h4>
+                        </div>
+                        <p class="text-gray-600 text-sm">生肖·${zodiacName}</p>
+                        <div class="flex gap-4 mt-2 text-sm">
+                            <span>等级: ${getStars(nft.level)} (${levelNum}阶)</span>
+                            <span>ID: ${nft.id}</span>
+                            <span>成长: ${nft.growth}</span>
+                        </div>
+                        ${levelNum < 10 ? `<p class="text-indigo-600 font-medium mt-1">可超阶至 ${levelNum + 1} 阶</p>` : `<p class="text-red-600 font-medium mt-1">已达到最高等级（10阶）</p>`}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div class="p-3 bg-indigo-50 rounded-lg">
+                        <div class="text-xs text-gray-500 mb-1">超阶所需子代币</div>
+                        <div class="font-bold text-indigo-600">${requiredCostDisplay} ${subTokenSymbol}</div>
+                        <p class="text-xs text-gray-400 mt-1">${levelNum} → ${levelNum + 1} 阶</p>
+                    </div>
+                    <div class="p-3 bg-green-50 rounded-lg">
+                        <div class="text-xs text-gray-500 mb-1">我的${zodiacName}子代币余额</div>
+                        <div class="font-bold ${hasEnough ? 'text-green-600' : 'text-red-600'}">${balanceDisplay} ${subTokenSymbol}</div>
+                        <p class="text-xs ${hasEnough ? 'text-green-500' : 'text-red-500'} mt-1">${hasEnough ? '✅ 余额充足' : '❌ 余额不足'}</p>
+                    </div>
+                    <div class="p-3 bg-purple-50 rounded-lg">
+                        <div class="text-xs text-gray-500 mb-1">子代币合约</div>
+                        <div class="font-bold text-purple-600 text-sm">${subTokenAddrShort}</div>
+                        <p class="text-xs text-gray-400 mt-1 break-all">${subEntry ? subEntry.address : '未在Authorizer注册'}</p>
+                    </div>
+                </div>
+
+                ${levelNum >= 10 ? `<div class="p-3 bg-red-50 rounded-lg text-sm text-red-700">该NFT已达10阶，无法继续超阶</div>` : ''}
+                ${levelNum >= 5 && levelNum <= 9 && !subEntry ? `<div class="p-3 bg-orange-50 rounded-lg text-sm text-orange-700">⚠ 未找到 ${zodiacName} 的子代币合约（Authorizer 中未注册 "${SUB_TOKEN_AUTH_NAMES[zodiacIndex]}"），请联系管理员</div>` : ''}
+            `;
+
+            // 设置按钮状态
+            if (levelNum >= 10) {
+                upgradeBtn.disabled = true;
+                upgradeBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                upgradeBtn.textContent = '已达最高等级';
+            } else if (!canUpgrade) {
+                upgradeBtn.disabled = true;
+                upgradeBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                upgradeBtn.textContent = hasEnough ? '暂不可超阶' : '余额不足';
+            } else {
+                upgradeBtn.disabled = false;
+                upgradeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                upgradeBtn.textContent = `使用 ${requiredCostDisplay} ${subTokenSymbol} 超阶到 ${levelNum + 1} 阶`;
+            }
+
+            document.getElementById('upgradeSection').classList.remove('hidden');
+        }
+
+        // ============= 超阶操作 =============
+        async function handleUpgradeWithSubToken() {
+            if (!selectedNft) {
+                ZODIAC_UI.showToast('请先选择一个NFT', 'error');
+                return;
+            }
+            const levelNum = parseInt(selectedNft.level, 10);
+            if (levelNum < 5 || levelNum > 9) {
+                ZODIAC_UI.showToast('当前NFT等级不满足超阶条件（需5-9阶）', 'error');
+                return;
+            }
+            if (!nftUpdateContract || !nftUpdateAddress || !account || !web3) {
+                ZODIAC_UI.showToast('合约未初始化', 'error');
+                return;
+            }
+
+            const zodiacIndex = Math.floor((parseInt(selectedNft.type, 10) / 2) % 12);
+            const zodiacName = ZODIAC_NAMES[zodiacIndex] || '未知';
+
+            // 检查合约是否暂停
+            try {
+                if (typeof nftUpdateContract.methods.paused === 'function') {
+                    const isPaused = await nftUpdateContract.methods.paused().call();
+                    if (isPaused) {
+                        let reason = '';
+                        try { reason = await nftUpdateContract.methods.pauseReason().call(); } catch (e) {}
+                        ZODIAC_UI.showToast('合约已暂停' + (reason ? ': ' + reason : ''), 'error');
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.warn('[SUPER] 检查合约暂停状态失败:', e && e.message);
+            }
+
+            // 确保 sub-token 合约已加载
+            await loadSubTokenContract(zodiacIndex);
+            const subEntry = subTokenContracts[zodiacIndex];
+            if (!subEntry) {
+                ZODIAC_UI.showToast(`${zodiacName} 的子代币合约未配置，无法超阶`, 'error');
+                return;
+            }
+
+            const costIndex = levelNum - 5;
+            const requiredCostWei = subTokenUpgradeCosts[costIndex];
+            if (!requiredCostWei || requiredCostWei <= 0n) {
+                ZODIAC_UI.showToast('超阶费用未配置，请联系管理员', 'error');
+                return;
+            }
+
+            // 刷新余额
+            const balanceWei = await refreshSubTokenBalance(zodiacIndex);
+            if (balanceWei < requiredCostWei) {
+                const need = formatTokenAmount(requiredCostWei, subEntry.decimals);
+                const have = formatTokenAmount(balanceWei, subEntry.decimals);
+                ZODIAC_UI.showToast(`${zodiacName}子代币余额不足！需要 ${need}，当前 ${have}`, 'error');
+                return;
+            }
+
+            const requiredDisplay = formatTokenAmount(requiredCostWei, subEntry.decimals);
+            const nftId = parseInt(selectedNft.id, 10);
+
+            const confirmed = await ZODIAC_UI.showConfirmModal(
+                '超阶升阶确认',
+                `确认对以下NFT进行超阶升阶？\n\nNFT ID: ${nftId}\n生肖: ${zodiacName}\n当前等级: ${levelNum}阶 → ${levelNum + 1}阶\n\n将消耗 ${requiredDisplay} ${subEntry.symbol}\n（${zodiacName}子代币将被销毁）`,
+                { confirmText: '确认超阶' }
+            );
+
+            if (!confirmed) return;
+
+            try {
+                ZODIAC_UI.showLoading('检查子代币授权...');
+
+                // 检查 allowance
+                let allowance = 0n;
+                try {
+                    const alw = await subEntry.contract.methods.allowance(account, nftUpdateAddress).call();
+                    allowance = BigInt(String(alw));
+                } catch (e) {
+                    console.warn('[SUPER] 查询 allowance 失败:', e && e.message);
+                }
+
+                if (allowance < requiredCostWei) {
+                    ZODIAC_UI.showLoading('请求子代币授权...');
+                    try {
+                        await subEntry.contract.methods.approve(
+                            nftUpdateAddress,
+                            '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
+                        ).send({ from: account, gas: 100000 });
+                        // 等待上链
+                        await new Promise(r => setTimeout(r, 1000));
+                    } catch (approveErr) {
+                        ZODIAC_UI.hideLoading();
+                        const msg = approveErr.message || approveErr.toString();
+                        if (msg.includes('User denied') || msg.includes('user rejected')) {
+                            ZODIAC_UI.showToast('用户取消了授权', 'info');
+                        } else {
+                            ZODIAC_UI.showToast('子代币授权失败: ' + msg, 'error');
+                        }
+                        return;
+                    }
+
+                    // 复核 allowance
+                    try {
+                        const alw2 = await subEntry.contract.methods.allowance(account, nftUpdateAddress).call();
+                        allowance = BigInt(String(alw2));
+                        if (allowance < requiredCostWei) {
+                            ZODIAC_UI.hideLoading();
+                            ZODIAC_UI.showToast('子代币授权未生效，请重试', 'error');
+                            return;
+                        }
+                    } catch (e) {
+                        console.warn('[SUPER] 复核 allowance 失败:', e && e.message);
+                    }
+                }
+
+                // 估算 Gas，提前检测可行性
+                ZODIAC_UI.showLoading('检查交易可行性...');
+                try {
+                    await nftUpdateContract.methods.upgradeWithSubToken(nftId).call({ from: account });
+                } catch (callError) {
+                    ZODIAC_UI.hideLoading();
+                    const errMsg = callError.message || callError.toString();
+                    let userMsg = '超阶可能失败，请检查条件后重试';
+                    if (errMsg.includes('E15')) userMsg = '错误：您不是该NFT的所有者';
+                    else if (errMsg.includes('E16')) userMsg = '错误：NFT已达到最高等级';
+                    else if (errMsg.includes('paused')) userMsg = '错误：合约已暂停';
+                    else if (errMsg.includes('insufficient')) userMsg = '错误：子代币余额不足';
+                    else if (errMsg.includes('allowance')) userMsg = '错误：子代币授权不足';
+                    ZODIAC_UI.showToast(userMsg, 'error');
+                    return;
+                }
+
+                ZODIAC_UI.showLoading('超阶中，请确认钱包交易...');
+
+                const result = await nftUpdateContract.methods.upgradeWithSubToken(nftId).send({
+                    from: account,
+                    gas: 4000000
+                });
+
+                ZODIAC_UI.hideLoading();
+                const newLevel = levelNum + 1;
+                ZODIAC_UI.showToast(`超阶成功！NFT ID ${nftId} 已升级到 ${newLevel} 阶`, 'success');
+
+                // 重置选中状态并刷新
+                selectedNft = null;
+                document.getElementById('upgradeSection').classList.add('hidden');
+                await loadUserNFTs();
+            } catch (error) {
+                ZODIAC_UI.hideLoading();
+                console.error('[SUPER] 超阶失败:', error);
+                let errorMsg = error.message || error.toString();
+                if (errorMsg.includes('User denied') || errorMsg.includes('user rejected')) {
+                    errorMsg = '用户取消了交易';
+                } else if (errorMsg.includes('insufficient funds')) {
+                    errorMsg = '余额不足，无法支付Gas费用';
+                }
+                ZODIAC_UI.showToast('超阶失败: ' + errorMsg, 'error');
+            }
+        }
+
+        // ============= 工具函数 =============
+        function formatTokenAmount(wei, decimals) {
+            try {
+                const d = parseInt(decimals, 10) || 18;
+                const v = BigInt(String(wei));
+                if (d === 18) {
+                    // 借用 web3.utils
+                    if (web3 && web3.utils) {
+                        const s = web3.utils.fromWei(v.toString(), 'ether');
+                        return formatNumber(s);
+                    }
+                }
+                // 通用精度换算
+                const divisor = 10n ** BigInt(d);
+                const intPart = v / divisor;
+                const fracPart = v % divisor;
+                let intStr = intPart.toString();
+                if (fracPart > 0n) {
+                    let fracStr = fracPart.toString().padStart(d, '0').replace(/0+$/, '');
+                    if (fracStr) intStr += '.' + fracStr.slice(0, 4);
+                }
+                return formatNumber(intStr);
+            } catch (e) {
+                return String(wei);
+            }
+        }
+
+        function formatNumber(s) {
+            try {
+                const parts = String(s).split('.');
+                parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                return parts.join('.');
+            } catch (e) {
+                return s;
+            }
+        }
+
+        function shortenAddress(addr) {
+            if (!addr || addr.length < 10) return addr || '';
+            return addr.substring(0, 6) + '...' + addr.substring(addr.length - 4);
+        }
+    </script>
+</body>
+</html>

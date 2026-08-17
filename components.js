@@ -5,11 +5,14 @@ window.ZODIAC_COMPONENTS = (function() {
         { id: 'collection', icon: '🎁', name: '生肖', url: 'collection.html' },
         { id: 'rewards', icon: '🏆', name: '奖励', url: 'rewards.html' },
         { id: 'upgrade', icon: '⭐', name: '升阶', url: 'upgrade.html' },
+        { id: 'superUpgrade', icon: '🌟', name: '超阶', url: 'super-upgrade.html' },
+        { id: 'runes', icon: '🔮', name: '符文', url: 'runes.html' },
         { id: 'trading', icon: '💰', name: '交易', url: 'trading.html' },
         { id: 'tokenBuyback', icon: '🔄', name: '代币回购', url: 'token-buyback.html' },
         { id: 'breeding', icon: '🐾', name: '孕育', url: 'breeding.html' },
         { id: 'staking', icon: '⚡', name: '挖矿', url: 'staking.html' },
-        { id: 'arena', icon: '⚔️', name: '竞技', url: 'arena.html' }
+        { id: 'arena', icon: '⚔️', name: '竞技', url: 'arena.html' },
+        { id: 'activities', icon: '🏮', name: '活动', url: 'activities.html' }
     ];
 
     function renderMobileNavbar(activeId) {
